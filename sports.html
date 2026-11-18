@@ -1,0 +1,885 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pook Scoreboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: two regional sections (Florida, Los Angeles) of team cards; live games sort first and glow. */
+:root {
+  --bg: #eef2f0;
+  --card: #ffffff;
+  --ink: #15211d;
+  --muted: #5d6b66;
+  --line: #d9e1dd;
+  --chip: #e6ece9;
+  --live: #d6312b;
+  --win: #1d7a4c;
+  --gold: #c99a1c;
+  --home: #1f6fb8;
+  --loss: #b23a32;
+  --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1513; --card: #18201d; --ink: #e9efec; --muted: #93a29c;
+    --line: #26302c; --chip: #212a27; --live: #ff5a4f; --win: #4cc98a; --loss: #ff7a6e; --gold: #e8b931; --home: #5aa8f0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1513; --card: #18201d; --ink: #e9efec; --muted: #93a29c;
+  --line: #26302c; --chip: #212a27; --live: #ff5a4f; --win: #4cc98a; --loss: #ff7a6e; --gold: #e8b931; --home: #5aa8f0;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink); font: 14px/1.45 var(--body);
+  padding-block: 20px 32px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 22px; }
+header.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 8px 16px; }
+h1 { font: 700 30px/1 var(--display); letter-spacing: .02em; text-transform: uppercase; margin: 0; }
+.status { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 8px; }
+.status button {
+  font: 600 11px var(--body); letter-spacing: .06em; text-transform: uppercase;
+  background: var(--chip); color: var(--ink); border: 1px solid var(--line); border-radius: 999px;
+  padding: 4px 10px; cursor: pointer;
+}
+.status button:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.ticker { display: flex; flex-wrap: wrap; gap: 8px; }
+.ticker:empty { display: none; }
+.tick {
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
+  background: var(--card); border: 1px solid var(--line); font: 600 15px var(--display); letter-spacing: .02em;
+  font-variant-numeric: tabular-nums;
+}
+.tick .dot, .live-tag .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--live); animation: pulse 1.4s infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .tick .dot, .live-tag .dot { animation: none; } }
+section h2 {
+  font: 600 13px var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+  margin: 0 0 10px; display: flex; align-items: center; gap: 10px;
+}
+section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+.card {
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+  display: grid; grid-template-rows: auto 1fr; min-width: 0;
+}
+.card.is-live { border-color: var(--live); box-shadow: 0 0 0 1px var(--live); }
+.head { display: flex; align-items: center; gap: 12px; padding: 14px 16px 12px; position: relative; }
+.head::before {
+  content: ""; position: absolute; inset: 0; opacity: .12;
+  background: linear-gradient(110deg, var(--team) 0%, transparent 70%);
+}
+.logo { width: 46px; height: 46px; object-fit: contain; position: relative; flex: none; }
+.who { position: relative; min-width: 0; }
+.who .name { font: 700 21px/1.05 var(--display); letter-spacing: .01em; text-transform: uppercase; }
+.who .rec { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.who .rec b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.rows { display: grid; }
+.row { padding: 11px 16px; border-top: 1px solid var(--line); display: grid; gap: 4px; min-width: 0; }
+.label { font: 600 10.5px var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.live-tag { color: var(--live); }
+.line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.opp-logo { width: 20px; height: 20px; object-fit: contain; flex: none; }
+.opp { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.sub { color: var(--muted); font-size: 12.5px; }
+.res { font: 700 13px var(--display); width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; color: #fff; flex: none; }
+.res.W { background: var(--win); } .res.L { background: var(--loss); } .res.T { background: var(--muted); }
+.score { font: 700 19px var(--display); font-variant-numeric: tabular-nums; letter-spacing: .02em; margin-left: auto; white-space: nowrap; }
+.board { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; }
+.board .t { display: flex; align-items: center; gap: 8px; font-weight: 600; min-width: 0; }
+.board .t img { width: 24px; height: 24px; object-fit: contain; }
+.board .pts { font: 700 30px/1 var(--display); font-variant-numeric: tabular-nums; text-align: right; }
+.board .lead .pts { color: var(--ink); } .board .trail .pts { color: var(--muted); }
+.clock { font: 600 15px var(--display); letter-spacing: .03em; color: var(--live); white-space: nowrap; }
+.row .line:has(.clock) { flex-wrap: wrap; }
+.tv { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.tv span { background: var(--chip); border-radius: 5px; padding: 1px 6px; font-size: 11.5px; font-weight: 500; }
+.note { color: var(--muted); font-size: 12px; }
+.tv a { background: var(--chip); border-radius: 5px; padding: 1px 6px; font-size: 11.5px; font-weight: 600; color: var(--ink); text-decoration: none; border: 1px solid var(--line); }
+.tv a:hover { border-color: var(--ink); }
+.tv a.gc { background: transparent; color: var(--muted); }
+.home-chip, .big-chip {
+  display: inline-block; font: 700 10px var(--body); letter-spacing: .08em; text-transform: uppercase;
+  border-radius: 4px; padding: 1px 5px; line-height: 1.4; flex: none;
+}
+.home-chip { background: var(--home); color: var(--card); }
+.big-chip { background: var(--gold); color: #1d1600; }
+.away-tag { color: var(--muted); font-weight: 600; width: 38px; text-align: center; flex: none; }
+.row.is-home { background: color-mix(in srgb, var(--home) 9%, transparent); }
+.big-why { color: var(--ink); font-weight: 500; }
+.odds { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font: 600 14px var(--display); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+.odds span { border: 1px dashed var(--gold); border-radius: 5px; padding: 0 6px; }
+.odds em { font: 400 11px var(--body); color: var(--muted); font-style: normal; }
+.ulist { list-style: none; margin: 2px 0 0; padding: 0; display: grid; gap: 2px; }
+.ulist li {
+  display: grid; grid-template-columns: 74px 1fr; gap: 3px 10px; align-items: center;
+  padding: 7px 8px; border-radius: 8px; margin: 0 -8px;
+}
+.ulist li > .odds, .ulist li > .tv { grid-column: 2; }
+.ulist li.home { background: color-mix(in srgb, var(--home) 11%, transparent); }
+.ulist li.home .opp { font-weight: 700; }
+.ulist li.away .opp { font-weight: 500; color: var(--muted); }
+.ulist li.big { box-shadow: inset 2px 0 0 var(--gold); }
+.ulist .when { display: grid; font-size: 12px; line-height: 1.25; font-variant-numeric: tabular-nums; }
+.ulist .when span { color: var(--muted); }
+.ulist .vs { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.ulist .home-chip { width: 38px; text-align: center; }
+.more {
+  justify-self: start; font: 600 12px var(--body); color: var(--ink); background: none; border: 1px solid var(--line);
+  border-radius: 999px; padding: 4px 12px; cursor: pointer; margin-top: 4px;
+}
+.more:focus-visible, .tv a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.err { color: var(--loss); font-size: 12.5px; }
+.skeleton { height: 14px; border-radius: 4px; background: var(--chip); width: 70%; }
+footer { color: var(--muted); font-size: 11.5px; text-align: center; }
+@media (max-width: 420px) { h1 { font-size: 26px; } .grid { grid-template-columns: 1fr; } }
+
+/* Game screen */
+.screen {
+  display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 0;
+  background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
+}
+.screen.is-live { border-color: var(--live); box-shadow: 0 0 0 1px var(--live); }
+.scr-video { position: relative; background: #050807; aspect-ratio: 16 / 9; max-width: 100%; min-width: 0; }
+.scr-video video { width: 100%; height: 100%; display: block; object-fit: contain; background: #050807; }
+.scr-novid {
+  position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 10px; padding: 20px; text-align: center;
+  color: #e9efec; background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--scr-team, #345) 45%, #050807), #050807 75%);
+}
+.scr-novid .vs { display: flex; align-items: center; gap: 18px; font: 700 34px var(--display); }
+.scr-novid .vs img { width: 72px; height: 72px; object-fit: contain; }
+.scr-novid p { margin: 0; color: #b9c6c0; font-size: 13px; max-width: 40ch; }
+.scr-cap {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 26px 14px 10px; color: #fff; font-size: 13px; font-weight: 500;
+  background: linear-gradient(transparent, rgba(0,0,0,.75)); pointer-events: none;
+}
+.scr-cap:empty { display: none; }
+.scr-onair {
+  position: absolute; top: 10px; left: 10px; display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px;
+  background: rgba(0,0,0,.6); color: #fff; font: 700 11px var(--body); letter-spacing: .1em; text-transform: uppercase;
+}
+.scr-onair .dot { width: 8px; height: 8px; border-radius: 50%; background: #ff4a40; animation: pulse 1.4s infinite; }
+.scr-ctl { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; }
+.scr-ctl button {
+  font: 600 11.5px var(--body); color: #fff; background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,.25);
+  border-radius: 999px; padding: 4px 10px; cursor: pointer;
+}
+.scr-side { padding: 14px 16px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.scr-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.scr-tabs:empty { display: none; }
+.scr-tabs button {
+  font: 600 14px var(--display); letter-spacing: .02em; background: var(--chip); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.scr-tabs button[aria-pressed="true"] { border-color: var(--live); color: var(--live); }
+.scr-title { font: 700 22px/1.1 var(--display); text-transform: uppercase; letter-spacing: .01em; margin: 0; text-wrap: balance; }
+.scr-board { display: grid; grid-template-columns: auto 1fr auto; gap: 6px 10px; align-items: center; }
+.scr-board img { width: 30px; height: 30px; object-fit: contain; }
+.scr-board .n { font-weight: 600; min-width: 0; }
+.scr-board .p { font: 700 36px/1 var(--display); font-variant-numeric: tabular-nums; text-align: right; }
+.scr-board .trail { color: var(--muted); }
+.count { font: 700 30px/1 var(--display); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.plays { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 210px; overflow: auto; }
+.plays li { display: grid; grid-template-columns: 62px 1fr; gap: 8px; font-size: 12.5px; }
+.plays li span:first-child { color: var(--muted); font-variant-numeric: tabular-nums; }
+.plays li:first-child { font-weight: 600; }
+.watch-big { display: flex; flex-wrap: wrap; gap: 6px; }
+.watch-big a {
+  display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font: 600 13px var(--body);
+  padding: 7px 12px; border-radius: 8px; background: var(--ink); color: var(--card);
+}
+.watch-big a.alt { background: var(--chip); color: var(--ink); border: 1px solid var(--line); }
+.alerts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; border-top: 1px solid var(--line); padding-top: 12px; }
+.alerts button {
+  font: 600 12.5px var(--body); color: var(--ink); background: var(--chip); border: 1px solid var(--line);
+  border-radius: 999px; padding: 6px 12px; cursor: pointer;
+}
+.alerts button[aria-pressed="true"] { background: var(--win); color: #fff; border-color: var(--win); }
+.alerts a { color: var(--ink); }
+.topic { user-select: all; font-family: ui-monospace, Menlo, monospace; font-weight: 600; color: var(--ink); }
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 20;
+  background: var(--ink); color: var(--card); padding: 10px 16px; border-radius: 12px; font-weight: 600; max-width: calc(100% - 32px);
+  box-shadow: 0 8px 30px rgba(0,0,0,.3);
+}
+.scr-ctl button:focus-visible, .scr-tabs button:focus-visible, .alerts button:focus-visible, .watch-big a:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
+@media (max-width: 760px) { .screen { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Pook Scoreboard</h1>
+    <div class="status"><span id="updated">Loading scores…</span><button id="refresh" type="button">Refresh</button></div>
+  </header>
+  <div class="ticker" id="ticker" aria-live="polite"></div>
+  <section class="screen" id="screen" aria-label="Game screen">
+    <div class="scr-video">
+      <video id="scr-vid" muted autoplay playsinline preload="auto"></video>
+      <div class="scr-novid" id="scr-novid" hidden></div>
+      <div class="scr-onair" id="scr-onair"></div>
+      <div class="scr-ctl"><button id="scr-sound" type="button">Sound off</button><button id="scr-next" type="button">Next clip</button></div>
+      <div class="scr-cap" id="scr-cap"></div>
+    </div>
+    <div class="scr-side">
+      <div class="scr-tabs" id="scr-tabs"></div>
+      <div id="scr-main" style="display:grid;gap:12px"><div class="skeleton"></div></div>
+      <div class="alerts"><button id="alerts" type="button" aria-pressed="false">Turn on game alerts</button><span id="alerts-note" class="note"></span>
+        <div class="note" style="flex-basis:100%">Phone alerts: get the free ntfy app (<a href="https://apps.apple.com/us/app/ntfy/id1625396347" target="_blank" rel="noopener">iPhone</a> · <a href="https://play.google.com/store/apps/details?id=io.heckel.ntfy" target="_blank" rel="noopener">Android</a>), tap +, and subscribe to <b class="topic">pook-scores-mn55tzb817</b>. They arrive even when this page is closed.</div></div>
+    </div>
+  </section>
+  <section><h2>Florida</h2><div class="grid" id="g-fl"></div></section>
+  <section><h2>Los Angeles</h2><div class="grid" id="g-la"></div></section>
+  <footer>Data from ESPN. Times shown in your time zone. Updates every 30 seconds during games, every 5 minutes otherwise.</footer>
+</div>
+<script>
+const API = "https://site.api.espn.com/apis/site/v2/sports/";
+const TEAMS = [
+  { key: "ucf", path: "football/college-football", id: "2116", group: "fl", short: "UCF" },
+  { key: "fsu", path: "football/college-football", id: "52",   group: "fl", short: "FSU" },
+  { key: "uf",  path: "football/college-football", id: "57",   group: "fl", short: "Florida" },
+  { key: "usf", path: "football/college-football", id: "58",   group: "fl", short: "USF" },
+  { key: "tb",  path: "football/nfl",              id: "tb",   group: "fl", short: "Buccaneers" },
+  { key: "tbr", path: "baseball/mlb",              id: "tb",   group: "fl", short: "Rays" },
+  { key: "lad", path: "baseball/mlb",              id: "lad",  group: "la", short: "Dodgers" },
+  { key: "lal", path: "basketball/nba",            id: "lal",  group: "la", short: "Lakers" },
+];
+const state = {}; // key -> { team, last, next, live, record, standing, seasonLabel, error }
+let timer = null;
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const scoreOf = (c) => (c?.score && typeof c.score === "object" ? c.score.displayValue : c?.score) ?? "";
+const logoOf = (t) => t?.logo || t?.logos?.[0]?.href || "";
+const stateOf = (e) => e?.competitions?.[0]?.status?.type?.state || e?.status?.type?.state;
+
+async function getJSON(url) {
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error(r.status + " " + url);
+  return r.json();
+}
+
+function fmtWhen(e) {
+  const d = new Date(e.date);
+  const day = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  if (e.timeValid === false) return day + " · Time TBA";
+  const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", timeZoneName: "short" });
+  const today = new Date(); const tmr = new Date(); tmr.setDate(today.getDate() + 1);
+  const same = (a, b) => a.toDateString() === b.toDateString();
+  const label = same(d, today) ? "Today" : same(d, tmr) ? "Tomorrow" : day;
+  return label + " · " + time;
+}
+function fmtDay(e) { return new Date(e.date).toLocaleDateString(undefined, { month: "short", day: "numeric" }); }
+
+function tvList(comp) {
+  const seen = new Set(); const out = [];
+  const list = [...(comp?.broadcasts || []), ...(comp?.geoBroadcasts || [])];
+  // National TV first, then everything else
+  list.sort((a, b) => (a.market?.type === "National" ? -1 : 0) - (b.market?.type === "National" ? -1 : 0));
+  for (const b of list) {
+    const n = b.media?.shortName || b.names?.[0];
+    if (n && !seen.has(n)) { seen.add(n); out.push(n); }
+  }
+  return out.slice(0, 3);
+}
+
+function sides(e, teamId) {
+  const comp = e.competitions[0];
+  const us = comp.competitors.find((c) => String(c.team?.id) === String(teamId)) || comp.competitors[0];
+  const them = comp.competitors.find((c) => c !== us);
+  return { comp, us, them };
+}
+function oppName(c) {
+  const r = c?.curatedRank?.current;
+  const rank = r && r <= 25 ? "#" + r + " " : "";
+  return rank + (c?.team?.shortDisplayName || c?.team?.displayName || c?.team?.abbreviation || "TBD");
+}
+
+async function loadTeam(t) {
+  const s = state[t.key] || (state[t.key] = {});
+  try {
+    // The schedule endpoint sends CORS headers (the plain /teams/{id} one does not), so it is the only source.
+    const sched = await getJSON(`${API}${t.path}/teams/${t.id}/schedule`);
+    const team = sched.team;
+    s.team = team; s.teamId = team.id;
+    let events = (sched.events || []).slice().sort((a, b) => new Date(a.date) - new Date(b.date));
+    let done = events.filter((e) => stateOf(e) === "post");
+    s.record = team.recordSummary || "";
+    s.standing = team.standingSummary || "";
+    s.seasonLabel = "";
+
+    // Off-season (e.g. MLB in winter): look back at last season, postseason first.
+    if (!done.length) {
+      const yr = (sched.requestedSeason?.year || sched.season?.year || new Date().getFullYear()) - 1;
+      for (const st of [3, 2]) {
+        try {
+          const old = await getJSON(`${API}${t.path}/teams/${t.id}/schedule?season=${yr}&seasontype=${st}`);
+          const od = (old.events || []).filter((e) => stateOf(e) === "post").sort((a, b) => new Date(a.date) - new Date(b.date));
+          if (od.length) {
+            done = od;
+            if (!s.record) { s.record = old.team?.recordSummary || ""; s.standing = old.team?.standingSummary || ""; }
+            s.seasonLabel = yr + " season";
+            break;
+          }
+        } catch (_) {}
+      }
+    }
+    s.last = done[done.length - 1] || null;
+    const now = Date.now();
+    const isUpcoming = (e) => stateOf(e) !== "post" && new Date(e.date).getTime() > now - 6 * 3600e3;
+    let upcoming = events.filter(isUpcoming);
+    // Off-season: the default schedule may be next season's regular season; spring training / preseason comes first.
+    if (!upcoming.length || new Date(upcoming[0].date) - now > 30 * 86400e3) {
+      try {
+        const pre = await getJSON(`${API}${t.path}/teams/${t.id}/schedule?seasontype=1`);
+        upcoming = upcoming.concat((pre.events || []).filter(isUpcoming));
+      } catch (_) {}
+    }
+    const seen = new Set();
+    upcoming = upcoming.filter((e) => !seen.has(e.id) && seen.add(e.id)).sort((a, b) => new Date(a.date) - new Date(b.date));
+    s.upcoming = upcoming;
+    s.next = upcoming[0] || null;
+    s.error = null;
+  } catch (err) {
+    s.error = "Couldn't load " + t.short + " right now. It will retry automatically.";
+    console.warn(err);
+  }
+}
+
+// Is the next game in progress, or about to start?
+function inWindow(s) {
+  if (!s.next) return false;
+  const st = stateOf(s.next);
+  if (st === "in") return true;
+  const start = new Date(s.next.date).getTime();
+  return Date.now() >= start - 10 * 60e3 && Date.now() <= start + 6 * 3600e3;
+}
+
+// Betting lines only show up on the scoreboard feed, and only for games about a week out.
+const etDate = (d) => new Date(d).toLocaleDateString("en-CA", { timeZone: "America/New_York" }).replace(/-/g, "");
+async function loadOdds() {
+  const boards = {};
+  const want = [];
+  for (const t of TEAMS) {
+    const s = state[t.key];
+    if (!s) continue;
+    s.odds = {};
+    for (const e of (s.upcoming || []).slice(0, 3)) {
+      if (new Date(e.date) - Date.now() > 8 * 86400e3) break;
+      const k = t.path + "|" + etDate(e.date);
+      boards[k] ||= getJSON(`${API}${t.path}/scoreboard?dates=${etDate(e.date)}&limit=300` + (t.path.includes("college") ? "&groups=80" : "")).catch(() => null);
+      want.push({ s, e, k });
+    }
+  }
+  for (const w of want) {
+    const sb = await boards[w.k];
+    const ev = sb?.events?.find((x) => x.id === w.e.id);
+    const o = ev?.competitions?.[0]?.odds?.[0];
+    if (o) w.s.odds[w.e.id] = o;
+  }
+}
+
+const RIVALS = {
+  "52": ["57", "2390"], "57": ["52", "61", "2390"], "2116": ["58"], "58": ["2116"],
+  "27": ["18", "1", "29"], "13": ["2", "12", "9"], "19": ["26", "25"], "30": ["10", "2"],
+};
+const BIG_TV = /^(ABC|CBS|NBC|FOX|ESPN|ESPN2|TNT|Prime Video|Netflix|NFL Network|ESPN\/ABC)$/i;
+function bigGame(e, teamId, odds) {
+  const { comp, us, them } = sides(e, teamId);
+  const why = [];
+  const r = them?.curatedRank?.current;
+  if (r && r <= 25) why.push("Ranked #" + r + " opponent");
+  if ((RIVALS[String(teamId)] || []).includes(String(them?.team?.id))) why.push("Rivalry");
+  const note = comp.notes?.[0]?.headline;
+  if (note && /bowl|playoff|championship|series|wild card|division|conference|cup|final/i.test(note)) why.push(note);
+  if (odds && odds.spread != null && Math.abs(odds.spread) <= 3) why.push("Toss-up line");
+  const tv = tvList(comp);
+  if (!/spring|pre/i.test(e.seasonType?.name || "") && e.timeValid !== false && tv.some((n) => BIG_TV.test(n))) {
+    const h = new Date(e.date).toLocaleTimeString("en-US", { hour: "numeric", hour12: false, timeZone: "America/New_York" });
+    if (+h >= 19) why.push("Primetime on " + tv.find((n) => BIG_TV.test(n)));
+  }
+  return why;
+}
+
+function oddsLine(o, e, teamId) {
+  if (!o) return "";
+  const { us } = sides(e, teamId);
+  const side = us.homeAway === "home" ? o.homeTeamOdds : o.awayTeamOdds;
+  const ml = side?.moneyLine ?? (us.homeAway === "home" ? o.moneyline?.home?.close?.odds : o.moneyline?.away?.close?.odds);
+  const parts = [o.details && `Line ${esc(o.details)}`, o.overUnder != null && `O/U ${esc(o.overUnder)}`, ml != null && ml !== "" && `ML ${esc(ml > 0 ? "+" + ml : ml)}`].filter(Boolean);
+  return parts.length ? `<div class="odds">${parts.map((p) => `<span>${p}</span>`).join("")}${o.provider?.name ? `<em>${esc(o.provider.name)}</em>` : ""}</div>` : "";
+}
+
+const WATCH = [
+  [/^ESPN\+$/i, "https://plus.espn.com/"],
+  [/ESPN|ABC|SEC Network|ACC Network|SECN|ACCN/i, "https://www.espn.com/watch/"],
+  [/^FOX|^FS1|^FS2|Big Ten|BTN/i, "https://www.foxsports.com/live"],
+  [/CBS|Paramount/i, "https://www.paramountplus.com/live-tv/"],
+  [/NBC|Peacock/i, "https://www.peacocktv.com/"],
+  [/Prime/i, "https://www.amazon.com/gp/video/storefront"],
+  [/Netflix/i, "https://www.netflix.com/"],
+  [/NFL Net|NFL\+/i, "https://www.nfl.com/plus/"],
+  [/MLB\.TV|MLB Net/i, "https://www.mlb.com/tv"],
+  [/NBA TV|League Pass/i, "https://www.nba.com/watch"],
+  [/TNT|truTV|TBS|Max/i, "https://www.max.com/sports"],
+  [/Spectrum Sports|SportsNet LA/i, "https://www.spectrumsportsnet.com/"],
+  [/FanDuel|Bally/i, "https://www.fanduelsportsnetwork.com/"],
+  [/Apple/i, "https://tv.apple.com/"],
+  [/CW/i, "https://www.cwtv.com/sports/"],
+];
+function gamecast(t, e) { return `https://www.espn.com/${t.path.split("/")[1]}/game/_/gameId/${e.id}`; }
+function watchChips(t, e, comp) {
+  const chips = tvList(comp).map((n) => {
+    const hit = WATCH.find(([re]) => re.test(n));
+    return hit ? `<a href="${hit[1]}" target="_blank" rel="noopener" title="Watch on ${esc(n)}">▶ ${esc(n)}</a>` : `<span>${esc(n)}</span>`;
+  });
+  chips.push(`<a class="gc" href="${gamecast(t, e)}" target="_blank" rel="noopener" title="ESPN Gamecast">Gamecast</a>`);
+  return `<span class="tv">${chips.join("")}</span>`;
+}
+
+async function loadLive() {
+  // Group live-window teams by league + ET date, one scoreboard call each.
+  const needs = {};
+  for (const t of TEAMS) {
+    const s = state[t.key];
+    if (!s) continue;
+    s.live = null;
+    if (!inWindow(s)) continue;
+    const et = new Date(s.next.date).toLocaleDateString("en-CA", { timeZone: "America/New_York" }).replace(/-/g, "");
+    const k = t.path + "|" + et;
+    (needs[k] ||= { path: t.path, date: et, teams: [] }).teams.push(t);
+  }
+  await Promise.all(Object.values(needs).map(async (n) => {
+    const q = `dates=${n.date}&limit=300` + (n.path.includes("college") ? "&groups=80" : "");
+    try {
+      const sb = await getJSON(`${API}${n.path}/scoreboard?${q}`);
+      for (const t of n.teams) {
+        const s = state[t.key];
+        const ev = (sb.events || []).find((e) => e.id === s.next.id) ||
+                   (sb.events || []).find((e) => e.competitions[0].competitors.some((c) => String(c.team.id) === String(s.teamId)));
+        if (!ev) continue;
+        const st = stateOf(ev);
+        if (st === "in") s.live = ev;
+        else if (st === "post") { s.last = ev; s.justEnded = true; }
+      }
+    } catch (err) { console.warn(err); }
+  }));
+}
+
+function situation(comp, path) {
+  const sit = comp.situation; if (!sit) return "";
+  if (path.startsWith("football")) return sit.downDistanceText || sit.shortDownDistanceText || "";
+  if (path.startsWith("baseball")) {
+    const bases = [sit.onFirst && "1st", sit.onSecond && "2nd", sit.onThird && "3rd"].filter(Boolean);
+    const parts = [];
+    if (sit.outs != null) parts.push(sit.outs + (sit.outs === 1 ? " out" : " outs"));
+    if (bases.length) parts.push("On " + bases.join(", "));
+    return parts.join(" · ");
+  }
+  return "";
+}
+
+function liveRow(t, s) {
+  const { comp, us, them } = sides(s.live, s.teamId);
+  const st = comp.status.type;
+  const a = +scoreOf(us) || 0, b = +scoreOf(them) || 0;
+  const line = (c, lead) => `<div class="t ${lead ? "lead" : "trail"}"><img src="${esc(logoOf(c.team))}" alt="">${esc(oppName(c))}</div><div class="pts ${lead ? "lead" : "trail"}">${esc(scoreOf(c) || "0")}</div>`;
+  const sit = situation(comp, t.path);
+  return `<div class="row">
+    <div class="label live-tag"><span class="dot"></span>Live${us.homeAway === "home" ? ` <span class="home-chip">Home</span>` : ""}</div>
+    <div class="board">${line(us, a >= b)}${line(them, b > a)}</div>
+    <div class="line"><span class="clock">${esc(st.shortDetail || st.detail)}</span>${sit ? `<span class="sub">· ${esc(sit)}</span>` : ""}</div>
+    <div class="line">${watchChips(t, s.live, comp)}</div>
+  </div>`;
+}
+
+function lastRow(s) {
+  if (!s.last) return `<div class="row"><div class="label">Last game</div><div class="sub">No games played yet</div></div>`;
+  const { comp, us, them } = sides(s.last, s.teamId);
+  const a = +scoreOf(us), b = +scoreOf(them);
+  const res = us.winner ? "W" : them?.winner ? "L" : a > b ? "W" : a < b ? "L" : "T";
+  const at = us.homeAway === "home" ? "vs" : "@";
+  const note = comp.notes?.[0]?.headline || s.last.competitions?.[0]?.notes?.[0]?.headline || "";
+  return `<div class="row">
+    <div class="label">${s.justEnded ? "Final · just ended" : "Last game · " + esc(fmtDay(s.last))}</div>
+    <div class="line"><span class="res ${res}">${res}</span><img class="opp-logo" src="${esc(logoOf(them?.team))}" alt=""><span class="opp">${at} ${esc(oppName(them))}</span>
+      <span class="score">${esc(scoreOf(us))}–${esc(scoreOf(them))}</span></div>
+    ${note ? `<div class="note">${esc(note)}</div>` : ""}
+  </div>`;
+}
+
+function nextRow(t, s) {
+  if (!s.next) return `<div class="row"><div class="label">Next game</div><div class="sub">Schedule not posted yet</div></div>`;
+  const e = s.next;
+  const { comp, us, them } = sides(e, s.teamId);
+  const home = us.homeAway === "home";
+  const kind = e.seasonType?.name && /spring|pre/i.test(e.seasonType.name) ? e.seasonType.name : "";
+  const note = comp.notes?.[0]?.headline || "";
+  const odds = s.odds?.[e.id];
+  const big = bigGame(e, s.teamId, odds);
+  return `<div class="row ${home ? "is-home" : ""}">
+    <div class="label">Next game${kind ? " · " + esc(kind) : ""}${home ? ` <span class="home-chip">Home</span>` : ""}${big.length ? ` <span class="big-chip" title="${esc(big.join(" · "))}">Big game</span>` : ""}</div>
+    <div class="line"><img class="opp-logo" src="${esc(logoOf(them?.team))}" alt=""><span class="opp">${home ? "vs" : "@"} ${esc(oppName(them))}</span></div>
+    <div class="line"><span class="sub">${esc(fmtWhen(e))}${comp.venue?.fullName ? " · " + esc(comp.venue.fullName) : ""}</span></div>
+    ${big.length ? `<div class="note big-why">${esc(big.join(" · "))}</div>` : ""}
+    ${oddsLine(odds, e, s.teamId)}
+    <div class="line">${watchChips(t, e, comp)}</div>
+    ${note && !big.includes(note) ? `<div class="note">${esc(note)}</div>` : ""}
+  </div>`;
+}
+
+const expanded = new Set();
+function upcomingRow(t, s) {
+  const rest = (s.upcoming || []).filter((e) => e !== s.next && (!s.live || e.id !== s.live.id));
+  if (!rest.length) return "";
+  const open = expanded.has(t.key);
+  const shown = open ? rest : rest.slice(0, 4);
+  const homes = rest.filter((e) => sides(e, s.teamId).us.homeAway === "home").length;
+  const items = shown.map((e) => {
+    const { comp, us, them } = sides(e, s.teamId);
+    const home = us.homeAway === "home";
+    const odds = s.odds?.[e.id];
+    const big = bigGame(e, s.teamId, odds);
+    const d = new Date(e.date);
+    const day = d.toLocaleDateString(undefined, { weekday: "short", month: "numeric", day: "numeric" });
+    const time = e.timeValid === false ? "TBA" : d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    return `<li class="${home ? "home" : "away"} ${big.length ? "big" : ""}">
+      <span class="when"><b>${esc(day)}</b><span>${esc(time)}</span></span>
+      <span class="vs">${home ? `<span class="home-chip">Home</span>` : `<span class="away-tag">@</span>`}<img class="opp-logo" src="${esc(logoOf(them?.team))}" alt=""><span class="opp">${esc(oppName(them))}</span>
+        ${big.length ? `<span class="big-chip" title="${esc(big.join(" · "))}">Big</span>` : ""}</span>
+      ${oddsLine(odds, e, s.teamId)}
+      ${watchChips(t, e, comp)}
+    </li>`;
+  }).join("");
+  return `<div class="row up">
+    <div class="label">Upcoming · ${rest.length} game${rest.length === 1 ? "" : "s"} · ${homes} at home</div>
+    <ul class="ulist">${items}</ul>
+    ${rest.length > 4 ? `<button type="button" class="more" data-key="${t.key}">${open ? "Show fewer" : "Show all " + rest.length}</button>` : ""}
+  </div>`;
+}
+document.addEventListener("click", (ev) => {
+  const b = ev.target.closest(".more");
+  if (!b) return;
+  const k = b.dataset.key;
+  expanded.has(k) ? expanded.delete(k) : expanded.add(k);
+  render();
+});
+
+function card(t) {
+  const s = state[t.key] || {};
+  const team = s.team;
+  if (!team && !s.error) return `<article class="card"><div class="head"><div class="logo"></div><div class="who"><div class="name">${esc(t.short)}</div><div class="skeleton"></div></div></div><div class="rows"></div></article>`;
+  const color = team?.color ? "#" + team.color : "#888";
+  const rec = [s.record && `<b>${esc(s.record)}</b>`, s.standing && esc(s.standing), s.seasonLabel && esc(s.seasonLabel)].filter(Boolean).join(" · ");
+  const rows = s.error && !team ? `<div class="row err">${esc(s.error)}</div>` :
+    (s.live ? liveRow(t, s) : "") + lastRow(s) + (s.live ? "" : nextRow(t, s)) + upcomingRow(t, s);
+  return `<article class="card ${s.live ? "is-live" : ""}" style="--team:${esc(color)}">
+    <div class="head"><img class="logo" src="${esc(logoOf(team))}" alt="${esc(team?.displayName || t.short)} logo">
+      <div class="who"><div class="name">${esc(team?.displayName || t.short)}</div><div class="rec">${rec || "&nbsp;"}</div></div></div>
+    <div class="rows">${rows}</div></article>`;
+}
+
+function render() {
+  for (const g of ["fl", "la"]) {
+    const list = TEAMS.filter((t) => t.group === g)
+      .map((t, i) => ({ t, i, live: !!state[t.key]?.live }))
+      .sort((a, b) => (b.live - a.live) || (a.i - b.i));
+    $("#g-" + g).innerHTML = list.map((x) => card(x.t)).join("");
+  }
+  const live = TEAMS.filter((t) => state[t.key]?.live);
+  $("#ticker").innerHTML = live.map((t) => {
+    const { comp, us, them } = sides(state[t.key].live, state[t.key].teamId);
+    return `<span class="tick"><span class="dot"></span>${esc(us.team.abbreviation)} ${esc(scoreOf(us))} · ${esc(them.team.abbreviation)} ${esc(scoreOf(them))} <span style="color:var(--muted)">${esc(comp.status.type.shortDetail)}</span></span>`;
+  }).join("");
+}
+
+
+// ---------- Game screen ----------
+const scr = { focus: null, clips: [], clipKey: "", idx: 0, summary: null, summaryFor: null, summaryAt: 0 };
+const vid = $("#scr-vid");
+const pickTeam = (s) => s.team?.abbreviation || "";
+function liveGames() { return TEAMS.filter((t) => state[t.key]?.live).map((t) => ({ t, s: state[t.key], e: state[t.key].live })); }
+function soonest() {
+  let best = null;
+  for (const t of TEAMS) {
+    const s = state[t.key];
+    if (!s?.next || s.live || stateOf(s.next) === "in") continue;
+    if (!best || new Date(s.next.date) < new Date(best.e.date)) best = { t, s, e: s.next };
+  }
+  return best;
+}
+function latestFinal() {
+  let best = null;
+  for (const t of TEAMS) {
+    const s = state[t.key];
+    if (s?.last && (!best || new Date(s.last.date) > new Date(best.e.date))) best = { t, s, e: s.last };
+  }
+  return best;
+}
+function clipsFrom(sum) {
+  return (sum?.videos || []).map((v) => ({
+    id: v.id, title: v.headline || v.title || "", poster: v.thumbnail || "",
+    src: v.links?.source?.HD?.href || v.links?.source?.href || v.links?.source?.mezzanine?.href || "",
+    at: Date.parse(v.originalPublishDate || v.lastModified || 0) || 0,
+  })).filter((c) => /\.mp4(\?|$)/.test(c.src));
+}
+function playClip() {
+  const c = scr.clips[scr.idx];
+  if (!c) return;
+  vid.src = c.src; vid.poster = c.poster;
+  vid.loop = scr.clips.length === 1;
+  vid.play().catch(() => {});
+  $("#scr-cap").textContent = c.title + (scr.clips.length > 1 ? `  ·  clip ${scr.idx + 1} of ${scr.clips.length}` : "");
+}
+function setClips(clips, newestFirst) {
+  if (newestFirst) clips.sort((a, b) => b.at - a.at);
+  const key = clips.map((c) => c.id).join(",");
+  if (key === scr.clipKey) return;
+  const hadClips = scr.clips.length > 0;
+  scr.clipKey = key; scr.clips = clips;
+  // A new clip during a live game jumps straight to it; otherwise start from the top.
+  scr.idx = 0;
+  const show = clips.length > 0;
+  vid.hidden = !show; $("#scr-novid").hidden = show; $("#scr-next").hidden = clips.length < 2; $("#scr-sound").hidden = !show;
+  if (show) playClip(); else { vid.removeAttribute("src"); vid.load(); $("#scr-cap").textContent = ""; }
+  if (hadClips && show && newestFirst) toast("New highlight: " + clips[0].title);
+}
+vid.addEventListener("ended", () => { if (scr.clips.length > 1) { scr.idx = (scr.idx + 1) % scr.clips.length; playClip(); } });
+$("#scr-next").addEventListener("click", () => { scr.idx = (scr.idx + 1) % scr.clips.length; playClip(); });
+$("#scr-sound").addEventListener("click", () => {
+  vid.muted = !vid.muted; $("#scr-sound").textContent = vid.muted ? "Sound off" : "Sound on";
+  if (!vid.muted) vid.play().catch(() => {});
+});
+$("#scr-tabs").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button[data-id]"); if (!b) return;
+  scr.focus = b.dataset.id; updateScreen(true);
+});
+
+function recentPlays(sum) {
+  let p = sum?.plays || [];
+  if (!p.length && sum?.drives) {
+    const d = [...(sum.drives.previous || []), ...(sum.drives.current ? [sum.drives.current] : [])];
+    p = d.flatMap((x) => x.plays || []);
+  }
+  return p.filter((x) => x.text).slice(-8).reverse();
+}
+function periodLabel(x, path) {
+  const n = x.period?.number;
+  if (path.startsWith("baseball")) return x.period?.displayValue?.replace(" Inning", "") || (n ? "Inn " + n : "");
+  const per = x.period?.displayValue || (n ? (n > 4 ? "OT" : "Q" + n) : "");
+  return [per.replace(/(\d)(st|nd|rd|th) Quarter/, "Q$1"), x.clock?.displayValue].filter(Boolean).join(" ");
+}
+function watchBig(t, e) {
+  const comp = e.competitions[0];
+  const links = tvList(comp).map((n) => {
+    const hit = WATCH.find(([re]) => re.test(n));
+    return hit ? `<a href="${hit[1]}" target="_blank" rel="noopener">▶ Watch on ${esc(n)}</a>` : "";
+  }).filter(Boolean);
+  links.push(`<a class="alt" href="${gamecast(t, e)}" target="_blank" rel="noopener">ESPN Gamecast</a>`);
+  return `<div class="watch-big">${links.join("")}</div>`;
+}
+
+async function updateScreen(forceFetch) {
+  const live = liveGames();
+  const pick = live.find((g) => g.e.id === scr.focus) || live[0];
+  const target = pick || latestFinal();
+  const screen = $("#screen");
+  screen.classList.toggle("is-live", !!pick);
+  $("#scr-onair").innerHTML = pick ? `<span class="dot"></span>Live · ${esc(pickTeam(pick.s))}` : target ? "Latest highlights" : "";
+  // Live: refresh the game feed every tick. Idle: fetch the last game's recap once.
+  if (target && (forceFetch || pick || scr.summaryFor !== target.e.id)) {
+    try { scr.summary = await getJSON(`${API}${target.t.path}/summary?event=${target.e.id}`); scr.summaryFor = target.e.id; }
+    catch (err) { console.warn(err); }
+  }
+  const sum = scr.summaryFor === target?.e.id ? scr.summary : null;
+  setClips(clipsFrom(sum), !!pick);
+
+  $("#scr-tabs").innerHTML = live.length > 1 ? live.map((g) => {
+    const { us, them } = sides(g.e, g.s.teamId);
+    return `<button type="button" data-id="${g.e.id}" aria-pressed="${g === pick}">${esc(us.team.abbreviation)} ${esc(scoreOf(us))}–${esc(scoreOf(them))} ${esc(them.team.abbreviation)}</button>`;
+  }).join("") : "";
+
+  const next = soonest();
+  if (pick) {
+    const { comp, us, them } = sides(pick.e, pick.s.teamId);
+    const a = +scoreOf(us) || 0, b = +scoreOf(them) || 0;
+    const sit = situation(comp, pick.t.path);
+    const plays = recentPlays(sum);
+    document.documentElement.style.setProperty("--scr-team", "#" + (pick.s.team?.color || "345"));
+    $("#scr-novid").innerHTML = `<div class="vs"><img src="${esc(logoOf(us.team))}" alt="">${esc(scoreOf(us))}–${esc(scoreOf(them))}<img src="${esc(logoOf(them.team))}" alt=""></div>
+      <p>${esc(comp.status.type.shortDetail)}. Highlight clips play here as ESPN posts them.</p>`;
+    $("#scr-main").innerHTML = `
+      <h2 class="scr-title">${esc(pick.s.team.displayName)} ${us.homeAway === "home" ? "vs" : "@"} ${esc(oppName(them))}</h2>
+      <div class="scr-board">
+        <img src="${esc(logoOf(us.team))}" alt=""><span class="n">${esc(us.team.shortDisplayName || us.team.displayName)}</span><span class="p ${a >= b ? "" : "trail"}">${esc(scoreOf(us) || 0)}</span>
+        <img src="${esc(logoOf(them.team))}" alt=""><span class="n">${esc(them.team.shortDisplayName || them.team.displayName)}</span><span class="p ${b > a ? "" : "trail"}">${esc(scoreOf(them) || 0)}</span>
+      </div>
+      <div class="line"><span class="clock">${esc(comp.status.type.shortDetail)}</span>${sit ? `<span class="sub">· ${esc(sit)}</span>` : ""}</div>
+      ${watchBig(pick.t, pick.e)}
+      ${plays.length ? `<div><div class="label" style="margin-bottom:6px">Play by play</div><ul class="plays">${plays.map((x) => `<li><span>${esc(periodLabel(x, pick.t.path))}</span><span>${esc(x.text)}</span></li>`).join("")}</ul></div>` : ""}`;
+  } else {
+    const fin = target;
+    document.documentElement.style.setProperty("--scr-team", "#" + (next?.s.team?.color || fin?.s.team?.color || "345"));
+    if (next) {
+      const { us, them } = sides(next.e, next.s.teamId);
+      $("#scr-novid").innerHTML = `<div class="vs"><img src="${esc(logoOf(us.team) || logoOf(next.s.team))}" alt="">vs<img src="${esc(logoOf(them?.team))}" alt=""></div><p>No highlights posted for the last game. This screen switches to the next live game on its own.</p>`;
+      $("#scr-main").innerHTML = `
+        <div class="label">Next game on</div>
+        <h2 class="scr-title">${esc(next.s.team.displayName)} ${us.homeAway === "home" ? "vs" : "@"} ${esc(oppName(them))}</h2>
+        <div class="sub">${esc(fmtWhen(next.e))}</div>
+        <div><div class="label">Starts in</div><div class="count" id="scr-count" data-at="${new Date(next.e.date).getTime()}"></div></div>
+        ${watchBig(next.t, next.e)}
+        <div class="note">When a game starts, this screen switches to it by itself and plays its highlights as they come in.${fin ? ` Playing now: highlights from ${esc(pickTeam(fin.s))}'s last game (${esc(fmtDay(fin.e))}).` : ""}</div>`;
+    } else {
+      $("#scr-main").innerHTML = `<h2 class="scr-title">No games scheduled</h2>`;
+    }
+  }
+  updateCountdown();
+}
+function updateCountdown() {
+  const el = $("#scr-count"); if (!el) return;
+  let ms = +el.dataset.at - Date.now();
+  if (ms <= 0) { el.textContent = "Starting now"; return; }
+  const d = Math.floor(ms / 86400e3), h = Math.floor(ms / 3600e3) % 24, m = Math.floor(ms / 60e3) % 60, sec = Math.floor(ms / 1e3) % 60;
+  el.textContent = (d ? d + "d " : "") + (d || h ? h + "h " : "") + m + "m " + String(sec).padStart(2, "0") + "s";
+}
+setInterval(updateCountdown, 1000);
+
+// ---------- Alerts ----------
+const inFrame = (() => { try { return window.self !== window.top; } catch (_) { return true; } })();
+const store = {
+  get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (_) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} },
+};
+let fired = store.get("pook-fired", []);
+let alertsOn = store.get("pook-alerts", false) && "Notification" in window && Notification.permission === "granted";
+let audioCtx = null;
+function syncAlertsBtn() {
+  const b = $("#alerts");
+  b.setAttribute("aria-pressed", String(alertsOn));
+  b.textContent = alertsOn ? "Game alerts on" : "Turn on game alerts";
+  $("#alerts-note").innerHTML = alertsOn ? "You'll get a notification 15 minutes before each game and when it starts, while this page is open in a tab."
+    : inFrame ? `Alerts can't be turned on inside Notion. <a href="${location.href.split("#")[0]}" target="_blank" rel="noopener">Open full screen</a> and turn them on there.` : "";
+}
+$("#alerts").addEventListener("click", async () => {
+  try { audioCtx ||= new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch (_) {}
+  if (alertsOn) { alertsOn = false; store.set("pook-alerts", false); syncAlertsBtn(); return; }
+  if (!("Notification" in window)) { $("#alerts-note").textContent = "This browser can't show notifications. The page will still chime and show a banner."; return; }
+  let perm = Notification.permission;
+  if (perm === "default") { try { perm = await Notification.requestPermission(); } catch (_) {} }
+  if (perm !== "granted") {
+    $("#alerts-note").innerHTML = inFrame ? `Alerts can't be turned on inside Notion. <a href="${location.href.split("#")[0]}" target="_blank" rel="noopener">Open full screen</a> and turn them on there.`
+      : "Notifications are blocked for this site. Allow them in your browser's site settings, then try again.";
+    return;
+  }
+  alertsOn = true; store.set("pook-alerts", true); syncAlertsBtn();
+  notify("Game alerts are on", "You'll hear from Pook Scoreboard when a game is about to start.", "test");
+});
+function chime() {
+  if (!audioCtx) return;
+  try {
+    const t0 = audioCtx.currentTime;
+    [660, 880, 990].forEach((f, i) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.frequency.value = f; o.type = "sine";
+      g.gain.setValueAtTime(0.0001, t0 + i * 0.16); g.gain.exponentialRampToValueAtTime(0.25, t0 + i * 0.16 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.16 + 0.3);
+      o.connect(g).connect(audioCtx.destination); o.start(t0 + i * 0.16); o.stop(t0 + i * 0.16 + 0.32);
+    });
+  } catch (_) {}
+}
+let toastTimer;
+function toast(msg) {
+  let el = $("#toast");
+  if (!el) { el = document.createElement("div"); el.id = "toast"; el.className = "toast"; el.setAttribute("role", "status"); document.body.append(el); }
+  el.textContent = msg; el.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 8000);
+}
+function notify(title, body, tag, eventId) {
+  toast(title + (body ? " · " + body : ""));
+  chime();
+  if (alertsOn && "Notification" in window && Notification.permission === "granted") {
+    try {
+      const n = new Notification(title, { body, tag, icon: "https://a.espncdn.com/i/espn/misc_logos/500/ncaa_football.png" });
+      n.onclick = () => { window.focus(); if (eventId) { scr.focus = eventId; updateScreen(true); } $("#screen").scrollIntoView({ behavior: "smooth" }); n.close(); };
+    } catch (_) {}
+  }
+}
+const markFired = (k) => { fired.push(k); fired = fired.slice(-300); store.set("pook-fired", fired); };
+let firstAlertPass = true;
+function checkAlerts() {
+  for (const t of TEAMS) {
+    const s = state[t.key];
+    if (!s?.team) continue;
+    if (s.live) {
+      const k = "live:" + s.live.id;
+      if (!fired.includes(k)) {
+        markFired(k);
+        if (!firstAlertPass) {
+          const { comp, them } = sides(s.live, s.teamId);
+          const tv = tvList(comp);
+          notify(`${s.team.displayName} game is on!`, `${s.team.abbreviation} vs ${them.team.abbreviation}` + (tv.length ? " · " + tv.join(", ") : ""), k, s.live.id);
+        }
+      }
+    } else if (s.next && stateOf(s.next) === "pre" && s.next.timeValid !== false) {
+      const mins = (new Date(s.next.date) - Date.now()) / 60e3;
+      const k = "soon:" + s.next.id;
+      if (mins > 0 && mins <= 15 && !fired.includes(k)) {
+        markFired(k);
+        const { comp, us, them } = sides(s.next, s.teamId);
+        const tv = tvList(comp);
+        notify(`${s.team.shortDisplayName || s.team.displayName} start in ${Math.round(mins)} min`, `${us.homeAway === "home" ? "vs" : "@"} ${oppName(them)}` + (tv.length ? " on " + tv.join(", ") : ""), k);
+      }
+    }
+  }
+  firstAlertPass = false;
+  const live = liveGames();
+  document.title = live.length ? `🔴 ${live.map((g) => pickTeam(g.s)).join(", ")} live · Pook Scoreboard` : "Pook Scoreboard";
+}
+syncAlertsBtn();
+
+let lastFull = 0;
+async function tick(force) {
+  clearTimeout(timer);
+  const anyWindow = TEAMS.some((t) => state[t.key] && inWindow(state[t.key]));
+  // Full reload every 5 min (or when forced); live scoreboards every 30 s in between.
+  if (force || Date.now() - lastFull > 5 * 60e3) {
+    for (const t of TEAMS) if (state[t.key]) state[t.key].justEnded = false;
+    await Promise.all(TEAMS.map(loadTeam));
+    await loadOdds();
+    lastFull = Date.now();
+  }
+  await loadLive();
+  render();
+  try { await updateScreen(force); } catch (err) { console.warn(err); }
+  checkAlerts();
+  const soon = TEAMS.some((t) => state[t.key]?.next && new Date(state[t.key].next.date) - Date.now() < 20 * 60e3);
+  const live = TEAMS.some((t) => state[t.key]?.live) || TEAMS.some((t) => state[t.key] && inWindow(state[t.key]));
+  const now = new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", second: "2-digit" });
+  $("#updated").textContent = (live ? "Live · " : "") + "Updated " + now;
+  timer = setTimeout(() => tick(false), live || anyWindow || soon ? 30e3 : 5 * 60e3);
+}
+
+$("#refresh").addEventListener("click", () => { $("#updated").textContent = "Refreshing…"; tick(true); });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) return;
+  if (scr.clips.length && vid.paused) vid.play().catch(() => {});
+  tick(false);
+});
+render();
+tick(true);
+</script>
+</body>
+</html>

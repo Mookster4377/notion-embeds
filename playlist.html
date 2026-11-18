@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pook Playlist</title>
+  <style>
+    :root {
+      --bg: #000;
+      --fg: #fff;
+      --muted: rgba(255, 255, 255, 0.65);
+      --panel: rgba(0, 0, 0, 0.72);
+      --button: rgba(255, 255, 255, 0.14);
+      --button-hover: rgba(255, 255, 255, 0.26);
+    }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--fg);
+      font: 15px/1.4 system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+    }
+    #stage {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #yt-wrap, #tt-wrap {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    #yt-wrap.on, #tt-wrap.on { display: flex; }
+    #yt-wrap iframe { width: 100%; height: 100%; border: 0; }
+    /* TikTok is vertical: keep 9:16 and fit the screen height. */
+    #tt-wrap iframe {
+      height: 100%;
+      width: min(100%, calc(100vh * 9 / 16));
+      border: 0;
+    }
+
+    #start {
+      position: fixed;
+      inset: 0;
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 16px;
+      text-align: center;
+      background: radial-gradient(circle at center, #1d1730 0%, #000 70%);
+    }
+    #start h1 { margin: 0; font-size: 28px; letter-spacing: 0.02em; }
+    #start p { margin: 0; color: var(--muted); max-width: 420px; }
+    #start.hidden { display: none; }
+
+    button {
+      font: inherit;
+      color: var(--fg);
+      background: var(--button);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 999px;
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+    button:hover { background: var(--button-hover); }
+    #play-all { font-size: 18px; padding: 14px 32px; }
+
+    #bar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 2;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: linear-gradient(transparent, var(--panel));
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    body.ui #bar { opacity: 1; pointer-events: auto; }
+    #now { margin-right: auto; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <!--
+    Plays every video in order, full screen, with sound.
+    Click "Play all" first: browsers only allow sound after a click.
+
+    Optional URL settings:
+      ?list=yt:ID,tt:ID,...   use your own list (yt = YouTube, tt = TikTok)
+      &loop=0                 stop at the end instead of starting over
+      &shuffle=1              play in random order
+      &start=5                start at video number 5
+
+    Keys: → next, ← previous, F full screen.
+  -->
+  <div id="stage">
+    <div id="yt-wrap"><div id="yt"></div></div>
+    <div id="tt-wrap"></div>
+  </div>
+
+  <div id="start">
+    <h1>Pook Playlist</h1>
+    <p id="count"></p>
+    <button id="play-all" type="button">▶ Play all</button>
+    <p>Plays full screen with sound. Move the mouse to see controls.</p>
+  </div>
+
+  <div id="bar">
+    <span id="now"></span>
+    <button id="prev" type="button">⏮ Prev</button>
+    <button id="next" type="button">Next ⏭</button>
+    <button id="fs" type="button">⛶ Full screen</button>
+  </div>
+
+  <script>
+    (function () {
+      // Same order as the Pook Gaming Center page.
+      var DEFAULT_LIST = [
+        'tt:7463547522414365974', 'yt:WzFgVCbw7Rg', 'tt:7395790052535618822',
+        'yt:By416mzsTH8', 'yt:JzUnmNiRnpw', 'yt:PiYE-DJ4jwQ',
+        'yt:u9o1OYX5UOQ', 'yt:rmlWSkxTWbA', 'tt:7526568710807489805',
+        'yt:ibNrPjETR_k', 'yt:pIwRg6rb1cI', 'yt:uXsZz4bwEYQ', 'yt:Nh9BrD3xIeU',
+        'tt:7486226012511178030', 'tt:7457288576410094853', 'tt:7361983763204574470'
+      ];
+      // If a TikTok never reports that it ended, move on after this long.
+      var TIKTOK_FALLBACK_MS = 3 * 60 * 1000;
+
+      var params = new URLSearchParams(location.search);
+      var list = parseList(params.get('list')) || DEFAULT_LIST.slice();
+      var loopAll = params.get('loop') !== '0';
+      if (params.get('shuffle') === '1') shuffle(list);
+      var index = Math.max(0, Math.min(list.length - 1, (parseInt(params.get('start'), 10) || 1) - 1));
+
+      var ytPlayer = null;
+      var ytReady = false;
+      var pendingYt = null;
+      var ttTimer = null;
+      var uiTimer = null;
+
+      var el = function (id) { return document.getElementById(id); };
+      el('count').textContent = list.length + ' videos, in order' + (loopAll ? ', repeating' : '') + '.';
+
+      function parseList(raw) {
+        if (!raw) return null;
+        var items = raw.split(',').map(function (s) { return s.trim(); }).filter(function (s) {
+          return /^yt:[\w-]{11}$/.test(s) || /^tt:\d{15,25}$/.test(s);
+        });
+        return items.length ? items : null;
+      }
+
+      function shuffle(a) {
+        for (var i = a.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var t = a[i]; a[i] = a[j]; a[j] = t;
+        }
+      }
+
+      // ---------- YouTube ----------
+      var tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(tag);
+
+      var ytApiReady = false;
+      window.onYouTubeIframeAPIReady = function () {
+        ytApiReady = true;
+        if (pendingYt) { var id = pendingYt; pendingYt = null; playYt(id); }
+      };
+
+      // The player is made the first time a YouTube video plays, while it is visible.
+      function createYt(id) {
+        ytPlayer = new YT.Player('yt', {
+          width: '100%',
+          height: '100%',
+          videoId: id,
+          playerVars: { autoplay: 1, controls: 1, rel: 0, playsinline: 1, modestbranding: 1 },
+          events: {
+            onReady: function (e) {
+              ytReady = true;
+              e.target.unMute();
+              e.target.setVolume(100);
+              e.target.playVideo();
+              if (pendingYt) { var next_ = pendingYt; pendingYt = null; playYt(next_); }
+            },
+            onStateChange: function (e) {
+              if (e.data === YT.PlayerState.ENDED) next();
+            },
+            // 101/150: the owner blocked embedding. Skip it.
+            onError: function () { next(); }
+          }
+        });
+      }
+
+      function playYt(id) {
+        el('yt-wrap').classList.add('on');
+        if (!ytApiReady) { pendingYt = id; return; }
+        if (!ytPlayer) { createYt(id); return; }
+        if (!ytReady) { pendingYt = id; return; }
+        ytPlayer.unMute();
+        ytPlayer.setVolume(100);
+        ytPlayer.loadVideoById(id);
+      }
+
+      function stopYt() {
+        pendingYt = null;
+        el('yt-wrap').classList.remove('on');
+        if (ytReady) ytPlayer.stopVideo();
+      }
+
+      // ---------- TikTok ----------
+      function playTt(id) {
+        var wrap = el('tt-wrap');
+        wrap.innerHTML = '';
+        var q = new URLSearchParams({
+          autoplay: '1', loop: '0', muted: '0', controls: '1',
+          music_info: '0', description: '0', rel: '0'
+        });
+        var f = document.createElement('iframe');
+        f.src = 'https://www.tiktok.com/player/v1/' + id + '?' + q.toString();
+        f.allow = 'autoplay; encrypted-media; fullscreen';
+        f.title = 'TikTok video';
+        wrap.appendChild(f);
+        wrap.classList.add('on');
+        clearTimeout(ttTimer);
+        ttTimer = setTimeout(next, TIKTOK_FALLBACK_MS);
+      }
+
+      function stopTt() {
+        clearTimeout(ttTimer);
+        var wrap = el('tt-wrap');
+        wrap.innerHTML = '';
+        wrap.classList.remove('on');
+      }
+
+      function ttCommand(type) {
+        var f = el('tt-wrap').querySelector('iframe');
+        if (f) f.contentWindow.postMessage({ type: type, value: null, 'x-tiktok-player': true }, '*');
+      }
+
+      window.addEventListener('message', function (e) {
+        if (!/(^|\.)tiktok\.com$/.test(new URL(e.origin).hostname)) return;
+        var d = e.data;
+        if (typeof d === 'string') { try { d = JSON.parse(d); } catch (err) { return; } }
+        if (!d || !d['x-tiktok-player']) return;
+        if (d.type === 'onPlayerReady') { ttCommand('unMute'); ttCommand('play'); }
+        // TikTok state 0 = ended.
+        if (d.type === 'onStateChange' && d.value === 0) next();
+      });
+
+      // ---------- Playlist ----------
+      function show(i) {
+        index = i;
+        var item = list[index];
+        var kind = item.slice(0, 2);
+        var id = item.slice(3);
+        if (kind === 'yt') { stopTt(); playYt(id); }
+        else { stopYt(); playTt(id); }
+        el('now').textContent = (index + 1) + ' / ' + list.length + (kind === 'yt' ? ' · YouTube' : ' · TikTok');
+      }
+
+      function next() {
+        if (index + 1 < list.length) show(index + 1);
+        else if (loopAll) show(0);
+        else { stopYt(); stopTt(); el('now').textContent = 'Done'; }
+      }
+
+      function prev() { show(index > 0 ? index - 1 : list.length - 1); }
+
+      function toggleFullscreen() {
+        if (document.fullscreenElement) { document.exitFullscreen(); return; }
+        var root = document.documentElement;
+        var req = root.requestFullscreen || root.webkitRequestFullscreen;
+        if (req) {
+          try {
+            var r = req.call(root);
+            if (r && r.catch) r.catch(function () {});
+          } catch (err) { /* not allowed here; keep playing in the window */ }
+        }
+      }
+
+      el('play-all').addEventListener('click', function () {
+        el('start').classList.add('hidden');
+        toggleFullscreen();
+        show(index);
+        flashUi();
+      });
+      el('next').addEventListener('click', next);
+      el('prev').addEventListener('click', prev);
+      el('fs').addEventListener('click', toggleFullscreen);
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowRight') next();
+        else if (e.key === 'ArrowLeft') prev();
+        else if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+      });
+
+      function flashUi() {
+        document.body.classList.add('ui');
+        clearTimeout(uiTimer);
+        uiTimer = setTimeout(function () { document.body.classList.remove('ui'); }, 2500);
+      }
+      document.addEventListener('mousemove', flashUi);
+      document.addEventListener('touchstart', flashUi);
+
+      // Testing hook.
+      window.pookPlaylist = {
+        next: next, prev: prev, show: show, list: list,
+        get index() { return index; },
+        get ytState() { return ytReady ? ytPlayer.getPlayerState() : 'not ready'; },
+        get ytVideo() { return ytReady ? ytPlayer.getVideoData().video_id : null; },
+        get ytMuted() { return ytReady ? ytPlayer.isMuted() : null; }
+      };
+    })();
+  </script>
+</body>
+</html>

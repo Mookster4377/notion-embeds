@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>YouTube Tap for Sound</title>
+  <style>
+    :root {
+      --bg: #000;
+      --chip-bg: rgba(0, 0, 0, 0.6);
+      --chip-fg: #fff;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: var(--bg);
+      overflow: hidden;
+      font: 13px/1.2 system-ui, -apple-system, sans-serif;
+    }
+    #player, #player iframe {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+    /* Clear layer over the video: catches the click that turns sound on or off. */
+    #tap {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      cursor: pointer;
+      background: transparent;
+      border: 0;
+      padding: 0;
+    }
+    #chip {
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
+      z-index: 3;
+      pointer-events: none;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--chip-bg);
+      color: var(--chip-fg);
+      transition: opacity 0.4s;
+    }
+    #chip.fade { opacity: 0; }
+    #msg {
+      color: #888;
+      padding: 16px;
+    }
+  </style>
+</head>
+<body>
+  <!--
+    Usage: youtube-sound.html?v=VIDEO_ID
+    Autoplays muted on a loop (browsers require muted autoplay).
+    Click the video to turn sound on; click again to mute.
+  -->
+  <div id="player"></div>
+  <button id="tap" type="button" aria-label="Turn sound on"></button>
+  <div id="chip">🔊 Tap for sound</div>
+
+  <script>
+    (function () {
+      var p = new URLSearchParams(location.search);
+      var raw = p.get('v') || '';
+      var m = raw.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/);
+      var id = m ? m[1] : raw;
+      var tap = document.getElementById('tap');
+      var chip = document.getElementById('chip');
+
+      if (!/^[\w-]{11}$/.test(id)) {
+        document.body.innerHTML = '<div id="msg">Add ?v=VIDEO_ID to the URL, e.g. youtube-sound.html?v=SYD1MmZvR1s</div>';
+        return;
+      }
+
+      var player = null;
+      var ready = false;
+      var soundOn = false;
+      var fadeTimer = null;
+
+      function showChip(text, autoHide) {
+        chip.textContent = text;
+        chip.classList.remove('fade');
+        clearTimeout(fadeTimer);
+        if (autoHide) fadeTimer = setTimeout(function () { chip.classList.add('fade'); }, 1500);
+      }
+
+      window.onYouTubeIframeAPIReady = function () {
+        player = new YT.Player('player', {
+          videoId: id,
+          playerVars: {
+            autoplay: 1,
+            mute: 1,
+            controls: 0,
+            playsinline: 1,
+            rel: 0,
+            loop: 1,
+            playlist: id // YouTube only loops when the video is its own playlist
+          },
+          events: {
+            onReady: function (e) {
+              ready = true;
+              e.target.mute();
+              e.target.playVideo();
+            },
+            onStateChange: function (e) {
+              // Belt and braces: restart if the loop setting doesn't kick in.
+              if (e.data === YT.PlayerState.ENDED) { e.target.seekTo(0); e.target.playVideo(); }
+            }
+          }
+        });
+      };
+
+      tap.addEventListener('click', function () {
+        if (!ready) return;
+        if (soundOn) {
+          player.mute();
+          soundOn = false;
+          tap.setAttribute('aria-label', 'Turn sound on');
+          showChip('🔊 Tap for sound', false);
+        } else {
+          player.unMute();
+          player.setVolume(100);
+          player.playVideo();
+          soundOn = true;
+          tap.setAttribute('aria-label', 'Mute');
+          showChip('🔇 Tap to mute', true);
+          // If the browser blocked sound (some embeds don't allow it), say so instead of failing silently.
+          setTimeout(function () {
+            if (player.isMuted()) {
+              soundOn = false;
+              showChip('Sound blocked here — open in a new tab', false);
+            }
+            console.log('tap-sound muted after click:', player.isMuted());
+          }, 800);
+        }
+      });
+
+      var tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(tag);
+
+      // Testing hook.
+      window.tapSound = {
+        get muted() { return ready ? player.isMuted() : null; },
+        get state() { return ready ? player.getPlayerState() : 'not ready'; }
+      };
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Autoplay Video</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: transparent;
+      overflow: hidden;
+    }
+    video {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain; /* override with ?fit=cover */
+      background: transparent;
+    }
+  </style>
+</head>
+<body>
+  <!--
+    Default: plays video.mp4 sitting next to this file.
+    Optional URL parameters:
+      ?src=https://example.com/clip.mp4   use a different video
+      &fit=cover                          fill the block (crops edges)
+      &controls=1                         show play/pause controls
+      &loop=0                             play once instead of looping
+      &poster=https://.../thumb.jpg       image shown while loading
+  -->
+  <video id="v" src="video.mp4" autoplay muted loop playsinline preload="auto"></video>
+
+  <script>
+    (function () {
+      var p = new URLSearchParams(location.search);
+      var v = document.getElementById('v');
+
+      if (p.get('src'))    v.src = p.get('src');
+      if (p.get('poster')) v.poster = p.get('poster');
+      if (p.get('fit'))    v.style.objectFit = p.get('fit');
+      if (p.get('controls') === '1') v.controls = true;
+      if (p.get('loop') === '0')     v.loop = false;
+
+      // Browsers only allow autoplay when muted; set the property too, not just the attribute.
+      v.muted = true;
+
+      // Retry play in case the browser held it back (e.g. embed loaded off-screen).
+      function tryPlay() {
+        var r = v.play();
+        if (r && r.catch) r.catch(function () {});
+      }
+      v.addEventListener('canplay', tryPlay);
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) tryPlay();
+      });
+      tryPlay();
+    })();
+  </script>
+</body>
+</html>

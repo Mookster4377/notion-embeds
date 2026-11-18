@@ -1,0 +1,11 @@
+# Only the public embed pages go to GitHub Pages. Everything else stays local.
+*
+!.gitignore
+!.nojekyll
+!index.html
+!youtube.html
+!youtube-sound.html
+!tiktok.html
+!playlist.html
+!sports.html
+!yeonskylar.mp4

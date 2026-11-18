@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Autoplay YouTube</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: transparent;
+      overflow: hidden;
+    }
+    iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+    #msg {
+      font: 14px/1.4 system-ui, sans-serif;
+      color: #888;
+      padding: 16px;
+    }
+  </style>
+</head>
+<body>
+  <!--
+    Usage: youtube.html?v=VIDEO_ID
+    Optional:
+      &controls=1   show YouTube controls (hidden by default)
+      &loop=0       play once instead of looping
+      &start=30     start at 30 seconds
+  -->
+  <div id="msg"></div>
+
+  <script>
+    (function () {
+      var p = new URLSearchParams(location.search);
+      var raw = p.get('v') || '';
+
+      // Accept a bare ID or a full YouTube link.
+      var m = raw.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/);
+      var id = m ? m[1] : raw;
+
+      if (!/^[\w-]{11}$/.test(id)) {
+        document.getElementById('msg').textContent =
+          'Add ?v=VIDEO_ID to the URL, e.g. youtube.html?v=SYD1MmZvR1s';
+        return;
+      }
+
+      var params = new URLSearchParams({
+        autoplay: '1',
+        mute: '1',            // required: browsers block autoplay with sound
+        playsinline: '1',     // iPhone/iPad: play in place, not fullscreen
+        controls: p.get('controls') === '1' ? '1' : '0',
+        rel: '0',             // related videos only from the same channel
+        loop: p.get('loop') === '0' ? '0' : '1',
+        playlist: id          // YouTube only loops when the video is its own playlist
+      });
+      if (p.get('start')) params.set('start', p.get('start'));
+
+      var f = document.createElement('iframe');
+      f.src = 'https://www.youtube.com/embed/' + id + '?' + params.toString();
+      f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+      f.allowFullscreen = true;
+      f.title = 'YouTube video';
+      document.body.innerHTML = '';
+      document.body.appendChild(f);
+    })();
+  </script>
+</body>
+</html>
