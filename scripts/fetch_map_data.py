@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Download OpenStreetMap data for the Tampa Bay traffic map (traffic.html).
 
-Run nightly by .github/workflows/map-data.yml. Writes, into the output folder:
+Run nightly by .github/workflows/map-data.yml. For each city (Tampa Bay → North Port in the output folder,
+Orlando in <output>/orlando/), writes:
   tiles/r{row}c{col}.json  everything the map needs for one 0.1-degree tile
   highways.json            interstates, U.S. and main state routes (for zoomed-out views)
   points.json              place names, museums, colleges, venues and malls (for zoomed-out views)
@@ -20,8 +21,11 @@ import urllib.request
 from datetime import datetime, timezone
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else "out"
-GRID = {"lat0": 26.8, "lon0": -83.0, "step": 0.1, "rows": 15, "cols": 11}
-REGION = (26.85, -82.95, 28.25, -81.95)  # south, west, north, east: Tampa Bay to North Port
+# Each city: output subfolder, tile grid (must match TILE in traffic.html) and area (south, west, north, east).
+CITIES = [
+    {"dir": "", "grid": {"lat0": 26.8, "lon0": -83.0, "step": 0.1, "rows": 15, "cols": 11}, "region": (26.85, -82.95, 28.25, -81.95)},
+    {"dir": "orlando", "grid": {"lat0": 28.2, "lon0": -81.75, "step": 0.1, "rows": 7, "cols": 8}, "region": (28.25, -81.70, 28.85, -81.00)},
+]
 SERVERS = [
     "https://overpass-api.de/api/interpreter",
     "https://overpass.private.coffee/api/interpreter",
@@ -63,7 +67,8 @@ out body geom qt;
 out center qt;"""
 
 
-REGION_FILES = {
+def region_files(REGION):
+    return {
     "highways.json": f"""[out:json][timeout:240];
 way["highway"~"^(motorway|trunk|primary)$"]["ref"~"^(I|US|SR|FL|CR) ?[0-9]"]({bb(*REGION)});
 out tags geom qt;""",
@@ -85,7 +90,7 @@ out center tags qt;""",
     "counties.json": f"""[out:json][timeout:240];
 relation["boundary"="administrative"]["admin_level"="6"]({bb(*REGION)});
 out geom qt;""",
-}
+    }
 
 
 def fetch(query, attempts=6):
@@ -139,18 +144,20 @@ def save(path, data):
     return len(els)
 
 
-def main():
-    os.makedirs(os.path.join(OUT, "tiles"), exist_ok=True)
+def run_city(city):
+    out_dir = os.path.join(OUT, city["dir"]) if city["dir"] else OUT
+    os.makedirs(os.path.join(out_dir, "tiles"), exist_ok=True)
+    print(f"== {city['dir'] or 'tampa'} ==", flush=True)
     failed = []
-    for name, q in REGION_FILES.items():
+    for name, q in region_files(city["region"]).items():
         print(f"{name} ...", flush=True)
         try:
-            print(f"  {save(os.path.join(OUT, name), fetch(q))} elements", flush=True)
+            print(f"  {save(os.path.join(out_dir, name), fetch(q))} elements", flush=True)
         except Exception as e:
             print(f"  FAILED {name}: {e}", flush=True)
             failed.append(name)
         time.sleep(3)
-    g = GRID
+    g = city["grid"]
     total = g["rows"] * g["cols"]
     for r in range(g["rows"]):
         for c in range(g["cols"]):
@@ -158,18 +165,23 @@ def main():
             s, w = g["lat0"] + r * g["step"], g["lon0"] + c * g["step"]
             box = bb(s, w, s + g["step"], w + g["step"])
             try:
-                n = save(os.path.join(OUT, "tiles", tid + ".json"), fetch(tile_query(box)))
+                n = save(os.path.join(out_dir, "tiles", tid + ".json"), fetch(tile_query(box)))
                 print(f"{tid}: {n} elements", flush=True)
             except Exception as e:
                 print(f"{tid}: FAILED {e}", flush=True)
                 failed.append(tid)
             time.sleep(2)  # be polite to the shared servers
-    with open(os.path.join(OUT, "meta.json"), "w") as f:
-        json.dump({"generated": datetime.now(timezone.utc).isoformat(timespec="seconds"), "grid": GRID, "failed": failed}, f)
+    with open(os.path.join(out_dir, "meta.json"), "w") as f:
+        json.dump({"generated": datetime.now(timezone.utc).isoformat(timespec="seconds"), "grid": g, "failed": failed}, f)
     print(f"done: {total} tiles, {len(failed)} failed: {failed}", flush=True)
+    return len([x for x in failed if x.startswith("r")]) > total * 0.2
+
+
+def main():
+    bad = [c["dir"] or "tampa" for c in CITIES if run_city(c)]
     # Don't publish a mostly-empty set over yesterday's good data.
-    if len([x for x in failed if x.startswith("r")]) > total * 0.2:
-        sys.exit("too many tiles failed; keeping the previous data")
+    if bad:
+        sys.exit(f"too many tiles failed for {bad}; keeping the previous data")
 
 
 if __name__ == "__main__":
