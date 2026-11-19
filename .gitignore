@@ -11,7 +11,7 @@
 !traffic.html
 !yeonskylar.mp4
 !scripts/
-!scripts/fetch_map_data.py
+!scripts/build_map_data.py
 !.github/
 !.github/workflows/
 !.github/workflows/map-data.yml

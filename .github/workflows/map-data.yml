@@ -1,11 +1,14 @@
-# Downloads OpenStreetMap data for traffic.html every night and publishes it to the
-# "map-data" branch (replaced each time, so the repo doesn't grow). The map reads it from
-# raw.githubusercontent.com and falls back to the live OpenStreetMap servers if it's missing.
+# Builds OpenStreetMap data for traffic.html every night and publishes it to the "map-data" branch
+# (replaced each time, so the repo doesn't grow). The map reads it from raw.githubusercontent.com and
+# falls back to the live OpenStreetMap servers for anything missing.
+#
+# Source: Geofabrik's daily Florida extract (one download), cut into Tampa Bay and Orlando tiles locally.
+# If any step fails, nothing is published and yesterday's data stays in place.
 name: Refresh map data
 
 on:
   schedule:
-    - cron: "23 7 * * *"   # 3:23 am Eastern (EDT) / 2:23 am (EST)
+    - cron: "23 7 * * *"   # 3:23 am Eastern (EDT) / 2:23 am (EST); Geofabrik updates Florida overnight
   workflow_dispatch:
 
 permissions:
@@ -18,7 +21,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 140
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -26,13 +29,17 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Start from the last published data
+      - name: Install osmium
         run: |
-          git clone -q --depth 1 --branch map-data "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" out || mkdir -p out
-          rm -rf out/.git
+          sudo apt-get update -q
+          sudo apt-get install -y -q osmium-tool
+          pip install -q osmium
 
-      - name: Download OpenStreetMap data
-        run: python scripts/fetch_map_data.py out
+      - name: Download the Florida map (Geofabrik)
+        run: curl -fsSL --retry 5 --retry-delay 20 -o florida.osm.pbf https://download.geofabrik.de/north-america/us/florida-latest.osm.pbf
+
+      - name: Build Tampa Bay and Orlando tiles
+        run: python scripts/build_map_data.py florida.osm.pbf out
 
       - name: Publish to the map-data branch
         working-directory: out
@@ -44,4 +51,4 @@ jobs:
           git add -A
           git commit -q -m "Map data $(date -u +%Y-%m-%dT%H:%MZ)"
           git push -q --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" map-data
-          du -sh . && ls tiles | wc -l
+          du -sh . && ls tiles | wc -l && ls orlando/tiles | wc -l
