@@ -12,20 +12,20 @@
 /* Layout: region chips → big live Waze map → road guide map (hotspots, lanes, merges) → lane table. */
 :root {
   --bg: #eef1f4; --card: #ffffff; --ink: #141a21; --muted: #5b6672; --line: #d8dee5; --chip: #e5eaef;
-  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057; --interstate: #364fc7; --ushwy: #c2255c; --staterd: #e0a800; --countyrd: #1098ad;
+  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057; --interstate: #364fc7; --ushwy: #c2255c; --staterd: #e0a800; --countyrd: #1098ad; --poi: #5f3dc4;
   --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db;
+    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db;
+  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -92,6 +92,7 @@ section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); 
 .county-label { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; font: 700 13px var(--display); letter-spacing: .12em; text-transform: uppercase; color: #fff; text-shadow: 0 0 3px #000, 0 0 6px #000; }
 .shield { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; font: 700 11px var(--body); color: #fff; border: 1.5px solid #fff; border-radius: 5px; padding: 1px 5px; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
 .shield.state { color: #1a1400; }
+.pin.poi { width: 24px; height: 24px; font-size: 13px; }
 .pin.gate { width: 20px; height: 20px; font-size: 10px; }
 .pin.school { color: #1a1400; width: 20px; height: 20px; font-size: 11px; }
 .zone-status { color: var(--muted); font-size: 12px; margin-left: auto; }
@@ -156,6 +157,8 @@ tr:last-child td { border-bottom: 0; }
         <span class="links">
           <a id="lnkGoogle" target="_blank" rel="noopener">Google traffic ↗</a>
           <a href="https://fl511.com/map" target="_blank" rel="noopener">FL511 incidents &amp; cameras ↗</a>
+          <a href="https://communitycrimemap.com/" target="_blank" rel="noopener">Crime map (police reports) ↗</a>
+          <a href="https://www.crimemapping.com/" target="_blank" rel="noopener">CrimeMapping ↗</a>
         </span>
       </div>
     </div>
@@ -342,7 +345,10 @@ tr:last-child td { border-bottom: 0; }
     highways: { label: "Highways, state & county roads", letter: "", v: "--interstate" },
     counties: { label: "County lines",         letter: "", v: "--county" },
     areas:   { label: "Urban / suburban / rural", letter: "", v: "--suburban" },
-    gates:   { label: "Gated communities",     letter: "🔒", v: "--gate" }
+    gates:   { label: "Gated communities",     letter: "🔒", v: "--gate" },
+    airports: { label: "Airports",             letter: "✈️", v: "--poi" },
+    museums: { label: "Museums",               letter: "🏛️", v: "--poi" },
+    colleges: { label: "Colleges",             letter: "🎓", v: "--poi" }
   };
 
   var css = getComputedStyle(document.documentElement);
@@ -803,6 +809,25 @@ tr:last-child td { border-bottom: 0; }
             .bindPopup(popup).addTo(layers.highways);
         });
       } },
+    // Airports, museums and colleges from OpenStreetMap.
+    airports: { on: true, minZoom: 8, boxes: [], busy: false, seen: {},
+      query: function () { return '[out:json][timeout:30];nwr["aeroway"="aerodrome"]["name"]["aerodrome:type"!~"private|military"](26.85,-82.95,28.25,-81.95);out center tags;'; },
+      draw: function (els) {
+        live.airports.boxes.push(L.latLngBounds([[26.85, -82.95], [28.25, -81.95]]));
+        els.forEach(function (e) {
+        var t = e.tags || {};
+        if (!t.iata && !t.icao && !/airport/i.test(t.name || "")) return;
+        poiMarker("airports", e, "✈️", t.iata ? "Airport · " + t.iata : "Airport",
+          (t.iata ? "Commercial airport (" + esc(t.iata) + "). " : "Airport. ") + "Expect heavy pickup and drop-off traffic around flight times.");
+      }); } },
+    museums: { on: true, minZoom: 12, boxes: [], busy: false, seen: {},
+      query: function (bb) { return '[out:json][timeout:25];nwr["tourism"="museum"]["name"](' + bb + ');out center tags;'; },
+      draw: function (els) { els.forEach(function (e) { poiMarker("museums", e, "🏛️", "Museum", ""); }); } },
+    colleges: { on: true, minZoom: 11, boxes: [], busy: false, seen: {},
+      query: function (bb) { return '[out:json][timeout:25];nwr["amenity"~"^(university|college)$"]["name"](' + bb + ');out center tags;'; },
+      draw: function (els) { els.forEach(function (e) {
+        poiMarker("colleges", e, "🎓", e.tags.amenity === "university" ? "University" : "College", "Busy around class changes; watch for pedestrians, bikes and scooters.");
+      }); } },
     // Urban / suburban / rural from OpenStreetMap place types.
     areas: { on: true, minZoom: 11, boxes: [], busy: false, seen: {},
       query: function (bb) { return '[out:json][timeout:25];node["place"~"^(city|town|suburb|village|hamlet|neighbourhood|quarter)$"](' + bb + ');out;'; },
@@ -841,6 +866,17 @@ tr:last-child td { border-bottom: 0; }
         });
       } }
   };
+  function poiMarker(layer, e, emoji, kind, note) {
+    var key = e.type + e.id; if (live[layer].seen[key]) return; live[layer].seen[key] = 1;
+    var t = e.tags || {}, lat = e.lat || (e.center && e.center.lat), lon = e.lon || (e.center && e.center.lon);
+    if (!lat || !t.name) return;
+    var site = t.website || t["contact:website"];
+    var icon = L.divIcon({ className: "", iconSize: [24, 24], iconAnchor: [12, 12], html: '<div class="pin poi" style="background:' + color("--poi") + '"><span>' + emoji + "</span></div>" });
+    L.marker([lat, lon], { icon: icon, title: t.name, keyboard: true })
+      .bindPopup('<div class="tag" style="color:' + color("--poi") + '">' + esc(kind) + "</div><h3>" + (site && /^https?:/.test(site) ? '<a href="' + esc(site) + '" target="_blank" rel="noopener">' + esc(t.name) + "</a>" : esc(t.name)) + "</h3>" +
+        (note ? note + "<br>" : "") + '<a href="https://www.google.com/maps/dir/?api=1&destination=' + lat + "," + lon + '" target="_blank" rel="noopener">Directions ↗</a>')
+      .addTo(layers[layer]);
+  }
   var liveTimer = null;
   function loadLive(k) {
     var L_ = live[k];
