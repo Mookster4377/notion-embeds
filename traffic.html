@@ -12,20 +12,20 @@
 /* Layout: region chips → big live Waze map → road guide map (hotspots, lanes, merges) → lane table. */
 :root {
   --bg: #eef1f4; --card: #ffffff; --ink: #141a21; --muted: #5b6672; --line: #d8dee5; --chip: #e5eaef;
-  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c;
+  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057;
   --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d;
+    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d;
+  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -85,6 +85,10 @@ section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); 
 .pin.add { width: 18px; height: 18px; font-size: 13px; }
 .sign { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; font: 700 10px var(--body); letter-spacing: .04em; color: #fff; background: #0b6b3a; border: 1.5px solid #fff; border-radius: 4px; padding: 1px 5px; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
 .sign.on { background: #fff; color: #0b6b3a; border-color: #0b6b3a; }
+.area { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; font: 600 11px var(--body); color: var(--ink); background: var(--card); border-radius: 999px; padding: 1px 8px 1px 6px; box-shadow: 0 1px 3px rgba(0,0,0,.3); opacity: .92; }
+.area i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+.county-label { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; font: 700 13px var(--display); letter-spacing: .12em; text-transform: uppercase; color: #fff; text-shadow: 0 0 3px #000, 0 0 6px #000; }
+.pin.gate { width: 20px; height: 20px; font-size: 10px; }
 .pin.school { color: #1a1400; width: 20px; height: 20px; font-size: 11px; }
 .zone-status { color: var(--muted); font-size: 12px; margin-left: auto; }
 .hours { margin: 6px 0 0; border-collapse: collapse; font-size: 12px; }
@@ -125,7 +129,7 @@ tr:last-child td { border-bottom: 0; }
   <header>
     <div>
       <h1>Tampa Bay Traffic</h1>
-      <div class="sub">Tampa · St. Pete · Sarasota · North Port</div>
+      <div class="sub">Tampa Bay to North Port: Tampa · Brandon · St. Pete · Bradenton · Sarasota · Venice · North Port</div>
     </div>
     <div class="chips" id="chips" role="group" aria-label="Region"></div>
   </header>
@@ -169,10 +173,13 @@ tr:last-child td { border-bottom: 0; }
 <script>
 (function () {
   var REGIONS = {
-    all:       { name: "All four",   lat: 27.47,  lon: -82.45,  z: 9 },
+    all:       { name: "All areas",  lat: 27.50,  lon: -82.45,  z: 9 },
     tampa:     { name: "Tampa",      lat: 27.965, lon: -82.47,  z: 11 },
+    brandon:   { name: "Brandon / Riverview", lat: 27.86, lon: -82.33, z: 11 },
     stpete:    { name: "St. Pete",   lat: 27.80,  lon: -82.66,  z: 11 },
+    bradenton: { name: "Bradenton",  lat: 27.48,  lon: -82.55,  z: 11 },
     sarasota:  { name: "Sarasota",   lat: 27.33,  lon: -82.51,  z: 11 },
+    venice:    { name: "Venice",     lat: 27.10,  lon: -82.42,  z: 12 },
     northport: { name: "North Port", lat: 27.06,  lon: -82.22,  z: 11 }
   };
 
@@ -232,6 +239,20 @@ tr:last-child td { border-bottom: 0; }
     {"t": "crash", "r": "sarasota", "lat": 27.271, "lon": -82.45, "name": "Clark Rd at I-75", "d": "The county's most crash-prone road segment in 2020; a pedestrian was killed on I-75 SB by Clark Rd in 2026.", "src": "https://news.yahoo.com/bee-ridge-beneva-intersection-high-090100135.html", "srcName": "Sarasota Herald-Tribune via Yahoo"},
     {"t": "crash", "r": "northport", "lat": 27.045, "lon": -82.165, "name": "I-75, mile markers 176–178", "d": "Repeated 2026 closures: multi-vehicle crash (Sept 17), dump-truck fire (Aug 24), semi crash (Aug 6), fatal semi crash (Apr 12).", "src": "https://www.mysuncoast.com/2026/09/17/multi-vehicle-crash-shuts-down-i-75-southbound-north-port/", "srcName": "WWSB"},
     {"t": "crash", "r": "northport", "lat": 27.06, "lon": -82.1965, "name": "Toledo Blade Blvd at I-75 ramps", "d": "A flatbed semi crash closed northbound Toledo Blade at the I-75 ramps on April 17, 2026.", "src": "https://www.mysuncoast.com/2026/04/17/major-crash-involving-tractor-trailer-closes-toledo-blade-blvd-friday-morning/", "srcName": "WWSB"},
+    // Brandon/Riverview, Bradenton and Venice
+    {"t": "jam", "r": "brandon", "lat": 27.793, "lon": -82.344, "name": "I-75 at Big Bend Rd (Exit 250)", "d": "Fast-growing Riverview/Apollo Beach area; ramps back onto I-75 during rush hours."},
+    {"t": "jam", "r": "brandon", "lat": 27.717, "lon": -82.377, "name": "I-75 at SR-674 / Sun City Center (Exit 240)", "d": "Ramp and signal backups on SR-674, worst in the evening."},
+    {"t": "crash", "r": "brandon", "lat": 27.86, "lon": -82.327, "name": "US-301 through Riverview", "d": "Busy six-lane corridor with many driveways and signals; frequent crashes."},
+    {"t": "jam", "r": "bradenton", "lat": 27.4958, "lon": -82.479, "name": "I-75 at SR-64 / Manatee Ave (Exit 220)", "d": "Lakewood Ranch and east Bradenton traffic; ramps back up at peak times."},
+    {"t": "jam", "r": "bradenton", "lat": 27.446, "lon": -82.48, "name": "I-75 at SR-70 (Exit 217)", "d": "Heavy growth along SR-70; signals at the ramps back up."},
+    {"t": "jam", "r": "bradenton", "lat": 27.522, "lon": -82.492, "name": "I-75 at US-301 / Ellenton (Exit 224)", "d": "Outlet mall and US-301 traffic."},
+    {"t": "jam", "r": "bradenton", "lat": 27.463, "lon": -82.572, "name": "US-41 & Cortez Rd", "d": "Two of Bradenton's busiest roads cross; slow most afternoons."},
+    {"t": "jam", "r": "bradenton", "lat": 27.495, "lon": -82.633, "name": "Manatee Ave W toward Anna Maria Island", "d": "Beach traffic backs up toward the island, especially on weekends and in season."},
+    {"t": "crash", "r": "bradenton", "lat": 27.48, "lon": -82.5735, "name": "US-41 (14th St W) corridor", "d": "Wide, fast road with many driveways; frequent crashes and pedestrian incidents."},
+    {"t": "merge", "r": "bradenton", "lat": 27.586, "lon": -82.497, "name": "I-275 joins I-75 (Exit 228)", "d": "Skyway traffic from I-275 merges into I-75. Watch for lanes ending and heavy merging."},
+    {"t": "crash", "r": "venice", "lat": 27.0995, "lon": -82.406, "name": "Jacaranda Blvd & E Venice Ave roundabout", "d": "One of the area's oldest roundabouts, with a high crash rate.", "src": "https://www.sarasotamagazine.com/articles/intersections", "srcName": "Sarasota Magazine"},
+    {"t": "jam", "r": "venice", "lat": 27.099, "lon": -82.439, "name": "US-41 Bypass & Venice Ave", "d": "Main route onto the island; slow in season and when drawbridges open."},
+    {"t": "jam", "r": "venice", "lat": 27.0995, "lon": -82.39, "name": "I-75 at Venice Ave (Exit 193)", "d": "Ramp backups at commute times."},
     // Merges
     { t: "merge", r: "tampa", lat: 27.9590, lon: -82.4560, name: "I-275 NB → I-4 EB split", d: "Left lanes become I-4 exit lanes. Get in your lane before downtown; last-second lane changes cause most crashes here." },
     { t: "merge", r: "tampa", lat: 27.9540, lon: -82.5450, name: "I-275 SB: Veterans Expwy + SR-60 merge", d: "Traffic from Veterans and the airport joins from the right before the Howard Frankland." },
@@ -270,6 +291,14 @@ tr:last-child td { border-bottom: 0; }
     { r: "northport", road: "I-75", stretch: "North Port (Exits 179–182)", lanes: "2–3", lat: 27.0720, lon: -82.2200, merge: "Lane taper near River Rd; on-ramps at Toledo Blade and Sumter." },
     { r: "northport", road: "US-41 (Tamiami Trail)", stretch: "Through North Port", lanes: "3", lat: 27.0300, lon: -82.2000, merge: "Turn lanes at Sumter, Toledo Blade and Ortiz; right lane drops near the city limits." },
     { r: "northport", road: "Sumter Blvd", stretch: "US-41 → I-75", lanes: "2", lat: 27.0600, lon: -82.2380, merge: "Merges at the I-75 ramps." },
+    {"r": "brandon", "road": "I-75", "stretch": "Brandon → Sun City Center", "lanes": "3", "lat": 27.8, "lon": -82.34, "merge": "On-ramps at Big Bend Rd and Gibsonton add traffic in the right lane."},
+    {"r": "brandon", "road": "US-301", "stretch": "Riverview", "lanes": "3", "lat": 27.88, "lon": -82.327, "merge": "Turn lanes at most signals; lanes drop south of Big Bend Rd."},
+    {"r": "bradenton", "road": "I-75", "stretch": "Manatee County", "lanes": "3", "lat": 27.47, "lon": -82.475, "merge": "I-275 joins at Exit 228; right lanes exit at SR-64 and SR-70."},
+    {"r": "bradenton", "road": "US-41 (14th St W)", "stretch": "Bradenton", "lanes": "2–3", "lat": 27.465, "lon": -82.574, "merge": "Merges with US-301 at the DeSoto Bridge approach."},
+    {"r": "bradenton", "road": "Manatee Ave (SR-64)", "stretch": "Downtown → Anna Maria", "lanes": "2", "lat": 27.4955, "lon": -82.6, "merge": "Narrows to one lane each way onto the island bridge."},
+    {"r": "bradenton", "road": "Cortez Rd (SR-684)", "stretch": "US-41 → Bradenton Beach", "lanes": "2–3", "lat": 27.463, "lon": -82.61, "merge": "Narrows toward the Cortez bridge."},
+    {"r": "venice", "road": "US-41 Bypass", "stretch": "Venice", "lanes": "2", "lat": 27.08, "lon": -82.43, "merge": "Merges with Business 41 at the north and south ends."},
+    {"r": "venice", "road": "Venice Ave", "stretch": "I-75 → island", "lanes": "2", "lat": 27.0995, "lon": -82.42, "merge": "Drops to one lane each way over the bridge to the island."},
     { r: "northport", road: "Toledo Blade Blvd", stretch: "US-41 → I-75", lanes: "2", lat: 27.0400, lon: -82.1800, merge: "Merges at the I-75 ramps." }
   ];
 
@@ -305,7 +334,10 @@ tr:last-child td { border-bottom: 0; }
     school: { label: "School zones",           letter: "S", v: "--school" },
     lanechg: { label: "Lane drops & adds",     letter: "",  v: "--expand" },
     ramps:   { label: "Highway exits & entrances", letter: "", v: "--exit" },
-    roads:   { label: "Arterials & stroads",   letter: "", v: "--stroad" }
+    roads:   { label: "Arterials & stroads",   letter: "", v: "--stroad" },
+    counties: { label: "County lines",         letter: "", v: "--county" },
+    areas:   { label: "Urban / suburban / rural", letter: "", v: "--suburban" },
+    gates:   { label: "Gated communities",     letter: "🔒", v: "--gate" }
   };
 
   var css = getComputedStyle(document.documentElement);
@@ -411,6 +443,7 @@ tr:last-child td { border-bottom: 0; }
     if (lat > 27.60 && lat < 28.18 && lon < -82.635) return "pinellas";
     if (lat > 27.64 && lat < 28.18 && lon >= -82.635 && lon < -82.05) return "hillsborough";
     if (lat > 26.94 && lat < 27.39 && lon < -82.05) return "sarasota";
+    if (lat >= 27.39 && lat <= 27.64 && lon < -82.05) return "manatee";
     return null;
   }
   function levelOf(name) {
@@ -722,6 +755,98 @@ tr:last-child td { border-bottom: 0; }
   }
   map.on("moveend", syncLaneChanges);
 
+
+  // --- Generic live OpenStreetMap layer (loads what's on screen once zoomed in) ---
+  function overpass(q) {
+    return fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "Content-Type": "application/x-www-form-urlencoded" } })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
+  }
+  function bboxStr(b) { return [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].map(function (v) { return v.toFixed(4); }).join(","); }
+  var live = {
+    // Urban / suburban / rural from OpenStreetMap place types.
+    areas: { on: true, minZoom: 11, boxes: [], busy: false, seen: {},
+      query: function (bb) { return '[out:json][timeout:25];node["place"~"^(city|town|suburb|village|hamlet|neighbourhood|quarter)$"](' + bb + ');out;'; },
+      draw: function (els) {
+        var cities = els.filter(function (e) { return e.tags.place === "city"; });
+        els.forEach(function (e) {
+          var t = e.tags, key = "a" + e.id;
+          if (!t.name || live.areas.seen[key]) return;
+          if ((t.place === "neighbourhood" || t.place === "quarter") && map.getZoom() < 13) return;
+          live.areas.seen[key] = 1;
+          var nearCity = cities.some(function (c) { return L.latLng(c.lat, c.lon).distanceTo([e.lat, e.lon]) < 8000; });
+          var kind = t.place === "city" || ((t.place === "suburb" || t.place === "quarter" || t.place === "neighbourhood") && nearCity) ? "urban"
+            : /^(village|hamlet)$/.test(t.place) ? "rural" : "suburban";
+          var label = { urban: "Urban", suburban: "Suburban", rural: "Rural" }[kind];
+          var icon = L.divIcon({ className: "", iconSize: [0, 0], html: '<span class="area"><i style="background:' + color("--" + kind) + '"></i>' + esc(t.name) + "</span>" });
+          var tips = { urban: "Dense streets, frequent signals, pedestrians and transit. Expect stop-and-go traffic.", suburban: "Neighborhoods feeding a few busy arterials. Rush-hour backups at the main intersections.", rural: "Two-lane roads, higher speeds, few lights and long distances between gas stations. Watch for farm equipment and wildlife." };
+          L.marker([e.lat, e.lon], { icon: icon, title: t.name + " (" + label + ")", keyboard: true })
+            .bindPopup('<div class="tag" style="color:' + color("--" + kind) + '">' + label + " area</div><h3>" + esc(t.name) + "</h3>" + tips[kind] + "<div class='note' style='margin-top:6px'>Based on how OpenStreetMap classifies the place (" + esc(t.place) + ").</div>")
+            .addTo(layers.areas);
+        });
+      } },
+    // Gated communities: private residential gates and areas tagged as gated.
+    gates: { on: true, minZoom: 14, boxes: [], busy: false, seen: {},
+      query: function (bb) { return '[out:json][timeout:25];(node["barrier"~"^(gate|lift_gate|swing_gate)$"]["access"~"^(private|residents|permit|customers)$"](' + bb + ');nwr["gated"="yes"](' + bb + ');way["landuse"="residential"]["access"="private"](' + bb + '););out center;'; },
+      draw: function (els) {
+        els.forEach(function (e) {
+          var key = e.type + e.id; if (live.gates.seen[key]) return; live.gates.seen[key] = 1;
+          var lat = e.lat || (e.center && e.center.lat), lon = e.lon || (e.center && e.center.lon); if (!lat) return;
+          var t = e.tags || {}, isGate = !!t.barrier;
+          var icon = L.divIcon({ className: "", iconSize: [20, 20], iconAnchor: [10, 10], html: '<div class="pin gate" style="background:' + color("--gate") + '"><span>🔒</span></div>' });
+          L.marker([lat, lon], { icon: icon, title: (t.name || "Gated community") + (isGate ? " gate" : ""), keyboard: true })
+            .bindPopup('<div class="tag" style="color:' + color("--gate") + '">' + (isGate ? "Gated entrance" : "Gated community") + "</div><h3>" + esc(t.name || "Gated community") + "</h3>" +
+              (isGate ? "Private gate: residents and guests only. Expect a guard or call box; " : "Private streets behind a gate; ") +
+              "navigation apps may route you here, but it isn't a through road.")
+            .addTo(layers.gates);
+        });
+      } }
+  };
+  var liveTimer = null;
+  function loadLive(k) {
+    var L_ = live[k];
+    if (!L_.on || map.getZoom() < L_.minZoom || L_.busy) return;
+    if (L_.boxes.some(function (x) { return x.contains(map.getBounds()); })) return;
+    var b = map.getBounds().pad(0.3);
+    L_.busy = true;
+    overpass(L_.query(bboxStr(b)))
+      .then(function (d) { L_.draw(d.elements || []); L_.boxes.push(b); })
+      .catch(function () { zoneStatus.textContent = "Some map details couldn't load. Try moving the map."; })
+      .then(function () { L_.busy = false; });
+  }
+  function syncLive() {
+    Object.keys(live).forEach(function (k) {
+      var on = live[k].on && map.getZoom() >= live[k].minZoom;
+      if (on) map.addLayer(layers[k]); else map.removeLayer(layers[k]);
+    });
+    clearTimeout(liveTimer);
+    liveTimer = setTimeout(function () { Object.keys(live).forEach(loadLive); }, 1200);
+  }
+  map.on("moveend", syncLive);
+
+  // --- County lines: loaded once for the whole Tampa Bay → North Port area. ---
+  var countiesLoaded = false;
+  function loadCounties() {
+    if (countiesLoaded) return; countiesLoaded = true;
+    overpass('[out:json][timeout:60];relation["boundary"="administrative"]["admin_level"="6"](26.85,-82.95,28.25,-81.95);out geom;')
+      .then(function (d) {
+        (d.elements || []).forEach(function (rel) {
+          var name = (rel.tags || {}).name || "County", bounds = L.latLngBounds([]);
+          (rel.members || []).forEach(function (m) {
+            if (m.type !== "way" || !m.geometry || m.role === "inner") return;
+            var pts = m.geometry.map(function (g) { return [g.lat, g.lon]; });
+            pts.forEach(function (p) { bounds.extend(p); });
+            L.polyline(pts, { color: color("--county"), weight: 2.5, opacity: 0.9, dashArray: "10 6", interactive: false }).addTo(layers.counties);
+          });
+          if (bounds.isValid()) {
+            var c = rel.center || bounds.getCenter();
+            L.marker(c, { icon: L.divIcon({ className: "", iconSize: [0, 0], html: '<span class="county-label">' + esc(name) + "</span>" }), interactive: false }).addTo(layers.counties);
+          }
+        });
+      })
+      .catch(function () { countiesLoaded = false; });
+  }
+  loadCounties();
+
   var toggles = document.getElementById("toggles");
   Object.keys(TYPES).forEach(function (k) {
     var T = TYPES[k];
@@ -733,6 +858,7 @@ tr:last-child td { border-bottom: 0; }
       if (k === "lanechg") { laneChgOn = e.target.checked; syncLaneChanges(); return; }
       if (k === "ramps") { rampsOn = e.target.checked; syncLaneChanges(); return; }
       if (k === "roads") { roadsOn = e.target.checked; syncLaneChanges(); return; }
+      if (k === "areas" || k === "gates") { live[k].on = e.target.checked; syncLive(); return; }
       if (e.target.checked) map.addLayer(layers[k]); else map.removeLayer(layers[k]);
     });
     toggles.appendChild(lab);
@@ -742,6 +868,7 @@ tr:last-child td { border-bottom: 0; }
   toggles.appendChild(zoneStatus);
   syncSchools();
   syncLaneChanges();
+  syncLive();
 
 
   // --- Selmon Expressway Reversible Express Lanes (downtown Tampa ↔ Brandon) ---
