@@ -254,7 +254,7 @@ tr:last-child td { border-bottom: 0; }
     { r: "tampa",  road: "I-275", stretch: "Downtown → Bearss Ave", lanes: "3", lat: 28.0200, lon: -82.4600, merge: "Lanes drop north of Fowler Ave toward Bearss." },
     { r: "tampa",  road: "I-4", stretch: "Downtown → I-75", lanes: "3", lat: 27.9680, lon: -82.3900, merge: "Right lanes exit-only for I-75; Selmon connector joins near 31st St." },
     { r: "tampa",  road: "I-75", stretch: "Hillsborough County", lanes: "3", lat: 27.8800, lon: -82.3300, merge: "Wider (4) near I-4; ramps merge at SR-60 Brandon." },
-    { r: "tampa",  road: "Selmon Expwy", stretch: "Gandy → Brandon (toll)", lanes: "2 + reversible", lat: 27.9470, lon: -82.4000, merge: "Elevated reversible lanes rejoin downtown and at Brandon." },
+    { r: "tampa",  road: "Selmon Expwy", stretch: "Gandy → Brandon (toll)", lanes: "2 + reversible", lat: 27.9470, lon: -82.4000, merge: "Elevated reversible lanes (downtown ↔ Brandon): toward Tampa weekdays 5 am–noon; toward Brandon weekdays noon–5 am and weekends. Rejoin the main lanes downtown and at Brandon." },
     { r: "tampa",  road: "Veterans Expwy", stretch: "Westshore → Suncoast (toll)", lanes: "2–3", lat: 28.0200, lon: -82.5600, merge: "Merges into I-275 SB at Westshore." },
     { r: "tampa",  road: "Dale Mabry Hwy", stretch: "Gandy → Fletcher", lanes: "3", lat: 27.9700, lon: -82.5100, merge: "Turn lanes at most major signals; right lane drops at some ramps." },
     { r: "tampa",  road: "Courtney Campbell (SR-60)", stretch: "Tampa ↔ Clearwater", lanes: "2", lat: 27.9760, lon: -82.6600, merge: "Widens to 3 at each end; merges back to 2 on the causeway." },
@@ -742,6 +742,35 @@ tr:last-child td { border-bottom: 0; }
   toggles.appendChild(zoneStatus);
   syncSchools();
   syncLaneChanges();
+
+
+  // --- Selmon Expressway Reversible Express Lanes (downtown Tampa ↔ Brandon) ---
+  // Schedule per THEA (July 2026): weekdays westbound to Tampa 5 am–noon, eastbound to Brandon noon–5 am.
+  // Weekends: eastbound (THEA kept weekend hours; older published schedule = eastbound Fri afternoon to Mon morning).
+  function relNow() {
+    var parts = {};
+    new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", hour12: false })
+      .formatToParts(new Date()).forEach(function (x) { parts[x.type] = x.value; });
+    var day = parts.weekday, h = +parts.hour % 24;
+    var weekend = day === "Sat" || day === "Sun" || (day === "Mon" && h < 5);
+    if (!weekend && h >= 5 && h < 12) return { dir: "Westbound → downtown Tampa", until: "noon" };
+    if (day === "Fri" && h >= 12 || weekend) return { dir: "Eastbound → Brandon", until: "5 am Monday" };
+    return { dir: "Eastbound → Brandon", until: "5 am" };
+  }
+  var relLine = [[27.9455, -82.4500], [27.9530, -82.4300], [27.9540, -82.4050], [27.9520, -82.3800], [27.9480, -82.3550], [27.9440, -82.3330]];
+  var relLayer = L.polyline(relLine, { color: color("--merge"), weight: 6, opacity: 0.85, dashArray: "8 6" });
+  function relPopup() {
+    var n = relNow();
+    return '<div class="tag" style="color:' + color("--merge") + '">Reversible express lanes</div><h3>Selmon Expressway REL</h3>' +
+      "<b>Right now:</b> " + n.dir + " (until " + n.until + ")" +
+      "<table class='hours'><tr><td><b>Mon–Fri</b></td><td>5 am – noon</td><td>Westbound → downtown Tampa</td></tr>" +
+      "<tr><td><b>Mon–Fri</b></td><td>noon – 5 am</td><td>Eastbound → Brandon</td></tr>" +
+      "<tr><td><b>Weekends</b></td><td>all day</td><td>Eastbound → Brandon</td></tr></table>" +
+      "<div class='note' style='margin-top:6px'>Elevated toll lanes between downtown Tampa and Brandon (I-75/Brandon Pkwy). Times from the Tampa Hillsborough Expressway Authority (July 2026); holidays and construction can change them. Overhead signs at each entrance show the current direction.</div>";
+  }
+  relLayer.bindPopup(relPopup).addTo(layers.lanes);
+  var relIcon = L.divIcon({ className: "", iconSize: [0, 0], html: '<span class="lanebadge" style="border-color:' + color("--merge") + '">⇄ Selmon REL</span>' });
+  L.marker([27.9545, -82.4150], { icon: relIcon, title: "Selmon reversible lanes schedule", keyboard: true }).bindPopup(relPopup).addTo(layers.lanes);
 
   // --- Lane table ---
   var tbody = document.getElementById("laneRows");
