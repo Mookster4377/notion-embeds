@@ -69,6 +69,7 @@ section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); 
 }
 .pin.merge { border-radius: 5px; transform: rotate(45deg); width: 20px; height: 20px; }
 .pin.merge span { transform: rotate(-45deg); }
+.tiles-dark { filter: invert(1) hue-rotate(180deg) brightness(.9) contrast(.9); }
 .lanebadge {
   white-space: nowrap; font: 600 11px var(--body); background: var(--card); color: var(--ink);
   border: 1.5px solid var(--lane); border-radius: 999px; padding: 2px 8px; box-shadow: 0 1px 3px rgba(0,0,0,.25);
@@ -264,9 +265,10 @@ tr:last-child td { border-bottom: 0; }
   // --- Road guide (Leaflet) ---
   var dark = matchMedia("(prefers-color-scheme: dark)").matches && document.documentElement.dataset.theme !== "light";
   var map = L.map("guide", { scrollWheelZoom: false, zoomControl: true }).setView([REGIONS[current].lat, REGIONS[current].lon], REGIONS[current].z);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/" + (dark ? "dark_all" : "rastertiles/voyager") + "/{z}/{x}/{y}{r}.png", {
-    maxZoom: 19, subdomains: "abcd",
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  // OpenStreetMap tiles need no API key. Dark mode dims them with a CSS filter.
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19, className: dark ? "tiles-dark" : "",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
   }).addTo(map);
   map.on("focus", function () { map.scrollWheelZoom.enable(); });
   map.on("blur", function () { map.scrollWheelZoom.disable(); });
