@@ -402,8 +402,7 @@ tr:last-child td { border-bottom: 0; }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
 
   var params = new URLSearchParams(location.search);
-  var current = REGIONS[params.get("region")] ? params.get("region") : "all";
-  try { var saved = localStorage.getItem("tbt-region"); if (!params.get("region") && REGIONS[saved]) current = saved; } catch (e) {}
+  var current = REGIONS[params.get("region")] ? params.get("region") : "sarasota"; // Always opens on Sarasota unless ?region= says otherwise.
 
   // --- Live map (Waze embed) ---
   var liveFrame = document.getElementById("live");
@@ -547,7 +546,7 @@ tr:last-child td { border-bottom: 0; }
   }
   function loadSchools() {
     if (!schoolsOn || map.getZoom() < SCHOOL_MIN_ZOOM || schoolBusy) return;
-    var b = map.getBounds().pad(0.3);
+    var b = map.getBounds().pad(0.15);
     if (covered(map.getBounds())) { return; }
     schoolBusy = true;
     var q = '[out:json][timeout:25];nwr["amenity"="school"](' + [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].map(function (v) { return v.toFixed(4); }).join(",") + ');out center 400;';
@@ -813,7 +812,7 @@ tr:last-child td { border-bottom: 0; }
   function loadLaneChanges() {
     if (!(laneChgOn || rampsOn || roadsOn) || map.getZoom() < LANE_MIN_ZOOM || laneBusy) return;
     if (laneBoxes.some(function (x) { return x.contains(map.getBounds()); })) return;
-    var b = map.getBounds().pad(0.3);
+    var b = map.getBounds().pad(0.15);
     laneBusy = true;
     var bb = [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].map(function (v) { return v.toFixed(4); }).join(",");
     var q = '[out:json][timeout:30];(way["highway"~"^(primary|secondary)$"](' + bb + ');way["highway"="tertiary"](' + bb + ');' +
@@ -846,7 +845,7 @@ tr:last-child td { border-bottom: 0; }
   // All OpenStreetMap (Overpass) requests go through one queue: at most 2 at a time, most important first,
   // retried on a busy server and spread across three public Overpass servers.
   var OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
-  var opQueue = [], opRunning = 0, opNext = 0, OP_MAX = 2;
+  var opQueue = [], opRunning = 0, opNext = 0, OP_MAX = 3, opBusy = {};
   function opStatus() {
     var n = opQueue.length + opRunning;
     if (typeof zoneStatus !== "undefined" && zoneStatus) zoneStatus.textContent = n ? "Loading map details… (" + n + ")" : "";
@@ -861,20 +860,29 @@ tr:last-child td { border-bottom: 0; }
     opStatus();
   }
   function opRun(job, attempt) {
-    var url = OVERPASS[(job.server + attempt) % OVERPASS.length];
-    fetch(url, { method: "POST", body: "data=" + encodeURIComponent(job.q), headers: { "Content-Type": "application/x-www-form-urlencoded" } })
+    // Use a server that isn't already busy with one of our requests, if there is one.
+    var idx = (job.server + attempt) % OVERPASS.length;
+    for (var i = 0; i < OVERPASS.length && opBusy[idx]; i++) idx = (idx + 1) % OVERPASS.length;
+    var url = OVERPASS[idx];
+    opBusy[idx] = (opBusy[idx] || 0) + 1;
+    // Give up on a request that hangs, so it can't block the queue; it's retried on another server.
+    var ctl = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctl) ctl.abort(); }, job.timeout || 20000);
+    var done = function () { clearTimeout(timer); opBusy[idx]--; };
+    fetch(url, { method: "POST", body: "data=" + encodeURIComponent(job.q), headers: { "Content-Type": "application/x-www-form-urlencoded" }, signal: ctl ? ctl.signal : undefined })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(function (d) { opRunning--; job.resolve(d); opPump(); })
+      .then(function (d) { done(); opRunning--; job.resolve(d); opPump(); })
       .catch(function (err) {
-        if (attempt < 4 && !(job.stale && job.stale())) {
-          setTimeout(function () { opRun(job, attempt + 1); }, [1500, 3000, 6000, 10000][attempt]);
+        done();
+        if (attempt < 3 && !(job.stale && job.stale())) {
+          setTimeout(function () { opRun(job, attempt + 1); }, [1000, 3000, 6000][attempt]);
         } else { opRunning--; job.reject(err); opPump(); }
       });
   }
   var opSeq = 0;
-  function overpass(q, prio, stale) {
+  function overpass(q, prio, stale, timeout) {
     return new Promise(function (resolve, reject) {
-      opQueue.push({ q: q, prio: prio == null ? 3 : prio, stale: stale, seq: opSeq++, server: opNext++ % OVERPASS.length, resolve: resolve, reject: reject });
+      opQueue.push({ q: q, prio: prio == null ? 3 : prio, stale: stale, timeout: timeout, seq: opSeq++, server: opNext++ % OVERPASS.length, resolve: resolve, reject: reject });
       opPump();
     });
   }
@@ -885,7 +893,11 @@ tr:last-child td { border-bottom: 0; }
   var live = {
     // Interstates, U.S. highways and state roads, by their route numbers.
     highways: { prio: 1, on: true, minZoom: 10, boxes: [], busy: false, seen: {}, shields: [],
-      query: function (bb) { return '[out:json][timeout:40];way["highway"~"^(motorway|trunk|primary|secondary|tertiary)$"]["ref"~"^(I|US|SR|FL|CR) ?[0-9]"](' + bb + ');out tags geom qt;'; },
+      // Zoomed out: only interstates, U.S. and main state routes (smaller download). Closer in: county roads too.
+      detail: function () { return map.getZoom() >= 12 ? "full" : "main"; },
+      query: function (bb) {
+        var cls = map.getZoom() >= 12 ? "motorway|trunk|primary|secondary|tertiary" : "motorway|trunk|primary";
+        return '[out:json][timeout:25];way["highway"~"^(' + cls + ')$"]["ref"~"^(I|US|SR|FL|CR) ?[0-9]"](' + bb + ');out tags geom qt;'; },
       draw: function (els) {
         var H = live.highways;
         els.forEach(function (e) {
@@ -920,30 +932,24 @@ tr:last-child td { border-bottom: 0; }
     airports: { prio: 2, on: true, minZoom: 8, boxes: [], busy: false, seen: {},
       query: function () { return '[out:json][timeout:30];nwr["aeroway"="aerodrome"]["name"]["aerodrome:type"!~"private|military"](26.85,-82.95,28.25,-81.95);out center tags;'; },
       draw: function (els) {
-        live.airports.boxes.push(L.latLngBounds([[26.85, -82.95], [28.25, -81.95]]));
+        live.airports.boxes.push({ b: L.latLngBounds([[26.85, -82.95], [28.25, -81.95]]), d: "full" });
         els.forEach(function (e) {
         var t = e.tags || {};
         if (!t.iata && !t.icao && !/airport/i.test(t.name || "")) return;
         poiMarker("airports", e, "✈️", t.iata ? "Airport · " + t.iata : "Airport",
           (t.iata ? "Commercial airport (" + esc(t.iata) + "). " : "Airport. ") + "Expect heavy pickup and drop-off traffic around flight times.");
       }); } },
-    museums: { prio: 4, on: true, minZoom: 12, boxes: [], busy: false, seen: {},
-      query: function (bb) { return '[out:json][timeout:25];nwr["tourism"="museum"]["name"](' + bb + ');out center tags;'; },
-      draw: function (els) { els.forEach(function (e) { poiMarker("museums", e, "🏛️", "Museum", ""); }); } },
-    colleges: { prio: 3, on: true, minZoom: 11, boxes: [], busy: false, seen: {},
-      query: function (bb) { return '[out:json][timeout:25];nwr["amenity"~"^(university|college)$"]["name"](' + bb + ');out center tags;'; },
+    // Museums, colleges, sports venues and shopping centers in one request.
+    places: { prio: 3, on: true, minZoom: 11, boxes: [], busy: false, seen: {},
+      query: function (bb) { return '[out:json][timeout:25];(nwr["tourism"="museum"]["name"](' + bb + ');nwr["amenity"~"^(university|college)$"]["name"](' + bb + ');' +
+        'nwr["leisure"="stadium"]["name"](' + bb + ');nwr["building"="stadium"]["name"](' + bb + ');nwr["leisure"="sports_centre"]["name"~"Arena|Stadium|Ballpark|Speedway",i](' + bb + ');' +
+        'nwr["shop"="mall"]["name"](' + bb + ');way["landuse"="retail"]["name"~"mall|town cent|outlets|shoppes|galleria|marketplace|square",i](' + bb + '););out center tags;'; },
       draw: function (els) { els.forEach(function (e) {
-        poiMarker("colleges", e, "🎓", e.tags.amenity === "university" ? "University" : "College", "Busy around class changes; watch for pedestrians, bikes and scooters.");
-      }); } },
-    venues: { prio: 3, on: true, minZoom: 10, boxes: [], busy: false, seen: {},
-      query: function (bb) { return '[out:json][timeout:25];(nwr["leisure"="stadium"]["name"](' + bb + ');nwr["building"="stadium"]["name"](' + bb + ');nwr["leisure"="sports_centre"]["name"~"Arena|Stadium|Ballpark|Speedway",i](' + bb + '););out center tags;'; },
-      draw: function (els) { els.forEach(function (e) {
-        poiMarker("venues", e, "🏟️", "Sports venue", "Expect heavy traffic and road closures before and after games and events.");
-      }); } },
-    malls: { prio: 3, on: true, minZoom: 11, boxes: [], busy: false, seen: {},
-      query: function (bb) { return '[out:json][timeout:25];(nwr["shop"="mall"]["name"](' + bb + ');way["landuse"="retail"]["name"~"mall|town cent|outlets|shoppes|galleria|marketplace|square",i](' + bb + '););out center tags;'; },
-      draw: function (els) { els.forEach(function (e) {
-        poiMarker("malls", e, "🛍️", "Shopping center", "Busy weekends and holidays; expect slow entrances and full lots in December.");
+        var t = e.tags || {};
+        if (t.tourism === "museum") poiMarker("museums", e, "🏛️", "Museum", "");
+        else if (/^(university|college)$/.test(t.amenity || "")) poiMarker("colleges", e, "🎓", t.amenity === "university" ? "University" : "College", "Busy around class changes; watch for pedestrians, bikes and scooters.");
+        else if (t.leisure === "stadium" || t.building === "stadium" || t.leisure === "sports_centre") poiMarker("venues", e, "🏟️", "Sports venue", "Expect heavy traffic and road closures before and after games and events.");
+        else poiMarker("malls", e, "🛍️", "Shopping center", "Busy weekends and holidays; expect slow entrances and full lots in December.");
       }); } },
     // Parking lots and garages, colored by whether OpenStreetMap says they're free or paid.
     parking: { prio: 4, on: true, minZoom: 15, boxes: [], busy: false, seen: {},
@@ -1044,12 +1050,14 @@ tr:last-child td { border-bottom: 0; }
         });
       } }
   };
+  var poiSeen = {};
   function poiMarker(layer, e, emoji, kind, note) {
-    var key = e.type + e.id; if (live[layer].seen[key]) return; live[layer].seen[key] = 1;
+    var reg = poiSeen[layer] = poiSeen[layer] || { seen: {} };
+    var key = e.type + e.id; if (reg.seen[key]) return; reg.seen[key] = 1;
     var t = e.tags || {}, lat = e.lat || (e.center && e.center.lat), lon = e.lon || (e.center && e.center.lon);
     if (!lat || !t.name) return;
     // The same place is often mapped twice (e.g. the grounds and the building): keep one.
-    var near = live[layer].named = live[layer].named || [];
+    var near = reg.named = reg.named || [];
     if (near.some(function (x) { return x.name === t.name && x.ll.distanceTo([lat, lon]) < 600; })) return;
     near.push({ name: t.name, ll: L.latLng(lat, lon) });
     var site = t.website || t["contact:website"];
@@ -1063,16 +1071,18 @@ tr:last-child td { border-bottom: 0; }
   function loadLive(k) {
     var L_ = live[k];
     if (!L_.on || map.getZoom() < L_.minZoom || L_.busy) return;
-    if (L_.boxes.some(function (x) { return x.contains(map.getBounds()); })) return;
-    var b = map.getBounds().pad(0.3);
+    var need = L_.detail ? L_.detail() : "full";
+    if (L_.boxes.some(function (x) { return x.b.contains(map.getBounds()) && (x.d === "full" || x.d === need); })) return;
+    var b = map.getBounds().pad(0.15);
     L_.busy = true;
     overpass(L_.query(bboxStr(b)), L_.prio == null ? 3 : L_.prio, k === "airports" ? null : viewStale(b))
-      .then(function (d) { L_.draw(d.elements || []); L_.boxes.push(b); })
+      .then(function (d) { L_.draw(d.elements || []); L_.boxes.push({ b: b, d: need }); })
       .catch(function () {})
       .then(function () { L_.busy = false; });
   }
   function syncLive() {
     Object.keys(live).forEach(function (k) {
+      if (!layers[k]) return; // e.g. "places" draws into the museum/college/venue/mall layers
       var on = live[k].on && map.getZoom() >= live[k].minZoom;
       if (on) map.addLayer(layers[k]); else map.removeLayer(layers[k]);
     });
@@ -1085,7 +1095,7 @@ tr:last-child td { border-bottom: 0; }
   var countiesLoaded = false;
   function loadCounties() {
     if (countiesLoaded) return; countiesLoaded = true;
-    overpass('[out:json][timeout:60];relation["boundary"="administrative"]["admin_level"="6"](26.85,-82.95,28.25,-81.95);out geom;', 6)
+    overpass('[out:json][timeout:60];relation["boundary"="administrative"]["admin_level"="6"](26.85,-82.95,28.25,-81.95);out geom;', 9, null, 60000)
       .then(function (d) {
         (d.elements || []).forEach(function (rel) {
           var name = (rel.tags || {}).name || "County", bounds = L.latLngBounds([]);
@@ -1103,7 +1113,11 @@ tr:last-child td { border-bottom: 0; }
       })
       .catch(function () { countiesLoaded = false; });
   }
-  loadCounties();
+  // County lines are a big download, so fetch them once the queue is quiet.
+  (function waitForQuiet(n) {
+    if (!(opQueue.length + opRunning) || n > 20) loadCounties();
+    else setTimeout(function () { waitForQuiet(n + 1); }, 1500);
+  })(0);
 
 
   // --- Police reports: tap the map to report police activity. ---
