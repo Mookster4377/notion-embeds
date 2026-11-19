@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tampa Bay Traffic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+/* Layout: region chips → big live Waze map → road guide map (hotspots, lanes, merges) → lane table. */
+:root {
+  --bg: #eef1f4; --card: #ffffff; --ink: #141a21; --muted: #5b6672; --line: #d8dee5; --chip: #e5eaef;
+  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c;
+  --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
+    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
+  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink); font: 14px/1.45 var(--body);
+  padding-block: 18px 32px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 10px 16px; }
+h1 { font: 700 30px/1 var(--display); letter-spacing: .02em; text-transform: uppercase; margin: 0; }
+.sub { color: var(--muted); font-size: 12px; margin-top: 4px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font: 600 12px var(--body); letter-spacing: .04em; background: var(--chip); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; cursor: pointer;
+}
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chip:focus-visible, a:focus-visible, label:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+section h2 {
+  font: 600 12px var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+  margin: 0 0 8px; display: flex; align-items: center; gap: 10px;
+}
+section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+#live { display: block; width: 100%; height: min(78vh, 760px); min-height: 460px; border: 0; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; padding: 10px 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+.bar a { color: var(--accent); font-weight: 600; text-decoration: none; }
+.bar a:hover { text-decoration: underline; }
+.links { display: flex; flex-wrap: wrap; gap: 12px; }
+#guide { height: min(70vh, 640px); min-height: 420px; background: var(--chip); }
+.toggles { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.toggles label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; border-radius: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.sw.lane { border-radius: 3px; }
+.pin {
+  width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  color: #fff; font: 700 12px var(--body); border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4);
+}
+.pin.merge { border-radius: 5px; transform: rotate(45deg); width: 20px; height: 20px; }
+.pin.merge span { transform: rotate(-45deg); }
+.lanebadge {
+  white-space: nowrap; font: 600 11px var(--body); background: var(--card); color: var(--ink);
+  border: 1.5px solid var(--lane); border-radius: 999px; padding: 2px 8px; box-shadow: 0 1px 3px rgba(0,0,0,.25);
+  display: inline-block; transform: translate(-50%, -50%);
+}
+.lanebadge b { color: var(--lane); }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--card); color: var(--ink); }
+.leaflet-popup-content { font: 13px/1.45 var(--body); margin: 10px 12px; }
+.leaflet-popup-content h3 { margin: 0 0 4px; font: 700 16px var(--display); letter-spacing: .02em; }
+.leaflet-popup-content .tag { font: 600 10px var(--body); letter-spacing: .08em; text-transform: uppercase; }
+.leaflet-container a.leaflet-popup-close-button { color: var(--muted); }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 11px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); background: var(--chip); }
+td.n { font: 700 18px var(--display); color: var(--lane); white-space: nowrap; font-variant-numeric: tabular-nums; }
+td.road { font-weight: 600; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+.note { color: var(--muted); font-size: 12px; }
+@media (max-width: 640px) {
+  h1 { font-size: 24px; }
+  #live { min-height: 380px; height: 62vh; }
+  #guide { min-height: 360px; height: 60vh; }
+  th, td { padding: 8px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Tampa Bay Traffic</h1>
+      <div class="sub">Tampa · St. Pete · Sarasota · North Port</div>
+    </div>
+    <div class="chips" id="chips" role="group" aria-label="Region"></div>
+  </header>
+
+  <section>
+    <h2>Live traffic, police &amp; crashes</h2>
+    <div class="panel">
+      <iframe id="live" title="Live traffic map" allow="geolocation" loading="eager"></iframe>
+      <div class="bar">
+        <span>Live from Waze: red/orange lines are slowdowns; icons show reported police, crashes, hazards and closures. Tap any icon for details.</span>
+        <span class="links">
+          <a id="lnkGoogle" target="_blank" rel="noopener">Google traffic ↗</a>
+          <a href="https://fl511.com/map" target="_blank" rel="noopener">FL511 incidents &amp; cameras ↗</a>
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Road guide: trouble spots, lanes &amp; merges</h2>
+    <div class="panel">
+      <div class="toggles" id="toggles"></div>
+      <div id="guide" role="region" aria-label="Road guide map"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Lanes by road</h2>
+    <div class="panel table-wrap">
+      <table>
+        <thead><tr><th>Road</th><th>Stretch</th><th>Lanes each way</th><th>Where lanes merge or drop</th></tr></thead>
+        <tbody id="laneRows"></tbody>
+      </table>
+    </div>
+    <p class="note">Zoom in on the road guide to see lane badges. Lane counts are typical through-lanes per direction and can change with construction. Trouble spots are recurring patterns, not live reports. For what's happening right now, use the live map above.</p>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function () {
+  var REGIONS = {
+    all:       { name: "All four",   lat: 27.47,  lon: -82.45,  z: 9 },
+    tampa:     { name: "Tampa",      lat: 27.965, lon: -82.47,  z: 11 },
+    stpete:    { name: "St. Pete",   lat: 27.80,  lon: -82.66,  z: 11 },
+    sarasota:  { name: "Sarasota",   lat: 27.33,  lon: -82.51,  z: 11 },
+    northport: { name: "North Port", lat: 27.06,  lon: -82.22,  z: 11 }
+  };
+
+  // type: jam | crash | police | merge
+  var SPOTS = [
+    // Tampa
+    { t: "jam", r: "tampa", lat: 27.9615, lon: -82.4490, name: "I-275 / I-4 “Malfunction Junction”", d: "Two interstates meet north of downtown. Backs up both rush hours in every direction; weaving between I-4 and I-275 lanes." },
+    { t: "jam", r: "tampa", lat: 27.9520, lon: -82.5330, name: "Westshore interchange (I-275 / SR-60)", d: "Airport, Veterans Expwy and Westshore traffic all funnel onto I-275 here. Heavy 7–9 am and 4–7 pm." },
+    { t: "jam", r: "tampa", lat: 27.9230, lon: -82.5880, name: "Howard Frankland Bridge (I-275)", d: "Main Tampa–St. Pete link. Any crash on the bridge stops traffic for miles; no shoulders to clear quickly." },
+    { t: "jam", r: "tampa", lat: 27.9440, lon: -82.5060, name: "Dale Mabry Hwy at Kennedy Blvd", d: "Signal-heavy stretch near the stadium and I-275. Bad on Bucs game days." },
+    { t: "jam", r: "tampa", lat: 28.0545, lon: -82.4340, name: "Fowler Ave at I-275 (USF)", d: "Campus and hospital traffic plus interstate ramps." },
+    { t: "jam", r: "tampa", lat: 27.9370, lon: -82.3330, name: "I-75 at SR-60 (Brandon)", d: "Mall and Brandon Blvd traffic, ramps back onto I-75." },
+    { t: "jam", r: "tampa", lat: 27.9990, lon: -82.3460, name: "I-4 / I-75 interchange", d: "Truck-heavy; slow merging on the ramps between the two interstates." },
+    { t: "crash", r: "tampa", lat: 27.9690, lon: -82.4050, name: "I-4 east of downtown", d: "I-4 through Tampa regularly ranks among the country's most dangerous interstates for crashes." },
+    { t: "crash", r: "tampa", lat: 27.9960, lon: -82.5050, name: "Dale Mabry & Hillsborough Ave", d: "Two six-lane roads cross; frequent red-light and turning crashes." },
+    { t: "crash", r: "tampa", lat: 28.0690, lon: -82.4180, name: "Bruce B. Downs & Fletcher Ave", d: "Very wide intersection near USF; high crash and pedestrian-incident counts." },
+    { t: "crash", r: "tampa", lat: 28.0545, lon: -82.3990, name: "Fowler Ave & 56th St", d: "Frequent rear-end and turning crashes." },
+    { t: "police", r: "tampa", lat: 27.9200, lon: -82.4870, name: "Bayshore Blvd", d: "35 mph zone with heavy pedestrian traffic; speed enforcement is common." },
+    { t: "police", r: "tampa", lat: 27.9700, lon: -82.6400, name: "Courtney Campbell Causeway (SR-60)", d: "Long straight causeway; regular speed enforcement in both directions." },
+    { t: "police", r: "tampa", lat: 27.9050, lon: -82.6050, name: "Howard Frankland Bridge", d: "Troopers often posted at the ends of the bridge." },
+    // St. Pete
+    { t: "jam", r: "stpete", lat: 27.8770, lon: -82.5650, name: "Gandy Bridge", d: "Backs up into Gandy Blvd at 4th St N during rush hours." },
+    { t: "jam", r: "stpete", lat: 27.7770, lon: -82.6530, name: "I-275 at I-375 / I-175 (downtown)", d: "Downtown on- and off-ramps stack up, especially on event nights." },
+    { t: "jam", r: "stpete", lat: 27.8740, lon: -82.6380, name: "4th St N at Gandy Blvd", d: "Shopping centers and Gandy Bridge traffic meet." },
+    { t: "jam", r: "stpete", lat: 27.7900, lon: -82.7300, name: "Tyrone Blvd / 66th St N", d: "Tyrone Square Mall area; slow most afternoons and weekends." },
+    { t: "crash", r: "stpete", lat: 27.8930, lon: -82.6870, name: "US-19 at Ulmerton Rd", d: "US-19 through Pinellas is one of the deadliest roads in Florida for drivers and pedestrians." },
+    { t: "crash", r: "stpete", lat: 27.8380, lon: -82.6800, name: "US-19 at Park Blvd", d: "Frontage-road and overpass merges lead to frequent crashes." },
+    { t: "crash", r: "stpete", lat: 27.7500, lon: -82.6790, name: "34th St S (US-19) & 22nd Ave S", d: "High pedestrian and turning-crash counts." },
+    { t: "police", r: "stpete", lat: 27.6250, lon: -82.6550, name: "Sunshine Skyway (I-275)", d: "Troopers patrol the approaches and toll plazas." },
+    { t: "police", r: "stpete", lat: 27.8300, lon: -82.6600, name: "I-275 through north St. Pete", d: "Frequent speed enforcement between Gandy Blvd and 54th Ave N." },
+    // Sarasota
+    { t: "jam", r: "sarasota", lat: 27.3372, lon: -82.5415, name: "US-41 (Tamiami Trail) at Fruitville Rd", d: "Downtown core; busy all day, worst in season (Jan–Apr)." },
+    { t: "jam", r: "sarasota", lat: 27.3330, lon: -82.5600, name: "John Ringling Causeway → St. Armands Circle", d: "Single-lane roundabout at St. Armands backs traffic onto the bridge, especially on weekends." },
+    { t: "jam", r: "sarasota", lat: 27.2550, lon: -82.5150, name: "US-41 at Stickney Point Rd (Siesta Key)", d: "Beach traffic plus drawbridge openings to Siesta Key." },
+    { t: "jam", r: "sarasota", lat: 27.3880, lon: -82.4500, name: "I-75 at University Pkwy", d: "Shopping and Lakewood Ranch traffic; ramps back up at peak times." },
+    { t: "crash", r: "sarasota", lat: 27.3370, lon: -82.4530, name: "I-75 at Fruitville Rd", d: "Frequent rear-end crashes in queues at the exit." },
+    { t: "crash", r: "sarasota", lat: 27.3000, lon: -82.5270, name: "US-41 & Bee Ridge Rd", d: "Busy commercial intersection with frequent turning crashes." },
+    { t: "police", r: "sarasota", lat: 27.3300, lon: -82.5450, name: "US-41 Bayfront (downtown)", d: "Lower speed limits and pedestrian crossings; enforcement is common." },
+    { t: "police", r: "sarasota", lat: 27.2200, lon: -82.4300, name: "I-75 south of Sarasota", d: "State troopers patrol this stretch regularly." },
+    // North Port
+    { t: "jam", r: "northport", lat: 27.0630, lon: -82.1950, name: "I-75 at Toledo Blade Blvd (Exit 179)", d: "Commuter ramp backups; grows quickly with new development." },
+    { t: "jam", r: "northport", lat: 27.0780, lon: -82.2370, name: "I-75 at Sumter Blvd (Exit 182)", d: "Ramps back up during commute and on spring-training game days." },
+    { t: "jam", r: "northport", lat: 27.0430, lon: -82.2350, name: "US-41 at Sumter Blvd", d: "Main shopping corridor; slow at signals." },
+    { t: "crash", r: "northport", lat: 27.0170, lon: -82.1680, name: "US-41 & Toledo Blade Blvd", d: "High-speed corridor with turning crashes." },
+    { t: "crash", r: "northport", lat: 27.0700, lon: -82.2850, name: "I-75 near River Rd", d: "Two-lane stretch where traffic bunches up; rear-end crashes common." },
+    { t: "police", r: "northport", lat: 27.0560, lon: -82.2000, name: "Price Blvd school zones", d: "School-zone speed limits are enforced on school days." },
+    { t: "police", r: "northport", lat: 27.0350, lon: -82.2000, name: "US-41 through North Port", d: "Speed limit drops through town; patrols are common." },
+    // Merges
+    { t: "merge", r: "tampa", lat: 27.9590, lon: -82.4560, name: "I-275 NB → I-4 EB split", d: "Left lanes become I-4 exit lanes. Get in your lane before downtown; last-second lane changes cause most crashes here." },
+    { t: "merge", r: "tampa", lat: 27.9540, lon: -82.5450, name: "I-275 SB: Veterans Expwy + SR-60 merge", d: "Traffic from Veterans and the airport joins from the right before the Howard Frankland." },
+    { t: "merge", r: "tampa", lat: 27.9990, lon: -82.3500, name: "I-4 EB → I-75 ramps", d: "Right lanes are exit-only for I-75 north and south." },
+    { t: "merge", r: "tampa", lat: 27.9430, lon: -82.4600, name: "Selmon Expwy downtown ramps", d: "Reversible lanes rejoin the main lanes; watch for merging traffic." },
+    { t: "merge", r: "stpete", lat: 27.6800, lon: -82.6790, name: "I-275 SB lane drop before Skyway", d: "Three lanes drop to two heading south toward the Sunshine Skyway. The right lane ends." },
+    { t: "merge", r: "stpete", lat: 27.7790, lon: -82.6550, name: "I-375 / I-175 onto I-275", d: "Short on-ramps from downtown; merge quickly." },
+    { t: "merge", r: "stpete", lat: 27.8740, lon: -82.6300, name: "Gandy Blvd at the bridge", d: "Gandy Blvd narrows from 3 to 2 lanes each way onto the bridge." },
+    { t: "merge", r: "stpete", lat: 27.9100, lon: -82.6870, name: "US-19 overpasses (Pinellas)", d: "Through lanes rise onto overpasses while frontage roads merge in from the right. Watch for lanes ending at each interchange." },
+    { t: "merge", r: "sarasota", lat: 27.3270, lon: -82.5770, name: "St. Armands Circle roundabout", d: "Two causeway lanes squeeze into a single-lane roundabout." },
+    { t: "merge", r: "sarasota", lat: 27.3880, lon: -82.4560, name: "I-75 at University Pkwy on-ramps", d: "Heavy on-ramp merge; short acceleration lanes." },
+    { t: "merge", r: "northport", lat: 27.0790, lon: -82.2700, name: "I-75: three lanes narrow toward River Rd", d: "Lanes drop on the south end of the Sarasota County widening. Expect slowdowns at the taper." },
+    { t: "merge", r: "northport", lat: 27.0620, lon: -82.1900, name: "Toledo Blade on-ramp to I-75", d: "On-ramp traffic merges into the right lane." }
+  ];
+
+  // lanes: through-lanes per direction. lat/lon: where the badge sits.
+  var ROADS = [
+    { r: "tampa",  road: "I-275", stretch: "Howard Frankland Bridge", lanes: "4", lat: 27.9150, lon: -82.6000, merge: "Veterans + SR-60 traffic merges in SB at Westshore." },
+    { r: "tampa",  road: "I-275", stretch: "Westshore → downtown", lanes: "3–4", lat: 27.9560, lon: -82.4950, merge: "NB left lanes split off to I-4 at Malfunction Junction." },
+    { r: "tampa",  road: "I-275", stretch: "Downtown → Bearss Ave", lanes: "3", lat: 28.0200, lon: -82.4600, merge: "Lanes drop north of Fowler Ave toward Bearss." },
+    { r: "tampa",  road: "I-4", stretch: "Downtown → I-75", lanes: "3", lat: 27.9680, lon: -82.3900, merge: "Right lanes exit-only for I-75; Selmon connector joins near 31st St." },
+    { r: "tampa",  road: "I-75", stretch: "Hillsborough County", lanes: "3", lat: 27.8800, lon: -82.3300, merge: "Wider (4) near I-4; ramps merge at SR-60 Brandon." },
+    { r: "tampa",  road: "Selmon Expwy", stretch: "Gandy → Brandon (toll)", lanes: "2 + reversible", lat: 27.9470, lon: -82.4000, merge: "Elevated reversible lanes rejoin downtown and at Brandon." },
+    { r: "tampa",  road: "Veterans Expwy", stretch: "Westshore → Suncoast (toll)", lanes: "2–3", lat: 28.0200, lon: -82.5600, merge: "Merges into I-275 SB at Westshore." },
+    { r: "tampa",  road: "Dale Mabry Hwy", stretch: "Gandy → Fletcher", lanes: "3", lat: 27.9700, lon: -82.5100, merge: "Turn lanes at most major signals; right lane drops at some ramps." },
+    { r: "tampa",  road: "Courtney Campbell (SR-60)", stretch: "Tampa ↔ Clearwater", lanes: "2", lat: 27.9760, lon: -82.6600, merge: "Widens to 3 at each end; merges back to 2 on the causeway." },
+    { r: "stpete", road: "I-275", stretch: "Gandy → downtown St. Pete", lanes: "3", lat: 27.8300, lon: -82.6560, merge: "I-375/I-175 ramps merge downtown." },
+    { r: "stpete", road: "I-275", stretch: "Downtown → Sunshine Skyway", lanes: "3 → 2", lat: 27.7100, lon: -82.6750, merge: "Right lane ends south of 54th Ave S; 2 lanes over the Skyway." },
+    { r: "stpete", road: "Gandy Bridge (US-92)", stretch: "St. Pete ↔ Tampa", lanes: "2", lat: 27.8800, lon: -82.5800, merge: "Narrows from 3 to 2 each way at both ends." },
+    { r: "stpete", road: "US-19 (34th St)", stretch: "St. Pete → Clearwater", lanes: "3", lat: 27.8600, lon: -82.6950, merge: "Overpasses with frontage roads; lanes merge at every interchange." },
+    { r: "stpete", road: "4th St N", stretch: "Downtown → Gandy", lanes: "2–3", lat: 27.8300, lon: -82.6350, merge: "Merges with Gandy Blvd traffic at the north end." },
+    { r: "sarasota", road: "I-75", stretch: "Sarasota County (north)", lanes: "3", lat: 27.3600, lon: -82.4480, merge: "Short on-ramps at University Pkwy and Fruitville Rd." },
+    { r: "sarasota", road: "US-41 (Tamiami Trail)", stretch: "Downtown Sarasota", lanes: "2–3", lat: 27.3150, lon: -82.5350, merge: "Drops to 2 lanes along the bayfront; roundabouts on US-41 downtown." },
+    { r: "sarasota", road: "John Ringling Causeway", stretch: "Downtown → St. Armands", lanes: "2", lat: 27.3330, lon: -82.5540, merge: "Squeezes into a single-lane roundabout at St. Armands Circle." },
+    { r: "sarasota", road: "Fruitville Rd", stretch: "Downtown → I-75", lanes: "3", lat: 27.3380, lon: -82.4950, merge: "Right lanes exit-only for I-75." },
+    { r: "northport", road: "I-75", stretch: "North Port (Exits 179–182)", lanes: "2–3", lat: 27.0720, lon: -82.2200, merge: "Lane taper near River Rd; on-ramps at Toledo Blade and Sumter." },
+    { r: "northport", road: "US-41 (Tamiami Trail)", stretch: "Through North Port", lanes: "3", lat: 27.0300, lon: -82.2000, merge: "Turn lanes at Sumter, Toledo Blade and Ortiz; right lane drops near the city limits." },
+    { r: "northport", road: "Sumter Blvd", stretch: "US-41 → I-75", lanes: "2", lat: 27.0600, lon: -82.2380, merge: "Merges at the I-75 ramps." },
+    { r: "northport", road: "Toledo Blade Blvd", stretch: "US-41 → I-75", lanes: "2", lat: 27.0400, lon: -82.1800, merge: "Merges at the I-75 ramps." }
+  ];
+
+  var TYPES = {
+    jam:    { label: "Frequent jams",          letter: "J", v: "--jam" },
+    crash:  { label: "Crash-prone",            letter: "!", v: "--crash" },
+    police: { label: "Police / enforcement",   letter: "P", v: "--police" },
+    merge:  { label: "Merges & lane drops",    letter: "M", v: "--merge" },
+    lanes:  { label: "Lane counts",            letter: "",  v: "--lane" }
+  };
+
+  var css = getComputedStyle(document.documentElement);
+  function color(v) { return css.getPropertyValue(v).trim(); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+  var params = new URLSearchParams(location.search);
+  var current = REGIONS[params.get("region")] ? params.get("region") : "all";
+  try { var saved = localStorage.getItem("tbt-region"); if (!params.get("region") && REGIONS[saved]) current = saved; } catch (e) {}
+
+  // --- Live map (Waze embed) ---
+  var live = document.getElementById("live");
+  var lnkGoogle = document.getElementById("lnkGoogle");
+  function setLive(r) {
+    var g = REGIONS[r];
+    live.src = "https://embed.waze.com/iframe?zoom=" + g.z + "&lat=" + g.lat + "&lon=" + g.lon + "&ct=livemap";
+    lnkGoogle.href = "https://www.google.com/maps/@" + g.lat + "," + g.lon + "," + (g.z + 1) + "z/data=!5m1!1e1";
+  }
+
+  // --- Road guide (Leaflet) ---
+  var dark = matchMedia("(prefers-color-scheme: dark)").matches && document.documentElement.dataset.theme !== "light";
+  var map = L.map("guide", { scrollWheelZoom: false, zoomControl: true }).setView([REGIONS[current].lat, REGIONS[current].lon], REGIONS[current].z);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/" + (dark ? "dark_all" : "rastertiles/voyager") + "/{z}/{x}/{y}{r}.png", {
+    maxZoom: 19, subdomains: "abcd",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  }).addTo(map);
+  map.on("focus", function () { map.scrollWheelZoom.enable(); });
+  map.on("blur", function () { map.scrollWheelZoom.disable(); });
+
+  var layers = {};
+  Object.keys(TYPES).forEach(function (k) { layers[k] = L.layerGroup().addTo(map); });
+
+  SPOTS.forEach(function (s) {
+    var T = TYPES[s.t], c = color(T.v);
+    var icon = L.divIcon({
+      className: "", iconSize: [24, 24], iconAnchor: [12, 12],
+      html: '<div class="pin' + (s.t === "merge" ? " merge" : "") + '" style="background:' + c + '"><span>' + T.letter + "</span></div>"
+    });
+    L.marker([s.lat, s.lon], { icon: icon, title: s.name, keyboard: true })
+      .bindPopup('<div class="tag" style="color:' + c + '">' + T.label + "</div><h3>" + esc(s.name) + "</h3>" + esc(s.d))
+      .addTo(layers[s.t]);
+  });
+
+  ROADS.forEach(function (rd) {
+    var icon = L.divIcon({ className: "", iconSize: [0, 0], html: '<span class="lanebadge">' + esc(rd.road) + " · <b>" + esc(rd.lanes) + "</b></span>" });
+    L.marker([rd.lat, rd.lon], { icon: icon, title: rd.road + " " + rd.lanes + " lanes each way", keyboard: true })
+      .bindPopup('<div class="tag" style="color:' + color("--lane") + '">Lanes each way: ' + esc(rd.lanes) + "</div><h3>" + esc(rd.road) + "</h3>" + esc(rd.stretch) + "<br><br><b>Merges:</b> " + esc(rd.merge))
+      .addTo(layers.lanes);
+  });
+
+  // Lane badges crowd the zoomed-out view, so they appear from zoom 10 in.
+  var lanesOn = true;
+  function syncLanes() {
+    if (lanesOn && map.getZoom() >= 10) map.addLayer(layers.lanes); else map.removeLayer(layers.lanes);
+  }
+  map.on("zoomend", syncLanes);
+  syncLanes();
+
+  var toggles = document.getElementById("toggles");
+  Object.keys(TYPES).forEach(function (k) {
+    var T = TYPES[k];
+    var lab = document.createElement("label");
+    lab.innerHTML = '<input type="checkbox" checked> <span class="sw' + (k === "lanes" ? " lane" : "") + '" style="background:' + color(T.v) + '"></span>' + T.label;
+    lab.querySelector("input").addEventListener("change", function (e) {
+      if (k === "lanes") { lanesOn = e.target.checked; syncLanes(); return; }
+      if (e.target.checked) map.addLayer(layers[k]); else map.removeLayer(layers[k]);
+    });
+    toggles.appendChild(lab);
+  });
+
+  // --- Lane table ---
+  var tbody = document.getElementById("laneRows");
+  function renderTable(r) {
+    tbody.innerHTML = ROADS.filter(function (x) { return r === "all" || x.r === r; }).map(function (x) {
+      return '<tr><td class="road">' + esc(x.road) + "<div class='note'>" + REGIONS[x.r].name + "</div></td><td>" + esc(x.stretch) + '</td><td class="n">' + esc(x.lanes) + "</td><td>" + esc(x.merge) + "</td></tr>";
+    }).join("");
+  }
+
+  // --- Region chips ---
+  var chips = document.getElementById("chips");
+  Object.keys(REGIONS).forEach(function (k) {
+    var b = document.createElement("button");
+    b.className = "chip"; b.type = "button"; b.textContent = REGIONS[k].name; b.dataset.r = k;
+    b.addEventListener("click", function () { select(k); });
+    chips.appendChild(b);
+  });
+  function select(r) {
+    current = r;
+    try { localStorage.setItem("tbt-region", r); } catch (e) {}
+    chips.querySelectorAll(".chip").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.r === r ? "true" : "false"); });
+    setLive(r);
+    var g = REGIONS[r];
+    map.setView([g.lat, g.lon], g.z);
+    renderTable(r);
+  }
+  select(current);
+})();
+</script>
+</body>
+</html>
