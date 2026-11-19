@@ -12,20 +12,20 @@
 /* Layout: region chips → big live Waze map → road guide map (hotspots, lanes, merges) → lane table. */
 :root {
   --bg: #eef1f4; --card: #ffffff; --ink: #141a21; --muted: #5b6672; --line: #d8dee5; --chip: #e5eaef;
-  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057;
+  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057; --interstate: #364fc7; --ushwy: #c2255c; --staterd: #e0a800;
   --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da;
+    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da;
+  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -88,6 +88,8 @@ section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); 
 .area { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; font: 600 11px var(--body); color: var(--ink); background: var(--card); border-radius: 999px; padding: 1px 8px 1px 6px; box-shadow: 0 1px 3px rgba(0,0,0,.3); opacity: .92; }
 .area i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
 .county-label { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; font: 700 13px var(--display); letter-spacing: .12em; text-transform: uppercase; color: #fff; text-shadow: 0 0 3px #000, 0 0 6px #000; }
+.shield { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; font: 700 11px var(--body); color: #fff; border: 1.5px solid #fff; border-radius: 5px; padding: 1px 5px; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+.shield.state { color: #1a1400; }
 .pin.gate { width: 20px; height: 20px; font-size: 10px; }
 .pin.school { color: #1a1400; width: 20px; height: 20px; font-size: 11px; }
 .zone-status { color: var(--muted); font-size: 12px; margin-left: auto; }
@@ -335,6 +337,7 @@ tr:last-child td { border-bottom: 0; }
     lanechg: { label: "Lane drops & adds",     letter: "",  v: "--expand" },
     ramps:   { label: "Highway exits & entrances", letter: "", v: "--exit" },
     roads:   { label: "Arterials & stroads",   letter: "", v: "--stroad" },
+    highways: { label: "Highways & state roads", letter: "", v: "--interstate" },
     counties: { label: "County lines",         letter: "", v: "--county" },
     areas:   { label: "Urban / suburban / rural", letter: "", v: "--suburban" },
     gates:   { label: "Gated communities",     letter: "🔒", v: "--gate" }
@@ -763,6 +766,38 @@ tr:last-child td { border-bottom: 0; }
   }
   function bboxStr(b) { return [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].map(function (v) { return v.toFixed(4); }).join(","); }
   var live = {
+    // Interstates, U.S. highways and state roads, by their route numbers.
+    highways: { on: true, minZoom: 10, boxes: [], busy: false, seen: {}, shields: [],
+      query: function (bb) { return '[out:json][timeout:40];way["highway"~"^(motorway|trunk|primary|secondary|tertiary)$"]["ref"~"^(I|US|SR|FL) ?[0-9]"](' + bb + ');out tags geom qt;'; },
+      draw: function (els) {
+        var H = live.highways;
+        els.forEach(function (e) {
+          if (H.seen[e.id] || !e.geometry) return; H.seen[e.id] = 1;
+          var refs = (e.tags.ref || "").split(";").map(function (r) { return r.trim(); });
+          var pick = function (re) { for (var i = 0; i < refs.length; i++) if (re.test(refs[i])) return refs[i]; return null; };
+          var ref = pick(/^I ?\d/), cls = "interstate";
+          if (!ref) { ref = pick(/^US ?\d/); cls = "ushwy"; }
+          if (!ref) { ref = pick(/^(SR|FL) ?\d/); cls = "staterd"; }
+          if (!ref) return;
+          var num = ref.replace(/^(I|US|SR|FL) ?/, "");
+          var label = cls === "interstate" ? "I-" + num : cls === "ushwy" ? "US " + num : "SR " + num;
+          var kind = { interstate: "Interstate", ushwy: "U.S. highway", staterd: "State road" }[cls];
+          var col = color("--" + cls), pts = e.geometry.map(function (g) { return [g.lat, g.lon]; });
+          var popup = '<div class="tag" style="color:' + col + '">' + kind + "</div><h3>" + esc(label) + (e.tags.name && e.tags.name !== label ? " · " + esc(e.tags.name) : "") + "</h3>" +
+            (refs.length > 1 ? "Also signed as " + esc(refs.filter(function (r) { return r !== ref; }).join(", ")) + ". " : "") +
+            (e.tags.lanes ? e.tags.lanes + " lanes" + (e.tags.oneway === "yes" ? " (one way)" : " total") + ". " : "") +
+            (e.tags.maxspeed ? "Speed limit " + esc(e.tags.maxspeed) + "." : "");
+          L.polyline(pts, { color: col, weight: cls === "interstate" ? 7 : cls === "ushwy" ? 5 : 4, opacity: 0.8 }).bindPopup(popup).addTo(layers.highways);
+          // Route label at the middle of longer pieces, at most one per route every ~5 km.
+          var mid = pts[Math.floor(pts.length / 2)];
+          if (pts.length < 4) return;
+          var ll = L.latLng(mid[0], mid[1]);
+          if (H.shields.some(function (x) { return x.label === label && x.ll.distanceTo(ll) < 5000; })) return;
+          H.shields.push({ label: label, ll: ll });
+          L.marker(ll, { icon: L.divIcon({ className: "", iconSize: [0, 0], html: '<span class="shield' + (cls === "staterd" ? " state" : "") + '" style="background:' + col + '">' + esc(label) + "</span>" }), title: label, keyboard: false })
+            .bindPopup(popup).addTo(layers.highways);
+        });
+      } },
     // Urban / suburban / rural from OpenStreetMap place types.
     areas: { on: true, minZoom: 11, boxes: [], busy: false, seen: {},
       query: function (bb) { return '[out:json][timeout:25];node["place"~"^(city|town|suburb|village|hamlet|neighbourhood|quarter)$"](' + bb + ');out;'; },
@@ -858,7 +893,7 @@ tr:last-child td { border-bottom: 0; }
       if (k === "lanechg") { laneChgOn = e.target.checked; syncLaneChanges(); return; }
       if (k === "ramps") { rampsOn = e.target.checked; syncLaneChanges(); return; }
       if (k === "roads") { roadsOn = e.target.checked; syncLaneChanges(); return; }
-      if (k === "areas" || k === "gates") { live[k].on = e.target.checked; syncLive(); return; }
+      if (live[k]) { live[k].on = e.target.checked; syncLive(); return; }
       if (e.target.checked) map.addLayer(layers[k]); else map.removeLayer(layers[k]);
     });
     toggles.appendChild(lab);
