@@ -92,6 +92,7 @@ section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); 
 .leaflet-popup-content { font: 13px/1.45 var(--body); margin: 10px 12px; }
 .leaflet-popup-content h3 { margin: 0 0 4px; font: 700 16px var(--display); letter-spacing: .02em; }
 .leaflet-popup-content .tag { font: 600 10px var(--body); letter-spacing: .08em; text-transform: uppercase; }
+.leaflet-control-layers { background: var(--card); color: var(--ink); border-radius: 8px; font: 13px var(--body); }
 .leaflet-container a.leaflet-popup-close-button { color: var(--muted); }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -122,7 +123,7 @@ tr:last-child td { border-bottom: 0; }
   <section>
     <div class="panel">
       <div class="tabs" role="tablist" aria-label="Map view">
-        <button type="button" role="tab" id="tabRoad" aria-selected="true" aria-controls="viewRoad">Road map</button>
+        <button type="button" role="tab" id="tabRoad" aria-selected="true" aria-controls="viewRoad">Map</button>
         <button type="button" role="tab" id="tabLive" aria-selected="false" aria-controls="viewLive"><span class="dot"></span>Live traffic</button>
       </div>
       <div id="viewRoad" role="tabpanel" aria-labelledby="tabRoad">
@@ -133,7 +134,7 @@ tr:last-child td { border-bottom: 0; }
         <iframe id="live" title="Live traffic map" allow="geolocation"></iframe>
       </div>
       <div class="bar">
-        <span id="barText">OpenStreetMap with recurring jams, crash-prone spots, police zones, merges and your coffee spots. Zoom in for lane counts. Tap any marker for details. Switch to <b>Live traffic</b> for real-time slowdowns, police and crash reports from Waze.</span>
+        <span id="barText">Satellite map with recurring jams, crash-prone spots, police zones, merges and your coffee spots. Zoom in for lane counts. Tap any marker for details. Switch to <b>Live traffic</b> for real-time slowdowns, police and crash reports from Waze.</span>
         <span class="links">
           <a id="lnkGoogle" target="_blank" rel="noopener">Google traffic ↗</a>
           <a href="https://fl511.com/map" target="_blank" rel="noopener">FL511 incidents &amp; cameras ↗</a>
@@ -302,11 +303,23 @@ tr:last-child td { border-bottom: 0; }
   // --- Road guide (Leaflet) ---
   var dark = matchMedia("(prefers-color-scheme: dark)").matches && document.documentElement.dataset.theme !== "light";
   var map = L.map("guide", { scrollWheelZoom: false, zoomControl: true }).setView([REGIONS[current].lat, REGIONS[current].lon], REGIONS[current].z);
-  // OpenStreetMap tiles need no API key. Dark mode dims them with a CSS filter.
-  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  // Base maps (no API key needed): Esri satellite imagery with road/place labels, or OpenStreetMap streets.
+  var ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/";
+  var esriAttr = 'Imagery &copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics';
+  var satellite = L.layerGroup([
+    L.tileLayer(ESRI + "World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, attribution: esriAttr }),
+    L.tileLayer(ESRI + "Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19 }),
+    L.tileLayer(ESRI + "Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19 })
+  ]);
+  var streets = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19, className: dark ? "tiles-dark" : "",
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-  }).addTo(map);
+  });
+  var baseName = "Satellite";
+  try { if (localStorage.getItem("tbt-base") === "Streets") baseName = "Streets"; } catch (e) {}
+  (baseName === "Streets" ? streets : satellite).addTo(map);
+  L.control.layers({ "Satellite": satellite, "Streets": streets }, null, { position: "topright", collapsed: false }).addTo(map);
+  map.on("baselayerchange", function (e) { try { localStorage.setItem("tbt-base", e.name); } catch (err) {} });
   map.on("focus", function () { map.scrollWheelZoom.enable(); });
   map.on("blur", function () { map.scrollWheelZoom.disable(); });
 
@@ -374,7 +387,7 @@ tr:last-child td { border-bottom: 0; }
   var tabRoad = document.getElementById("tabRoad"), tabLive = document.getElementById("tabLive");
   var viewRoad = document.getElementById("viewRoad"), viewLive = document.getElementById("viewLive");
   var barText = document.getElementById("barText"), roadText = barText.innerHTML;
-  var liveText = "Live from Waze: red and orange lines are slowdowns; icons show reported police, crashes, hazards and closures. Tap any icon for details.";
+  var liveText = "Live from Waze: red and orange lines are slowdowns; icons show reported police, crashes, hazards and closures. Use the city buttons to jump straight to an area. For smooth zooming, <a href=\"https://www.waze.com/live-map/\" target=\"_blank\" rel=\"noopener\">open the full Waze map ↗</a>.";
   function showTab(isLive) {
     tabRoad.setAttribute("aria-selected", String(!isLive));
     tabLive.setAttribute("aria-selected", String(isLive));
