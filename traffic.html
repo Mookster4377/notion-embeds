@@ -263,25 +263,26 @@ tr:last-child td { border-bottom: 0; }
     { r: "northport", road: "Toledo Blade Blvd", stretch: "US-41 → I-75", lanes: "2", lat: 27.0400, lon: -82.1800, merge: "Merges at the I-75 ramps." }
   ];
 
-  // From the Sarasota Coffee database in Notion.
+  // From the Sarasota Coffee database in Notion. id = the entry's Notion page id (used for ?coffee=<id> links).
+  var COFFEE_DB = "https://app.notion.com/p/cd8bb5242e5c83acb18e010614dda7fb";
   var COFFEE = [
-    {"name": "Project Coffee", "url": "https://www.projectcoffee.us/", "r": "sarasota", "lat": 27.34069, "lon": -82.54223, "addr": "1419 5th St, Sarasota", "rank": "Gets the job done", "cat": "Coffee"},
-    {"name": "Qamaria", "url": "https://www.qamariacoffee.com/", "r": "tampa", "lat": 28.05184, "lon": -82.39279, "addr": "11301 56th St N, Temple Terrace", "rank": "Peak", "cat": "Coffee"},
-    {"name": "Casa Azul", "url": "https://casaazultpa.com/", "r": "tampa", "lat": 27.90714, "lon": -82.52707, "addr": "4802 W Bay Ct Ave, Tampa", "rank": "Peak", "cat": "Coffee"},
-    {"name": "OfKors Bakery", "url": "https://www.ofkorsbakery.com/menu.php", "r": "sarasota", "lat": 27.33605, "lon": -82.54339, "addr": "1359 Main St, Sarasota", "rank": "Gets the job done", "cat": "Coffee, Bakery"},
-    {"name": "Oxford Exchange", "url": "", "r": "tampa", "lat": 27.94493, "lon": -82.46463, "addr": "420 W John F Kennedy Blvd, Tampa", "rank": "", "cat": "Coffee, Bakery"},
-    {"name": "The Blend (Old Northeast)", "url": "https://realcoffeeclub.com/place/florida/st-petersburg/the-blend-old-northeast-coffee-cocktails", "r": "stpete", "lat": 27.79966, "lon": -82.6546, "addr": "3001 16th St N, St. Petersburg", "rank": "", "cat": "Coffee"},
-    {"name": "CoffeeMe", "url": "https://coffeemefl.wixsite.com/coffeemee", "r": "tampa", "lat": 28.03378, "lon": -82.47561, "addr": "1457 W Busch Blvd, Tampa", "rank": "", "cat": "Coffee"},
-    {"name": "Leads Coffeehouse", "url": "https://www.networkingleads.com/leadscoffeehouse", "r": "tampa", "lat": 27.96495, "lon": -82.50098, "addr": "2701 N Himes Ave, Tampa", "rank": "", "cat": "Coffee"},
-    {"name": "Black Crow Coffee Shop", "url": "https://www.blackcrowcoffeeco.com/", "r": "stpete", "lat": 27.77975, "lon": -82.63576, "addr": "722 2nd St N, St. Petersburg", "rank": "", "cat": "Coffee"},
-    {"name": "Postal 98 Cafe", "url": "https://postal98cafe.com/index.php/menu/", "r": "sarasota", "lat": 27.3226, "lon": -82.50218, "addr": "1240 Yoder Ave, Sarasota", "rank": "Gets the job done", "cat": "Coffee"},
-    {"name": "Paradeco Coffee Roasters", "url": "https://paradecocoffee.com/menu/", "r": "stpete", "lat": 27.77426, "lon": -82.63353, "addr": "111 2nd Ave NE, St. Petersburg", "rank": "", "cat": "Coffee"},
-    {"name": "Pistil House", "url": "https://www.pistilhouse.com/", "r": "stpete", "lat": 27.77041, "lon": -82.66791, "addr": "2533 1st Ave S, St. Petersburg", "rank": "", "cat": "Coffee"},
-    {"name": "Flatbread & Butter", "url": "https://www.flatbreadandbutter.com/menus-order-online", "r": "stpete", "lat": 27.77956, "lon": -82.64048, "addr": "497 7th Ave N, St. Petersburg", "rank": "", "cat": "Coffee"},
-    {"name": "Grove Surf + Coffee", "url": "https://www.grovesurfandcoffee.com/", "r": "stpete", "lat": 27.74094, "lon": -82.7512, "addr": "7370 Gulf Blvd, St. Pete Beach", "rank": "", "cat": "Coffee"},
-    {"name": "Bad Ass Coffee", "url": "https://badasscoffee.com/", "r": "sarasota", "lat": 27.38579, "lon": -82.42711, "addr": "6588 University Pkwy, Sarasota", "rank": "Dogwater", "cat": "Coffee"},
-    {"name": "Bad Mother", "url": "https://www.badmother.coffee/", "r": "stpete", "lat": 27.77006, "lon": -82.63666, "addr": "260 1st Ave S, St. Petersburg", "rank": "", "cat": "Coffee"},
-    {"name": "Buttermilk Handcrafted Food", "url": "https://www.yelp.com/biz/buttermilk-handcrafted-food-sarasota", "r": "sarasota", "lat": 27.32642, "lon": -82.45852, "addr": "5520 Palmer Blvd, Sarasota", "rank": "Great", "cat": "Coffee, Bakery, Sandwiches"}
+    {"id": "e1cbb5242e5c82da95e4814443571939", "name": "Project Coffee", "url": "https://www.projectcoffee.us/", "r": "sarasota", "lat": 27.34069, "lon": -82.54223, "addr": "1419 5th St, Sarasota", "rank": "Gets the job done", "cat": "Coffee"},
+    {"id": "ff8bb5242e5c82a08d9d8111175f1a91", "name": "Qamaria", "url": "https://www.qamariacoffee.com/", "r": "tampa", "lat": 28.05184, "lon": -82.39279, "addr": "11301 56th St N, Temple Terrace", "rank": "Peak", "cat": "Coffee"},
+    {"id": "4d9bb5242e5c82478db901ebf82f7371", "name": "Casa Azul", "url": "https://casaazultpa.com/", "r": "tampa", "lat": 27.90714, "lon": -82.52707, "addr": "4802 W Bay Ct Ave, Tampa", "rank": "Peak", "cat": "Coffee"},
+    {"id": "c12bb5242e5c83cf8efa8114e06d2c36", "name": "OfKors Bakery", "url": "https://www.ofkorsbakery.com/menu.php", "r": "sarasota", "lat": 27.33605, "lon": -82.54339, "addr": "1359 Main St, Sarasota", "rank": "Gets the job done", "cat": "Coffee, Bakery"},
+    {"id": "405bb5242e5c8063b50bec54a7ab548b", "name": "Oxford Exchange", "url": "", "r": "tampa", "lat": 27.94493, "lon": -82.46463, "addr": "420 W John F Kennedy Blvd, Tampa", "rank": "", "cat": "Coffee, Bakery"},
+    {"id": "3b3bb5242e5c83f1a9168174c1a6fe5d", "name": "The Blend (Old Northeast)", "url": "https://realcoffeeclub.com/place/florida/st-petersburg/the-blend-old-northeast-coffee-cocktails", "r": "stpete", "lat": 27.79966, "lon": -82.6546, "addr": "3001 16th St N, St. Petersburg", "rank": "", "cat": "Coffee"},
+    {"id": "0b0bb5242e5c83b4bc7701f0345dd5a9", "name": "CoffeeMe", "url": "https://coffeemefl.wixsite.com/coffeemee", "r": "tampa", "lat": 28.03378, "lon": -82.47561, "addr": "1457 W Busch Blvd, Tampa", "rank": "", "cat": "Coffee"},
+    {"id": "fcbbb5242e5c8301892f816036267454", "name": "Leads Coffeehouse", "url": "https://www.networkingleads.com/leadscoffeehouse", "r": "tampa", "lat": 27.96495, "lon": -82.50098, "addr": "2701 N Himes Ave, Tampa", "rank": "", "cat": "Coffee"},
+    {"id": "0d6bb5242e5c833eb7a301260c382d45", "name": "Black Crow Coffee Shop", "url": "https://www.blackcrowcoffeeco.com/", "r": "stpete", "lat": 27.77975, "lon": -82.63576, "addr": "722 2nd St N, St. Petersburg", "rank": "", "cat": "Coffee"},
+    {"id": "1b5bb5242e5c835ab85c812156fe7432", "name": "Postal 98 Cafe", "url": "https://postal98cafe.com/index.php/menu/", "r": "sarasota", "lat": 27.3226, "lon": -82.50218, "addr": "1240 Yoder Ave, Sarasota", "rank": "Gets the job done", "cat": "Coffee"},
+    {"id": "571bb5242e5c824d9aa70197266c5ea2", "name": "Paradeco Coffee Roasters", "url": "https://paradecocoffee.com/menu/", "r": "stpete", "lat": 27.77426, "lon": -82.63353, "addr": "111 2nd Ave NE, St. Petersburg", "rank": "", "cat": "Coffee"},
+    {"id": "2b1bb5242e5c82c59fc581a242bf03f3", "name": "Pistil House", "url": "https://www.pistilhouse.com/", "r": "stpete", "lat": 27.77041, "lon": -82.66791, "addr": "2533 1st Ave S, St. Petersburg", "rank": "", "cat": "Coffee"},
+    {"id": "751bb5242e5c8283a997013ce6b01770", "name": "Flatbread & Butter", "url": "https://www.flatbreadandbutter.com/menus-order-online", "r": "stpete", "lat": 27.77956, "lon": -82.64048, "addr": "497 7th Ave N, St. Petersburg", "rank": "", "cat": "Coffee"},
+    {"id": "53cbb5242e5c833daf198190e48b811b", "name": "Grove Surf + Coffee", "url": "https://www.grovesurfandcoffee.com/", "r": "stpete", "lat": 27.74094, "lon": -82.7512, "addr": "7370 Gulf Blvd, St. Pete Beach", "rank": "", "cat": "Coffee"},
+    {"id": "a3dbb5242e5c830ca1ce01644d4fb8e2", "name": "Bad Ass Coffee", "url": "https://badasscoffee.com/", "r": "sarasota", "lat": 27.38579, "lon": -82.42711, "addr": "6588 University Pkwy, Sarasota", "rank": "Dogwater", "cat": "Coffee"},
+    {"id": "e03bb5242e5c832ba6b48118dbe96836", "name": "Bad Mother", "url": "https://www.badmother.coffee/", "r": "stpete", "lat": 27.77006, "lon": -82.63666, "addr": "260 1st Ave S, St. Petersburg", "rank": "", "cat": "Coffee"},
+    {"id": "435bb5242e5c831685e701541fdd00c9", "name": "Buttermilk Handcrafted Food", "url": "https://www.yelp.com/biz/buttermilk-handcrafted-food-sarasota", "r": "sarasota", "lat": 27.32642, "lon": -82.45852, "addr": "5520 Palmer Blvd, Sarasota", "rank": "Great", "cat": "Coffee, Bakery, Sandwiches"}
   ];
 
   var TYPES = {
@@ -350,15 +351,19 @@ tr:last-child td { border-bottom: 0; }
       .addTo(layers[s.t]);
   });
 
+  var coffeeMarkers = {};
   COFFEE.forEach(function (c) {
     var col = color("--coffee");
     var icon = L.divIcon({ className: "", iconSize: [24, 24], iconAnchor: [12, 12],
       html: '<div class="pin coffee" style="background:' + col + '"><span>☕</span></div>' });
     var title = c.url ? '<a href="' + esc(c.url) + '" target="_blank" rel="noopener">' + esc(c.name) + "</a>" : esc(c.name);
-    L.marker([c.lat, c.lon], { icon: icon, title: c.name, keyboard: true, zIndexOffset: 500 })
+    var marker = L.marker([c.lat, c.lon], { icon: icon, title: c.name, keyboard: true, zIndexOffset: 500 })
       .bindPopup('<div class="tag" style="color:' + col + '">' + esc(c.cat) + (c.rank ? " · " + esc(c.rank) : "") + "</div><h3>" + title + "</h3>" + esc(c.addr) +
-        '<br><a href="https://www.google.com/maps/dir/?api=1&destination=' + c.lat + "," + c.lon + '" target="_blank" rel="noopener">Directions ↗</a>')
-      .addTo(layers.coffee);
+        '<br><a href="https://www.google.com/maps/dir/?api=1&destination=' + c.lat + "," + c.lon + '" target="_blank" rel="noopener">Directions ↗</a>' +
+        ' · <a href="https://app.notion.com/p/' + c.id + '" target="_blank" rel="noopener">Notion entry ↗</a>' +
+        ' · <a href="' + COFFEE_DB + '" target="_blank" rel="noopener">All coffee ↗</a>');
+    marker.addTo(layers.coffee);
+    coffeeMarkers[c.id] = { m: marker, c: c };
   });
 
   ROADS.forEach(function (rd) {
@@ -435,6 +440,16 @@ tr:last-child td { border-bottom: 0; }
     renderTable(r);
   }
   select(current);
+
+  // Deep link from the Notion coffee database: ?coffee=<page id> zooms to that spot and opens it.
+  var want = (params.get("coffee") || "").replace(/-/g, "").toLowerCase();
+  if (coffeeMarkers[want]) {
+    var hit = coffeeMarkers[want];
+    chips.querySelectorAll(".chip").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.r === hit.c.r ? "true" : "false"); });
+    current = hit.c.r; setLive(current); renderTable(current);
+    map.setView([hit.c.lat, hit.c.lon], 16);
+    hit.m.openPopup();
+  }
 })();
 </script>
 </body>
