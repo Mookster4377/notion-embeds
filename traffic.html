@@ -12,20 +12,20 @@
 /* Layout: region chips → big live Waze map → road guide map (hotspots, lanes, merges) → lane table. */
 :root {
   --bg: #eef1f4; --card: #ffffff; --ink: #141a21; --muted: #5b6672; --line: #d8dee5; --chip: #e5eaef;
-  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057; --interstate: #364fc7; --ushwy: #c2255c; --staterd: #e0a800; --countyrd: #1098ad; --poi: #5f3dc4;
+  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057; --interstate: #364fc7; --ushwy: #c2255c; --staterd: #e0a800; --countyrd: #1098ad; --poi: #5f3dc4; --free: #2b8a3e; --paid: #c92a2a; --parkunk: #495057;
   --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa;
+    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa;
+  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -93,6 +93,7 @@ section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); 
 .shield { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; font: 700 11px var(--body); color: #fff; border: 1.5px solid #fff; border-radius: 5px; padding: 1px 5px; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
 .shield.state { color: #1a1400; }
 .pin.poi { width: 24px; height: 24px; font-size: 13px; }
+.pin.park { width: 20px; height: 20px; font: 800 11px var(--body); border-radius: 4px; }
 .pin.gate { width: 20px; height: 20px; font-size: 10px; }
 .pin.school { color: #1a1400; width: 20px; height: 20px; font-size: 11px; }
 .zone-status { color: var(--muted); font-size: 12px; margin-left: auto; }
@@ -348,7 +349,10 @@ tr:last-child td { border-bottom: 0; }
     gates:   { label: "Gated communities",     letter: "🔒", v: "--gate" },
     airports: { label: "Airports",             letter: "✈️", v: "--poi" },
     museums: { label: "Museums",               letter: "🏛️", v: "--poi" },
-    colleges: { label: "Colleges",             letter: "🎓", v: "--poi" }
+    colleges: { label: "Colleges",             letter: "🎓", v: "--poi" },
+    venues:  { label: "Sports venues",         letter: "🏟️", v: "--poi" },
+    malls:   { label: "Shopping centers",      letter: "🛍️", v: "--poi" },
+    parking: { label: "Parking (free / paid)", letter: "P", v: "--free" }
   };
 
   var css = getComputedStyle(document.documentElement);
@@ -525,15 +529,33 @@ tr:last-child td { border-bottom: 0; }
   // fewer lanes ahead = lanes merge (purple), more lanes ahead = lanes added (teal). Checked for each direction.
   var laneChgOn = true, rampsOn = true, roadsOn = true, laneBoxes = [], laneTimer = null, laneBusy = false, laneSeen = {};
   var LANE_MIN_ZOOM = 13;
+  // Through lanes in each direction. Turn-only lanes (left/right/U-turn) and center turn lanes are not counted.
+  function throughCount(turns, fallback) {
+    if (!turns) return fallback;
+    var n = turns.split("|").filter(function (l) {
+      var parts = l.split(";");
+      return parts.some(function (x) { return x === "" || x === "none" || x === "through" || /^slight_/.test(x) || /^merge_to_/.test(x); });
+    }).length;
+    return n || fallback;
+  }
   function perDir(t) {
     var n = parseInt(t.lanes, 10), f = parseInt(t["lanes:forward"], 10), b = parseInt(t["lanes:backward"], 10);
-    if (t.oneway === "yes" || t.oneway === "1" || t.highway === "motorway" && t.oneway !== "no") return { f: n, b: 0 };
-    if (t.oneway === "-1") return { f: 0, b: n };
-    if (f && b) return { f: f, b: b };
+    var both = parseInt(t["lanes:both_ways"], 10) || 0; // center two-way turn lane
+    if (t.oneway === "yes" || t.oneway === "1" || t.highway === "motorway" && t.oneway !== "no") return { f: throughCount(t["turn:lanes"], n), b: 0 };
+    if (t.oneway === "-1") return { f: 0, b: throughCount(t["turn:lanes"], n) };
+    if (f && b) return { f: throughCount(t["turn:lanes:forward"], f), b: throughCount(t["turn:lanes:backward"], b) };
     if (!n) return null;
-    var half = Math.max(1, Math.floor(n / 2));
+    if (t["turn:lanes:forward"] || t["turn:lanes:backward"]) return null; // turn lanes mapped but per-direction counts missing: can't tell
+    var half = Math.max(1, Math.floor((n - both) / 2));
     return { f: half, b: half };
   }
+  function wayLength(w) {
+    if (w.len != null) return w.len;
+    var d = 0;
+    for (var i = 1; i < w.geometry.length; i++) d += L.latLng(w.geometry[i - 1].lat, w.geometry[i - 1].lon).distanceTo([w.geometry[i].lat, w.geometry[i].lon]);
+    return (w.len = d);
+  }
+
   function bearingDeg(a, b) {
     var y = Math.sin((b.lon - a.lon) * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180);
     var x = Math.cos(a.lat * Math.PI / 180) * Math.sin(b.lat * Math.PI / 180) - Math.sin(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.cos((b.lon - a.lon) * Math.PI / 180);
@@ -572,6 +594,10 @@ tr:last-child td { border-bottom: 0; }
         var inLanes = from.atStart ? from.w.dir.b : from.w.dir.f;
         var outLanes = to.atStart ? to.w.dir.f : to.w.dir.b;
         if (!inLanes || !outLanes || inLanes === outLanes) return;
+        // A short piece with an extra lane is almost always a turn bay at an intersection, not a real lane change.
+        // (Highways are exempt: auxiliary lanes between ramps are real lanes.)
+        var wider = inLanes > outLanes ? from.w : to.w;
+        if (!/^(motorway|trunk)$/.test(wider.tags.highway) && wayLength(wider) < 300) return;
         var g = from.w.geometry, prev = from.atStart ? g[1] : g[g.length - 2];
         var kind = outLanes < inLanes ? "drop" : "add";
         if (kind === "drop" && ramps.exitAt[id]) kind = "exitonly";
@@ -602,7 +628,7 @@ tr:last-child td { border-bottom: 0; }
     });
     L.marker([c.lat, c.lon], { icon: icon, title: c.name + (hasDrop ? " lane merge" : " lanes added"), keyboard: true })
       .bindPopup('<div class="tag" style="color:' + col + '">' + (exitOnly ? "Exit-only lane" : hasDrop ? "Lane merge" : "Lanes added") + "</div><h3>" + esc(c.name) + "</h3>" + lines.join("<br>") +
-        "<div class='note' style='margin-top:6px'>From OpenStreetMap lane counts, read live. Short turn lanes at intersections are not shown.</div>")
+        "<div class='note' style='margin-top:6px'>From OpenStreetMap lane counts, read live. Only through lanes are counted; turn lanes and short turn bays are ignored.</div>")
       .addTo(layers.lanechg);
   }
 
@@ -828,6 +854,36 @@ tr:last-child td { border-bottom: 0; }
       draw: function (els) { els.forEach(function (e) {
         poiMarker("colleges", e, "🎓", e.tags.amenity === "university" ? "University" : "College", "Busy around class changes; watch for pedestrians, bikes and scooters.");
       }); } },
+    venues: { on: true, minZoom: 10, boxes: [], busy: false, seen: {},
+      query: function (bb) { return '[out:json][timeout:25];(nwr["leisure"="stadium"]["name"](' + bb + ');nwr["building"="stadium"]["name"](' + bb + ');nwr["leisure"="sports_centre"]["name"~"Arena|Stadium|Ballpark|Speedway",i](' + bb + '););out center tags;'; },
+      draw: function (els) { els.forEach(function (e) {
+        poiMarker("venues", e, "🏟️", "Sports venue", "Expect heavy traffic and road closures before and after games and events.");
+      }); } },
+    malls: { on: true, minZoom: 11, boxes: [], busy: false, seen: {},
+      query: function (bb) { return '[out:json][timeout:25];(nwr["shop"="mall"]["name"](' + bb + ');way["landuse"="retail"]["name"~"mall|town cent|outlets|shoppes|galleria|marketplace|square",i](' + bb + '););out center tags;'; },
+      draw: function (els) { els.forEach(function (e) {
+        poiMarker("malls", e, "🛍️", "Shopping center", "Busy weekends and holidays; expect slow entrances and full lots in December.");
+      }); } },
+    // Parking lots and garages, colored by whether OpenStreetMap says they're free or paid.
+    parking: { on: true, minZoom: 15, boxes: [], busy: false, seen: {},
+      query: function (bb) { return '[out:json][timeout:25];nwr["amenity"="parking"](' + bb + ');out center tags;'; },
+      draw: function (els) { els.forEach(function (e) {
+        var t = e.tags || {}, key = e.type + e.id;
+        if (live.parking.seen[key]) return; live.parking.seen[key] = 1;
+        if (/^(street_side|lane|layby|on_kerb|half_on_kerb)$/.test(t.parking || "") || /^(private|no)$/.test(t.access || "")) return;
+        var lat = e.lat || (e.center && e.center.lat), lon = e.lon || (e.center && e.center.lon); if (!lat) return;
+        var garage = /^(multi-storey|underground|rooftop)$/.test(t.parking || "");
+        var fee = t.fee === "yes" || !!t.charge ? "paid" : t.fee === "no" ? "free" : "unknown";
+        var col = color(fee === "paid" ? "--paid" : fee === "free" ? "--free" : "--parkunk");
+        var feeText = { paid: "Paid" + (t.charge ? ": " + esc(t.charge) : ""), free: "Free", unknown: "Free or paid: not listed. Check the signs." }[fee];
+        var who = t.access === "customers" ? "Customers only." : t.access === "permissive" || t.access === "yes" || !t.access ? "" : "Access: " + esc(t.access) + ".";
+        var icon = L.divIcon({ className: "", iconSize: [20, 20], iconAnchor: [10, 10], html: '<div class="pin park" style="background:' + col + '"><span>' + (garage ? "P▲" : "P") + "</span></div>" });
+        L.marker([lat, lon], { icon: icon, title: (t.name || (garage ? "Parking garage" : "Parking lot")) + " (" + fee + ")", keyboard: true })
+          .bindPopup('<div class="tag" style="color:' + col + '">' + (garage ? "Parking garage" : "Parking lot") + " · " + (fee === "unknown" ? "fee unknown" : fee) + "</div><h3>" + esc(t.name || (garage ? "Parking garage" : "Parking lot")) + "</h3>" +
+            feeText + (who ? "<br>" + who : "") + (t.capacity ? "<br>About " + esc(t.capacity) + " spaces." : "") + (t.opening_hours ? "<br>Hours: " + esc(t.opening_hours) : "") + (t.operator ? "<br>Run by " + esc(t.operator) + "." : "") +
+            '<br><a href="https://www.google.com/maps/dir/?api=1&destination=' + lat + "," + lon + '" target="_blank" rel="noopener">Directions ↗</a>')
+          .addTo(layers.parking);
+      }); } },
     // Urban / suburban / rural from OpenStreetMap place types.
     areas: { on: true, minZoom: 11, boxes: [], busy: false, seen: {},
       query: function (bb) { return '[out:json][timeout:25];node["place"~"^(city|town|suburb|village|hamlet|neighbourhood|quarter)$"](' + bb + ');out;'; },
@@ -870,6 +926,10 @@ tr:last-child td { border-bottom: 0; }
     var key = e.type + e.id; if (live[layer].seen[key]) return; live[layer].seen[key] = 1;
     var t = e.tags || {}, lat = e.lat || (e.center && e.center.lat), lon = e.lon || (e.center && e.center.lon);
     if (!lat || !t.name) return;
+    // The same place is often mapped twice (e.g. the grounds and the building): keep one.
+    var near = live[layer].named = live[layer].named || [];
+    if (near.some(function (x) { return x.name === t.name && x.ll.distanceTo([lat, lon]) < 600; })) return;
+    near.push({ name: t.name, ll: L.latLng(lat, lon) });
     var site = t.website || t["contact:website"];
     var icon = L.divIcon({ className: "", iconSize: [24, 24], iconAnchor: [12, 12], html: '<div class="pin poi" style="background:' + color("--poi") + '"><span>' + emoji + "</span></div>" });
     L.marker([lat, lon], { icon: icon, title: t.name, keyboard: true })
