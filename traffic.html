@@ -110,6 +110,7 @@ section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); 
 .stopsign { width: 18px; height: 18px; display: grid; place-items: center; color: #fff; font: 800 6px var(--body); letter-spacing: -.02em;
   clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%); box-shadow: 0 0 0 2px #fff; }
 .stopsign.busy { width: 24px; height: 24px; font-size: 7px; }
+.pin.local { width: 20px; height: 20px; font-size: 10px; opacity: .9; }
 .pin.gate { width: 20px; height: 20px; font-size: 10px; }
 .pin.school { color: #1a1400; width: 20px; height: 20px; font-size: 11px; }
 .zone-status { color: var(--muted); font-size: 12px; margin-left: auto; }
@@ -179,6 +180,17 @@ tr:last-child td { border-bottom: 0; }
         </span>
       </div>
     </div>
+  </section>
+
+  <section>
+    <h2>Local coffee in Sarasota</h2>
+    <div class="panel table-wrap">
+      <table>
+        <thead><tr><th>Coffee shop</th><th>Address</th><th>Hours</th><th></th></tr></thead>
+        <tbody id="localCoffeeRows"><tr><td colspan="4" class="note">Loading local coffee shops…</td></tr></tbody>
+      </table>
+    </div>
+    <p class="note">Every café OpenStreetMap lists from Lakewood Ranch and Sarasota down to Osprey, minus national chains. ☕ marks the ones already in your Sarasota Coffee list. New places may be missing.</p>
   </section>
 
   <section>
@@ -380,7 +392,8 @@ tr:last-child td { border-bottom: 0; }
     venues:  { label: "Sports venues",         letter: "🏟️", v: "--poi" },
     malls:   { label: "Shopping centers",      letter: "🛍️", v: "--poi" },
     parking: { label: "Parking (free / paid)", letter: "P", v: "--free" },
-    stops:   { label: "Stop signs",            letter: "", v: "--crash" }
+    stops:   { label: "Stop signs",            letter: "", v: "--crash" },
+    localcoffee: { label: "Local coffee (Sarasota)", letter: "☕", v: "--coffee" }
   };
 
   var css = getComputedStyle(document.documentElement);
@@ -1261,6 +1274,58 @@ tr:last-child td { border-bottom: 0; }
     tr.querySelector("button").addEventListener("click", function () { showGarage(g); });
     garageRows.appendChild(tr);
   });
+
+
+  // --- Local coffee shops in Sarasota (from OpenStreetMap, national chains removed) ---
+  var CHAINS = /starbucks|dunkin|panera|tim hortons|peet|dutch bros|scooter'?s|biggby|7 brew|krispy|mcdonald|mccaf|einstein|caribou|costa|barnie|tropical smoothie|smoothie king|wawa|7-eleven|circle k|duck donuts|first watch|another broken egg|black rifle|ziggi/i;
+  var SARASOTA_BOX = "27.17,-82.62,27.47,-82.33";
+  function addrOf(t) {
+    var a = [t["addr:housenumber"], t["addr:street"]].filter(Boolean).join(" ");
+    return a ? a + (t["addr:city"] ? ", " + t["addr:city"] : "") : (t["addr:city"] || "");
+  }
+  function inMyList(name) {
+    var n = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    return COFFEE.some(function (c) { var m = c.name.toLowerCase().replace(/[^a-z0-9]/g, ""); return m && (n.indexOf(m) >= 0 || m.indexOf(n) >= 0); });
+  }
+  overpass('[out:json][timeout:30];nwr["amenity"="cafe"](' + SARASOTA_BOX + ');out center tags;')
+    .then(function (d) {
+      var seenName = {};
+      var shops = (d.elements || []).map(function (e) {
+        var t = e.tags || {};
+        return { t: t, name: t.name, lat: e.lat || (e.center && e.center.lat), lon: e.lon || (e.center && e.center.lon) };
+      }).filter(function (x) {
+        if (!x.name || !x.lat || x.t.brand || x.t["brand:wikidata"] || CHAINS.test(x.name)) return false;
+        var k = x.name.toLowerCase() + Math.round(x.lat * 200) + Math.round(x.lon * 200);
+        if (seenName[k]) return false; seenName[k] = 1; return true;
+      }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+      var rows = document.getElementById("localCoffeeRows");
+      rows.innerHTML = "";
+      if (!shops.length) { rows.innerHTML = '<tr><td colspan="4" class="note">No local coffee shops found.</td></tr>'; return; }
+      shops.forEach(function (x) {
+        var mine = inMyList(x.name), site = x.t.website || x.t["contact:website"];
+        var title = (mine ? "☕ " : "") + (site && /^https?:/.test(site) ? '<a href="' + esc(site) + '" target="_blank" rel="noopener">' + esc(x.name) + "</a>" : esc(x.name));
+        var icon = L.divIcon({ className: "", iconSize: [20, 20], iconAnchor: [10, 10], html: '<div class="pin local" style="background:' + color("--coffee") + '"><span>☕</span></div>' });
+        var m = L.marker([x.lat, x.lon], { icon: icon, title: x.name, keyboard: true })
+          .bindPopup('<div class="tag" style="color:' + color("--coffee") + '">Local coffee' + (mine ? " · in your list" : "") + "</div><h3>" + title + "</h3>" +
+            esc(addrOf(x.t) || "") + (x.t.opening_hours ? "<br>Hours: " + esc(x.t.opening_hours) : "") +
+            '<br><a href="https://www.google.com/maps/dir/?api=1&destination=' + x.lat + "," + x.lon + '" target="_blank" rel="noopener">Directions ↗</a>')
+          .addTo(layers.localcoffee);
+        var tr = document.createElement("tr");
+        tr.innerHTML = '<td class="road">' + title + "</td><td>" + esc(addrOf(x.t) || "—") + "</td><td class='note'>" + esc(x.t.opening_hours || "—") +
+          '</td><td><button type="button" class="chip">Show on map</button></td>';
+        tr.querySelector("button").addEventListener("click", function () {
+          showTab(false);
+          if (!map.hasLayer(layers.localcoffee)) map.addLayer(layers.localcoffee);
+          document.getElementById("guide").scrollIntoView({ behavior: "smooth", block: "center" });
+          map.setView([x.lat, x.lon], 17); m.openPopup();
+        });
+        rows.appendChild(tr);
+      });
+      document.querySelector("#localCoffeeRows").closest("section").querySelector("h2").firstChild.textContent = "Local coffee in Sarasota (" + shops.length + ")";
+    })
+    .catch(function () {
+      document.getElementById("localCoffeeRows").innerHTML = '<tr><td colspan="4" class="note">Couldn\'t load the coffee list right now. Refresh to try again.</td></tr>';
+    });
 
   // --- Lane table ---
   var tbody = document.getElementById("laneRows");
