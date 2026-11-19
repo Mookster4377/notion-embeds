@@ -1,0 +1,42 @@
+# Downloads OpenStreetMap data for traffic.html every night and publishes it to the
+# "map-data" branch (replaced each time, so the repo doesn't grow). The map reads it from
+# raw.githubusercontent.com and falls back to the live OpenStreetMap servers if it's missing.
+name: Refresh map data
+
+on:
+  schedule:
+    - cron: "23 7 * * *"   # 3:23 am Eastern (EDT) / 2:23 am (EST)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: map-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download OpenStreetMap data
+        run: python scripts/fetch_map_data.py out
+
+      - name: Publish to the map-data branch
+        working-directory: out
+        run: |
+          git init -q
+          git checkout -q -b map-data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Map data $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" map-data
+          du -sh . && ls tiles | wc -l
