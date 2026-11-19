@@ -93,6 +93,7 @@ section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); 
 .shield { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; font: 700 11px var(--body); color: #fff; border: 1.5px solid #fff; border-radius: 5px; padding: 1px 5px; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
 .shield.state { color: #1a1400; }
 .pin.poi { width: 24px; height: 24px; font-size: 13px; }
+.pin.park.street { border-radius: 10px; width: 24px; }
 .pin.park { width: 20px; height: 20px; font: 800 11px var(--body); border-radius: 4px; }
 .layer-box { flex: 1 1 100%; }
 .layer-box summary { cursor: pointer; font: 600 13px var(--body); padding: 2px 0; }
@@ -173,7 +174,7 @@ tr:last-child td { border-bottom: 0; }
       <div class="bar">
         <span id="barText">Satellite map with recurring jams, crash-prone spots, police zones, merges, your coffee spots and school zones. Zoom in to see schools and every spot where lanes merge or are added. Zoom in for lane counts. Tap any marker for details. Switch to <b>Live traffic</b> for real-time slowdowns, police and crash reports from Waze.</span>
         <span class="links">
-          <a id="lnkGoogle" target="_blank" rel="noopener">Google traffic ↗</a>
+          <a id="lnkMaps" target="_blank" rel="noopener">Open in Apple Maps ↗</a>
           <a href="https://fl511.com/map" target="_blank" rel="noopener">FL511 incidents &amp; cameras ↗</a>
           <a href="https://communitycrimemap.com/" target="_blank" rel="noopener">Crime map (police reports) ↗</a>
           <a href="https://www.crimemapping.com/" target="_blank" rel="noopener">CrimeMapping ↗</a>
@@ -391,7 +392,7 @@ tr:last-child td { border-bottom: 0; }
     colleges: { label: "Colleges",             letter: "🎓", v: "--poi" },
     venues:  { label: "Sports venues",         letter: "🏟️", v: "--poi" },
     malls:   { label: "Shopping centers",      letter: "🛍️", v: "--poi" },
-    parking: { label: "Parking (free / paid)", letter: "P", v: "--free" },
+    parking: { label: "Parking (free / paid / private)", letter: "P", v: "--free" },
     stops:   { label: "Stop signs",            letter: "", v: "--crash" },
     localcoffee: { label: "Local coffee (Sarasota)", letter: "☕", v: "--coffee" }
   };
@@ -405,14 +406,14 @@ tr:last-child td { border-bottom: 0; }
   try { var saved = localStorage.getItem("tbt-region"); if (!params.get("region") && REGIONS[saved]) current = saved; } catch (e) {}
 
   // --- Live map (Waze embed) ---
-  var live = document.getElementById("live");
-  var lnkGoogle = document.getElementById("lnkGoogle");
+  var liveFrame = document.getElementById("live");
+  var lnkMaps = document.getElementById("lnkMaps");
   var liveShown = false;
   function setLive(r) {
     var g = REGIONS[r];
-    lnkGoogle.href = "https://www.google.com/maps/@" + g.lat + "," + g.lon + "," + (g.z + 1) + "z/data=!5m1!1e1";
+    lnkMaps.href = "https://maps.apple.com/?ll=" + g.lat + "," + g.lon + "&z=" + (g.z + 1);
     if (!liveShown) return; // Waze loads only when its tab is opened.
-    live.src = "https://embed.waze.com/iframe?zoom=" + g.z + "&lat=" + g.lat + "&lon=" + g.lon + "&ct=livemap";
+    liveFrame.src = "https://embed.waze.com/iframe?zoom=" + g.z + "&lat=" + g.lat + "&lon=" + g.lon + "&ct=livemap";
   }
 
   // --- Road guide (Leaflet) ---
@@ -464,7 +465,7 @@ tr:last-child td { border-bottom: 0; }
     var title = c.url ? '<a href="' + esc(c.url) + '" target="_blank" rel="noopener">' + esc(c.name) + "</a>" : esc(c.name);
     var marker = L.marker([c.lat, c.lon], { icon: icon, title: c.name, keyboard: true, zIndexOffset: 500 })
       .bindPopup('<div class="tag" style="color:' + col + '">' + esc(c.cat) + (c.rank ? " · " + esc(c.rank) : "") + "</div><h3>" + title + "</h3>" + esc(c.addr) +
-        '<br><a href="https://www.google.com/maps/dir/?api=1&destination=' + c.lat + "," + c.lon + '" target="_blank" rel="noopener">Directions ↗</a>' +
+        '<br><a href="https://maps.apple.com/?daddr=' + c.lat + "," + c.lon + '" target="_blank" rel="noopener">Directions ↗</a>' +
         ' · <a href="https://app.notion.com/p/' + c.id + '" target="_blank" rel="noopener">Notion entry ↗</a>' +
         ' · <a href="' + COFFEE_DB + '" target="_blank" rel="noopener">All coffee ↗</a>');
     marker.addTo(layers.coffee);
@@ -547,19 +548,18 @@ tr:last-child td { border-bottom: 0; }
   function loadSchools() {
     if (!schoolsOn || map.getZoom() < SCHOOL_MIN_ZOOM || schoolBusy) return;
     var b = map.getBounds().pad(0.3);
-    if (covered(map.getBounds())) { zoneStatus.textContent = ""; return; }
-    schoolBusy = true; zoneStatus.textContent = "Loading schools…";
+    if (covered(map.getBounds())) { return; }
+    schoolBusy = true;
     var q = '[out:json][timeout:25];nwr["amenity"="school"](' + [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].map(function (v) { return v.toFixed(4); }).join(",") + ');out center 400;';
-    fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "Content-Type": "application/x-www-form-urlencoded" } })
-      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(function (d) { (d.elements || []).forEach(addSchool); loadedBoxes.push(b); zoneStatus.textContent = ""; })
-      .catch(function () { zoneStatus.textContent = "Couldn't load schools right now. Try moving the map."; })
+    overpass(q, 2, viewStale(b))
+      .then(function (d) { (d.elements || []).forEach(addSchool); loadedBoxes.push(b); })
+      .catch(function () {})
       .then(function () { schoolBusy = false; });
   }
   function syncSchools() {
     var on = schoolsOn && map.getZoom() >= SCHOOL_MIN_ZOOM;
     if (on) map.addLayer(layers.school); else map.removeLayer(layers.school);
-    if (typeof zoneStatus !== "undefined" && zoneStatus) zoneStatus.textContent = (schoolsOn || laneChgOn) && map.getZoom() < SCHOOL_MIN_ZOOM ? "Zoom in to see school zones, lane changes and highway exits" : "";
+    if (typeof zoneStatus !== "undefined" && zoneStatus && !(opQueue.length + opRunning)) zoneStatus.textContent = (schoolsOn || laneChgOn) && map.getZoom() < SCHOOL_MIN_ZOOM ? "Zoom in to see school zones, lane changes and highway exits" : "";
     clearTimeout(schoolTimer);
     if (on) schoolTimer = setTimeout(loadSchools, 400);
   }
@@ -814,22 +814,21 @@ tr:last-child td { border-bottom: 0; }
     if (!(laneChgOn || rampsOn || roadsOn) || map.getZoom() < LANE_MIN_ZOOM || laneBusy) return;
     if (laneBoxes.some(function (x) { return x.contains(map.getBounds()); })) return;
     var b = map.getBounds().pad(0.3);
-    laneBusy = true; zoneStatus.textContent = "Loading lane changes…";
+    laneBusy = true;
     var bb = [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].map(function (v) { return v.toFixed(4); }).join(",");
     var q = '[out:json][timeout:30];(way["highway"~"^(primary|secondary)$"](' + bb + ');way["highway"="tertiary"](' + bb + ');' +
       'way["highway"~"^(residential|unclassified)$"]["name"~"^(' + EXTRA_ARTERIALS.join("|") + ')"](' + bb + ');' +
       'way["highway"~"^(motorway|trunk)$"](' + bb + ');way["highway"~"^(motorway|trunk)_link$"](' + bb + ');' +
       'node["highway"="motorway_junction"](' + bb + '););out body geom;';
-    fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "Content-Type": "application/x-www-form-urlencoded" } })
-      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    overpass(q, 1, viewStale(b))
       .then(function (d) {
         var els = d.elements || [], ramps = findRamps(els);
         findLaneChanges(els.filter(function (e) { return e.type === "way" && !/_link$/.test((e.tags || {}).highway || ""); }), ramps).forEach(addLaneChange);
         ramps.list.forEach(addRamp);
         els.forEach(addRoadLine);
-        laneBoxes.push(b); zoneStatus.textContent = "";
+        laneBoxes.push(b);
       })
-      .catch(function () { zoneStatus.textContent = "Couldn't load lane changes right now. Try moving the map."; })
+      .catch(function () {})
       .then(function () { laneBusy = false; });
   }
   function syncLaneChanges() {
@@ -844,14 +843,48 @@ tr:last-child td { border-bottom: 0; }
 
 
   // --- Generic live OpenStreetMap layer (loads what's on screen once zoomed in) ---
-  function overpass(q) {
-    return fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "Content-Type": "application/x-www-form-urlencoded" } })
-      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
+  // All OpenStreetMap (Overpass) requests go through one queue: at most 2 at a time, most important first,
+  // retried on a busy server and spread across three public Overpass servers.
+  var OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
+  var opQueue = [], opRunning = 0, opNext = 0, OP_MAX = 2;
+  function opStatus() {
+    var n = opQueue.length + opRunning;
+    if (typeof zoneStatus !== "undefined" && zoneStatus) zoneStatus.textContent = n ? "Loading map details… (" + n + ")" : "";
   }
+  function opPump() {
+    while (opRunning < OP_MAX && opQueue.length) {
+      opQueue.sort(function (x, y) { return x.prio - y.prio || x.seq - y.seq; });
+      var job = opQueue.shift();
+      if (job.stale && job.stale()) { job.reject(new Error("stale")); continue; }
+      opRunning++; opRun(job, 0);
+    }
+    opStatus();
+  }
+  function opRun(job, attempt) {
+    var url = OVERPASS[(job.server + attempt) % OVERPASS.length];
+    fetch(url, { method: "POST", body: "data=" + encodeURIComponent(job.q), headers: { "Content-Type": "application/x-www-form-urlencoded" } })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (d) { opRunning--; job.resolve(d); opPump(); })
+      .catch(function (err) {
+        if (attempt < 4 && !(job.stale && job.stale())) {
+          setTimeout(function () { opRun(job, attempt + 1); }, [1500, 3000, 6000, 10000][attempt]);
+        } else { opRunning--; job.reject(err); opPump(); }
+      });
+  }
+  var opSeq = 0;
+  function overpass(q, prio, stale) {
+    return new Promise(function (resolve, reject) {
+      opQueue.push({ q: q, prio: prio == null ? 3 : prio, stale: stale, seq: opSeq++, server: opNext++ % OVERPASS.length, resolve: resolve, reject: reject });
+      opPump();
+    });
+  }
+  // A request for an area the map has since moved away from is skipped.
+  function viewStale(box) { return function () { return !box.intersects(map.getBounds()); }; }
+
   function bboxStr(b) { return [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].map(function (v) { return v.toFixed(4); }).join(","); }
   var live = {
     // Interstates, U.S. highways and state roads, by their route numbers.
-    highways: { on: true, minZoom: 10, boxes: [], busy: false, seen: {}, shields: [],
+    highways: { prio: 1, on: true, minZoom: 10, boxes: [], busy: false, seen: {}, shields: [],
       query: function (bb) { return '[out:json][timeout:40];way["highway"~"^(motorway|trunk|primary|secondary|tertiary)$"]["ref"~"^(I|US|SR|FL|CR) ?[0-9]"](' + bb + ');out tags geom qt;'; },
       draw: function (els) {
         var H = live.highways;
@@ -884,7 +917,7 @@ tr:last-child td { border-bottom: 0; }
         });
       } },
     // Airports, museums and colleges from OpenStreetMap.
-    airports: { on: true, minZoom: 8, boxes: [], busy: false, seen: {},
+    airports: { prio: 2, on: true, minZoom: 8, boxes: [], busy: false, seen: {},
       query: function () { return '[out:json][timeout:30];nwr["aeroway"="aerodrome"]["name"]["aerodrome:type"!~"private|military"](26.85,-82.95,28.25,-81.95);out center tags;'; },
       draw: function (els) {
         live.airports.boxes.push(L.latLngBounds([[26.85, -82.95], [28.25, -81.95]]));
@@ -894,46 +927,50 @@ tr:last-child td { border-bottom: 0; }
         poiMarker("airports", e, "✈️", t.iata ? "Airport · " + t.iata : "Airport",
           (t.iata ? "Commercial airport (" + esc(t.iata) + "). " : "Airport. ") + "Expect heavy pickup and drop-off traffic around flight times.");
       }); } },
-    museums: { on: true, minZoom: 12, boxes: [], busy: false, seen: {},
+    museums: { prio: 4, on: true, minZoom: 12, boxes: [], busy: false, seen: {},
       query: function (bb) { return '[out:json][timeout:25];nwr["tourism"="museum"]["name"](' + bb + ');out center tags;'; },
       draw: function (els) { els.forEach(function (e) { poiMarker("museums", e, "🏛️", "Museum", ""); }); } },
-    colleges: { on: true, minZoom: 11, boxes: [], busy: false, seen: {},
+    colleges: { prio: 3, on: true, minZoom: 11, boxes: [], busy: false, seen: {},
       query: function (bb) { return '[out:json][timeout:25];nwr["amenity"~"^(university|college)$"]["name"](' + bb + ');out center tags;'; },
       draw: function (els) { els.forEach(function (e) {
         poiMarker("colleges", e, "🎓", e.tags.amenity === "university" ? "University" : "College", "Busy around class changes; watch for pedestrians, bikes and scooters.");
       }); } },
-    venues: { on: true, minZoom: 10, boxes: [], busy: false, seen: {},
+    venues: { prio: 3, on: true, minZoom: 10, boxes: [], busy: false, seen: {},
       query: function (bb) { return '[out:json][timeout:25];(nwr["leisure"="stadium"]["name"](' + bb + ');nwr["building"="stadium"]["name"](' + bb + ');nwr["leisure"="sports_centre"]["name"~"Arena|Stadium|Ballpark|Speedway",i](' + bb + '););out center tags;'; },
       draw: function (els) { els.forEach(function (e) {
         poiMarker("venues", e, "🏟️", "Sports venue", "Expect heavy traffic and road closures before and after games and events.");
       }); } },
-    malls: { on: true, minZoom: 11, boxes: [], busy: false, seen: {},
+    malls: { prio: 3, on: true, minZoom: 11, boxes: [], busy: false, seen: {},
       query: function (bb) { return '[out:json][timeout:25];(nwr["shop"="mall"]["name"](' + bb + ');way["landuse"="retail"]["name"~"mall|town cent|outlets|shoppes|galleria|marketplace|square",i](' + bb + '););out center tags;'; },
       draw: function (els) { els.forEach(function (e) {
         poiMarker("malls", e, "🛍️", "Shopping center", "Busy weekends and holidays; expect slow entrances and full lots in December.");
       }); } },
     // Parking lots and garages, colored by whether OpenStreetMap says they're free or paid.
-    parking: { on: true, minZoom: 15, boxes: [], busy: false, seen: {},
+    parking: { prio: 4, on: true, minZoom: 15, boxes: [], busy: false, seen: {},
       query: function (bb) { return '[out:json][timeout:25];nwr["amenity"="parking"](' + bb + ');out center tags;'; },
       draw: function (els) { els.forEach(function (e) {
         var t = e.tags || {}, key = e.type + e.id;
         if (live.parking.seen[key]) return; live.parking.seen[key] = 1;
-        if (/^(street_side|lane|layby|on_kerb|half_on_kerb)$/.test(t.parking || "") || /^(private|no)$/.test(t.access || "")) return;
+        var street = /^(street_side|lane|layby|on_kerb|half_on_kerb)$/.test(t.parking || "");
+        var priv = /^(private|no|permit|residents)$/.test(t.access || "");
         var lat = e.lat || (e.center && e.center.lat), lon = e.lon || (e.center && e.center.lon); if (!lat) return;
         var garage = /^(multi-storey|underground|rooftop)$/.test(t.parking || "");
+        var kindName = garage ? "Parking garage" : street ? "Street parking" : "Parking lot";
         var fee = t.fee === "yes" || !!t.charge ? "paid" : t.fee === "no" ? "free" : "unknown";
-        var col = color(fee === "paid" ? "--paid" : fee === "free" ? "--free" : "--parkunk");
+        var col = priv ? color("--gate") : color(fee === "paid" ? "--paid" : fee === "free" ? "--free" : "--parkunk");
         var feeText = { paid: "Paid" + (t.charge ? ": " + esc(t.charge) : ""), free: "Free", unknown: "Free or paid: not listed. Check the signs." }[fee];
-        var who = t.access === "customers" ? "Customers only." : t.access === "permissive" || t.access === "yes" || !t.access ? "" : "Access: " + esc(t.access) + ".";
-        var icon = L.divIcon({ className: "", iconSize: [20, 20], iconAnchor: [10, 10], html: '<div class="pin park" style="background:' + col + '"><span>' + (garage ? "P▲" : "P") + "</span></div>" });
-        L.marker([lat, lon], { icon: icon, title: (t.name || (garage ? "Parking garage" : "Parking lot")) + " (" + fee + ")", keyboard: true })
-          .bindPopup('<div class="tag" style="color:' + col + '">' + (garage ? "Parking garage" : "Parking lot") + " · " + (fee === "unknown" ? "fee unknown" : fee) + "</div><h3>" + esc(t.name || (garage ? "Parking garage" : "Parking lot")) + "</h3>" +
-            feeText + (who ? "<br>" + who : "") + (t.capacity ? "<br>About " + esc(t.capacity) + " spaces." : "") + (t.opening_hours ? "<br>Hours: " + esc(t.opening_hours) : "") + (t.operator ? "<br>Run by " + esc(t.operator) + "." : "") +
-            '<br><a href="https://www.google.com/maps/dir/?api=1&destination=' + lat + "," + lon + '" target="_blank" rel="noopener">Directions ↗</a>')
+        var who = priv ? "<b>Private:</b> " + ({ permit: "permit holders only", residents: "residents only" }[t.access] || "not open to the public") + "."
+          : t.access === "customers" ? "Customers only." : t.access === "permissive" || t.access === "yes" || !t.access ? "" : "Access: " + esc(t.access) + ".";
+        if (street && t.maxstay) who += (who ? " " : "") + "Time limit: " + esc(t.maxstay) + ".";
+        var icon = L.divIcon({ className: "", iconSize: [20, 20], iconAnchor: [10, 10], html: '<div class="pin park' + (street ? " street" : "") + '" style="background:' + col + '"><span>' + (priv ? "🔒" : garage ? "P▲" : street ? "P═" : "P") + "</span></div>" });
+        L.marker([lat, lon], { icon: icon, title: (t.name || kindName) + " (" + (priv ? "private" : fee) + ")", keyboard: true })
+          .bindPopup('<div class="tag" style="color:' + col + '">' + kindName + " · " + (priv ? "private" : fee === "unknown" ? "fee unknown" : fee) + "</div><h3>" + esc(t.name || kindName) + "</h3>" +
+            (priv ? who : feeText + (who ? "<br>" + who : "")) + (t.capacity ? "<br>About " + esc(t.capacity) + " spaces." : "") + (t.opening_hours ? "<br>Hours: " + esc(t.opening_hours) : "") + (t.operator ? "<br>Run by " + esc(t.operator) + "." : "") +
+            '<br><a href="https://maps.apple.com/?daddr=' + lat + "," + lon + '" target="_blank" rel="noopener">Directions ↗</a>')
           .addTo(layers.parking);
       }); } },
     // Stop signs. Flagged as "backs up" when it's an all-way stop, a side street stopping at a busy road, or a stop on a bigger road.
-    stops: { on: true, minZoom: 15, boxes: [], busy: false, seen: {},
+    stops: { prio: 3, on: true, minZoom: 15, boxes: [], busy: false, seen: {},
       query: function (bb) { return '[out:json][timeout:25];node["highway"="stop"](' + bb + ')->.s;.s out;way(bn.s)["highway"];out body;way(around.s:40)["highway"~"^(trunk|primary|secondary|tertiary)$"];out geom;'; },
       draw: function (els) {
         var nodes = els.filter(function (e) { return e.type === "node"; });
@@ -970,7 +1007,7 @@ tr:last-child td { border-bottom: 0; }
         });
       } },
     // Urban / suburban / rural from OpenStreetMap place types.
-    areas: { on: true, minZoom: 11, boxes: [], busy: false, seen: {},
+    areas: { prio: 3, on: true, minZoom: 11, boxes: [], busy: false, seen: {},
       query: function (bb) { return '[out:json][timeout:25];node["place"~"^(city|town|suburb|village|hamlet|neighbourhood|quarter)$"](' + bb + ');out;'; },
       draw: function (els) {
         var cities = els.filter(function (e) { return e.tags.place === "city"; });
@@ -991,7 +1028,7 @@ tr:last-child td { border-bottom: 0; }
         });
       } },
     // Gated communities: private residential gates and areas tagged as gated.
-    gates: { on: true, minZoom: 14, boxes: [], busy: false, seen: {},
+    gates: { prio: 4, on: true, minZoom: 14, boxes: [], busy: false, seen: {},
       query: function (bb) { return '[out:json][timeout:25];(node["barrier"~"^(gate|lift_gate|swing_gate)$"]["access"~"^(private|residents|permit|customers)$"](' + bb + ');nwr["gated"="yes"](' + bb + ');way["landuse"="residential"]["access"="private"](' + bb + '););out center;'; },
       draw: function (els) {
         els.forEach(function (e) {
@@ -1019,7 +1056,7 @@ tr:last-child td { border-bottom: 0; }
     var icon = L.divIcon({ className: "", iconSize: [24, 24], iconAnchor: [12, 12], html: '<div class="pin poi" style="background:' + color("--poi") + '"><span>' + emoji + "</span></div>" });
     L.marker([lat, lon], { icon: icon, title: t.name, keyboard: true })
       .bindPopup('<div class="tag" style="color:' + color("--poi") + '">' + esc(kind) + "</div><h3>" + (site && /^https?:/.test(site) ? '<a href="' + esc(site) + '" target="_blank" rel="noopener">' + esc(t.name) + "</a>" : esc(t.name)) + "</h3>" +
-        (note ? note + "<br>" : "") + '<a href="https://www.google.com/maps/dir/?api=1&destination=' + lat + "," + lon + '" target="_blank" rel="noopener">Directions ↗</a>')
+        (note ? note + "<br>" : "") + '<a href="https://maps.apple.com/?daddr=' + lat + "," + lon + '" target="_blank" rel="noopener">Directions ↗</a>')
       .addTo(layers[layer]);
   }
   var liveTimer = null;
@@ -1029,9 +1066,9 @@ tr:last-child td { border-bottom: 0; }
     if (L_.boxes.some(function (x) { return x.contains(map.getBounds()); })) return;
     var b = map.getBounds().pad(0.3);
     L_.busy = true;
-    overpass(L_.query(bboxStr(b)))
+    overpass(L_.query(bboxStr(b)), L_.prio == null ? 3 : L_.prio, k === "airports" ? null : viewStale(b))
       .then(function (d) { L_.draw(d.elements || []); L_.boxes.push(b); })
-      .catch(function () { zoneStatus.textContent = "Some map details couldn't load. Try moving the map."; })
+      .catch(function () {})
       .then(function () { L_.busy = false; });
   }
   function syncLive() {
@@ -1048,7 +1085,7 @@ tr:last-child td { border-bottom: 0; }
   var countiesLoaded = false;
   function loadCounties() {
     if (countiesLoaded) return; countiesLoaded = true;
-    overpass('[out:json][timeout:60];relation["boundary"="administrative"]["admin_level"="6"](26.85,-82.95,28.25,-81.95);out geom;')
+    overpass('[out:json][timeout:60];relation["boundary"="administrative"]["admin_level"="6"](26.85,-82.95,28.25,-81.95);out geom;', 6)
       .then(function (d) {
         (d.elements || []).forEach(function (rel) {
           var name = (rel.tags || {}).name || "County", bounds = L.latLngBounds([]);
@@ -1244,7 +1281,7 @@ tr:last-child td { border-bottom: 0; }
   function findCampusGarages(c) {
     if (campusFound[c]) return Promise.resolve(campusFound[c]);
     var b = CAMPUS[c].bounds;
-    return overpass('[out:json][timeout:25];nwr["amenity"="parking"]["parking"~"multi-storey|underground|rooftop"](' + [b[0][0], b[0][1], b[1][0], b[1][1]].join(",") + ');out center tags;')
+    return overpass('[out:json][timeout:25];nwr["amenity"="parking"]["parking"~"multi-storey|underground|rooftop"](' + [b[0][0], b[0][1], b[1][0], b[1][1]].join(",") + ');out center tags;', 0)
       .then(function (d) { return (campusFound[c] = d.elements || []); });
   }
   function showGarage(g) {
@@ -1257,13 +1294,13 @@ tr:last-child td { border-bottom: 0; }
         var c = L.latLngBounds(CAMPUS[g.c].bounds).getCenter();
         L.popup().setLatLng(c).setContent('<div class="tag" style="color:' + color("--paid") + '">' + esc(CAMPUS[g.c].name) + " · Parking garage</div><h3>" + esc(g.name) + "</h3>" + esc(g.addr) + "<br>" + esc(g.vis) +
           "<div class='note' style='margin-top:4px'>Not pinned on OpenStreetMap, so this shows the campus.</div>" +
-          '<a href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(g.name + ", " + g.addr + ", Tampa, FL") + '" target="_blank" rel="noopener">Find it on Google Maps ↗</a>').openOn(map);
+          '<a href="https://maps.apple.com/?q=' + encodeURIComponent(g.name + ", " + g.addr + ", Tampa, FL") + '" target="_blank" rel="noopener">Find it in Apple Maps ↗</a>').openOn(map);
         return;
       }
       var lat = hit.lat || hit.center.lat, lon = hit.lon || hit.center.lon;
       map.setView([lat, lon], 17);
       L.popup().setLatLng([lat, lon]).setContent('<div class="tag" style="color:' + color("--paid") + '">' + esc(CAMPUS[g.c].name) + " · Parking garage</div><h3>" + esc(g.name) + "</h3>" + esc(g.addr) + "<br>" + esc(g.vis) +
-        '<br><a href="https://www.google.com/maps/dir/?api=1&destination=' + lat + "," + lon + '" target="_blank" rel="noopener">Directions ↗</a>').openOn(map);
+        '<br><a href="https://maps.apple.com/?daddr=' + lat + "," + lon + '" target="_blank" rel="noopener">Directions ↗</a>').openOn(map);
     }).catch(function () { zoneStatus.textContent = "Couldn't look up the garage right now."; });
   }
   var garageRows = document.getElementById("garageRows");
@@ -1283,11 +1320,31 @@ tr:last-child td { border-bottom: 0; }
     var a = [t["addr:housenumber"], t["addr:street"]].filter(Boolean).join(" ");
     return a ? a + (t["addr:city"] ? ", " + t["addr:city"] : "") : (t["addr:city"] || "");
   }
+  // Shops in the Notion database that have no map location yet (matched to OpenStreetMap by name).
+  var MY_LIST_EXTRA = ["Breaking Wave Coffee", "The Clever Cup", "Mama G's Coffee", "Yoder's", "Captain Curt's", "O & A Coffee", "Buddy Brew", "Cedar Fox",
+    "Pastry Art", "The Overton", "Perq", "Raining Berries", "Cafe Divan", "Kahwa", "Atria", "Sunsoaked"];
+  function norm(x) { return x.toLowerCase().replace(/\(.*?\)/g, "").replace(/&/g, "and").replace(/[^a-z0-9]/g, "").replace(/^the/, ""); }
+  function sameShop(a, b) { a = norm(a); b = norm(b); return a && b && (a.indexOf(b) >= 0 || b.indexOf(a) >= 0); }
   function inMyList(name) {
-    var n = name.toLowerCase().replace(/[^a-z0-9]/g, "");
-    return COFFEE.some(function (c) { var m = c.name.toLowerCase().replace(/[^a-z0-9]/g, ""); return m && (n.indexOf(m) >= 0 || m.indexOf(n) >= 0); });
+    return COFFEE.some(function (c) { return sameShop(name, c.name); }) || MY_LIST_EXTRA.some(function (n) { return sameShop(name, n); });
   }
-  overpass('[out:json][timeout:30];nwr["amenity"="cafe"](' + SARASOTA_BOX + ');out center tags;')
+  var localShops = [];
+  // From a Notion "Map" link (?coffee=<id>&name=<shop>) for a shop without a saved location.
+  function openNamedCoffee() {
+    var want = (params.get("name") || "").replace(/\+/g, " ");
+    if (!want || coffeeMarkers[(params.get("coffee") || "").replace(/-/g, "").toLowerCase()]) return;
+    var hit = localShops.filter(function (s) { return sameShop(s.x.name, want); })[0];
+    if (hit) {
+      map.addLayer(layers.localcoffee);
+      map.setView([hit.x.lat, hit.x.lon], 17); hit.m.openPopup();
+    } else {
+      var c = [27.33, -82.53];
+      map.setView(c, 12);
+      L.popup().setLatLng(c).setContent('<div class="tag" style="color:' + color("--coffee") + '">Coffee</div><h3>' + esc(want) + "</h3>Not on OpenStreetMap yet, so it can't be pinned here." +
+        '<br><a href="https://maps.apple.com/?q=' + encodeURIComponent(want + ", Sarasota, FL") + '" target="_blank" rel="noopener">Find it in Apple Maps ↗</a>').openOn(map);
+    }
+  }
+  overpass('[out:json][timeout:30];nwr["amenity"="cafe"](' + SARASOTA_BOX + ');out center tags;', 5)
     .then(function (d) {
       var seenName = {};
       var shops = (d.elements || []).map(function (e) {
@@ -1308,7 +1365,7 @@ tr:last-child td { border-bottom: 0; }
         var m = L.marker([x.lat, x.lon], { icon: icon, title: x.name, keyboard: true })
           .bindPopup('<div class="tag" style="color:' + color("--coffee") + '">Local coffee' + (mine ? " · in your list" : "") + "</div><h3>" + title + "</h3>" +
             esc(addrOf(x.t) || "") + (x.t.opening_hours ? "<br>Hours: " + esc(x.t.opening_hours) : "") +
-            '<br><a href="https://www.google.com/maps/dir/?api=1&destination=' + x.lat + "," + x.lon + '" target="_blank" rel="noopener">Directions ↗</a>')
+            '<br><a href="https://maps.apple.com/?daddr=' + x.lat + "," + x.lon + '" target="_blank" rel="noopener">Directions ↗</a>')
           .addTo(layers.localcoffee);
         var tr = document.createElement("tr");
         tr.innerHTML = '<td class="road">' + title + "</td><td>" + esc(addrOf(x.t) || "—") + "</td><td class='note'>" + esc(x.t.opening_hours || "—") +
@@ -1320,10 +1377,13 @@ tr:last-child td { border-bottom: 0; }
           map.setView([x.lat, x.lon], 17); m.openPopup();
         });
         rows.appendChild(tr);
+        localShops.push({ x: x, m: m });
       });
+      openNamedCoffee();
       document.querySelector("#localCoffeeRows").closest("section").querySelector("h2").firstChild.textContent = "Local coffee in Sarasota (" + shops.length + ")";
     })
     .catch(function () {
+      openNamedCoffee();
       document.getElementById("localCoffeeRows").innerHTML = '<tr><td colspan="4" class="note">Couldn\'t load the coffee list right now. Refresh to try again.</td></tr>';
     });
 
