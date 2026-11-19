@@ -489,7 +489,7 @@ tr:last-child td { border-bottom: 0; }
 
   // --- Road guide (Leaflet) ---
   var dark = matchMedia("(prefers-color-scheme: dark)").matches && document.documentElement.dataset.theme !== "light";
-  var map = L.map("guide", { scrollWheelZoom: false, zoomControl: true }).setView([REGIONS[current].lat, REGIONS[current].lon], REGIONS[current].z);
+  var map = L.map("guide", { scrollWheelZoom: false, zoomControl: true, preferCanvas: true /* thousands of road lines draw much faster on canvas */ }).setView([REGIONS[current].lat, REGIONS[current].lon], REGIONS[current].z);
   // Base maps (no API key needed): Esri satellite imagery with road/place labels, or OpenStreetMap streets.
   var ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/";
   var esriAttr = 'Imagery &copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics';
@@ -858,7 +858,7 @@ tr:last-child td { border-bottom: 0; }
         seen["x" + first] = 1;
         var j = junction[first] || {};
         var label = j.ref ? "Exit " + j.ref : "Exit";
-        out.exitAt[first] = label + (j.name || j.exit_to ? " (" + (j.exit_to || j.name).replace(/;/g, " / ") + ")" : "");
+        out.exitAt[first] = (j.ref ? label : "an exit") + (j.name || j.exit_to ? " (" + (j.exit_to || j.name).replace(/;/g, " / ") + ")" : "");
         var ge = alongRamp(e.geometry, false);
         out.list.push({ kind: "exit", lat: ge.lat, lon: ge.lon, label: label, road: mainName[first], to: j.exit_to || j.name || dest });
       }
