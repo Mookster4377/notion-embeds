@@ -12,14 +12,14 @@
 /* Layout: region chips → big live Waze map → road guide map (hotspots, lanes, merges) → lane table. */
 :root {
   --bg: #eef1f4; --card: #ffffff; --ink: #141a21; --muted: #5b6672; --line: #d8dee5; --chip: #e5eaef;
-  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057; --interstate: #364fc7; --ushwy: #c2255c; --staterd: #e0a800; --countyrd: #1098ad; --poi: #5f3dc4; --free: #2b8a3e; --paid: #c92a2a; --parkunk: #495057;
+  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057; --interstate: #364fc7; --ushwy: #c2255c; --staterd: #e0a800; --countyrd: #1098ad; --poi: #5f3dc4; --night: #d6336c; --gym: #0b7285; --free: #2b8a3e; --paid: #c92a2a; --parkunk: #495057;
   --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
+    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --night: #f783ac; --gym: #3bc9db; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
     color-scheme: dark;
   }
 }
@@ -112,6 +112,7 @@ section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); 
   clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%); box-shadow: 0 0 0 2px #fff; }
 .stopsign.busy { width: 24px; height: 24px; font-size: 7px; }
 .pin.local { width: 20px; height: 20px; font-size: 10px; opacity: .9; }
+.district-label { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; font: 700 12px var(--display); letter-spacing: .08em; text-transform: uppercase; color: #fff; background: var(--night); padding: 2px 8px; border-radius: 999px; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
 .pin.gate { width: 20px; height: 20px; font-size: 10px; }
 .pin.school { color: #1a1400; width: 20px; height: 20px; font-size: 11px; }
 .zone-status { color: var(--muted); font-size: 12px; margin-left: auto; }
@@ -213,6 +214,7 @@ tr:last-child td { border-bottom: 0; }
         <tbody id="laneRows"></tbody>
       </table>
     </div>
+    <p class="note" id="dataDate"></p>
     <p class="note">Zoom in on the road map to see lane badges. Lane counts are typical through-lanes per direction and can change with construction. Trouble spots are recurring patterns, not live reports. For what's happening right now, open the Live traffic tab.</p>
   </section>
 </div>
@@ -394,7 +396,12 @@ tr:last-child td { border-bottom: 0; }
     malls:   { label: "Shopping centers",      letter: "🛍️", v: "--poi" },
     parking: { label: "Parking (free / paid / private)", letter: "P", v: "--free" },
     stops:   { label: "Stop signs",            letter: "", v: "--crash" },
-    localcoffee: { label: "Local coffee (Sarasota)", letter: "☕", v: "--coffee" }
+    localcoffee: { label: "Local coffee (Sarasota)", letter: "☕", v: "--coffee" },
+    districts: { label: "Nightlife districts",   letter: "", v: "--night" },
+    nightclubs: { label: "Nightclubs",           letter: "🪩", v: "--night" },
+    collegebars: { label: "College bars",        letter: "🍺", v: "--night" },
+    twentybars: { label: "20s bars",             letter: "🍸", v: "--night" },
+    gyms:    { label: "Gyms",                  letter: "🏋️", v: "--gym" }
   };
 
   var css = getComputedStyle(document.documentElement);
@@ -550,7 +557,7 @@ tr:last-child td { border-bottom: 0; }
     if (covered(map.getBounds())) { return; }
     schoolBusy = true;
     var q = '[out:json][timeout:25];nwr["amenity"="school"](' + [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].map(function (v) { return v.toFixed(4); }).join(",") + ');out center 400;';
-    overpass(q, 2, viewStale(b))
+    osm(b, q, 2, viewStale(b), function (e) { return tg(e).amenity === "school"; })
       .then(function (d) { (d.elements || []).forEach(addSchool); loadedBoxes.push(b); })
       .catch(function () {})
       .then(function () { schoolBusy = false; });
@@ -819,7 +826,12 @@ tr:last-child td { border-bottom: 0; }
       'way["highway"~"^(residential|unclassified)$"]["name"~"^(' + EXTRA_ARTERIALS.join("|") + ')"](' + bb + ');' +
       'way["highway"~"^(motorway|trunk)$"](' + bb + ');way["highway"~"^(motorway|trunk)_link$"](' + bb + ');' +
       'node["highway"="motorway_junction"](' + bb + '););out body geom;';
-    overpass(q, 1, viewStale(b))
+    osm(b, q, 1, viewStale(b), function (e) {
+      var h = tg(e).highway || "";
+      if (e.type === "node") return h === "motorway_junction";
+      return e.type === "way" && (/^(motorway|trunk|primary|secondary|tertiary|motorway_link|trunk_link)$/.test(h) ||
+        /^(residential|unclassified)$/.test(h) && EXTRA_ARTERIALS.some(function (n) { return (tg(e).name || "").indexOf(n) === 0; }));
+    })
       .then(function (d) {
         var els = d.elements || [], ramps = findRamps(els);
         findLaneChanges(els.filter(function (e) { return e.type === "way" && !/_link$/.test((e.tags || {}).highway || ""); }), ramps).forEach(addLaneChange);
@@ -889,10 +901,90 @@ tr:last-child td { border-bottom: 0; }
   // A request for an area the map has since moved away from is skipped.
   function viewStale(box) { return function () { return !box.intersects(map.getBounds()); }; }
 
+  // --- Nightly map data ---
+  // A GitHub Action downloads OpenStreetMap data every night into 0.1° tiles on the "map-data" branch.
+  // The map loads those files first (fast, no busy servers) and only asks the live servers when a tile is missing.
+  var DATA_BASE = "https://raw.githubusercontent.com/Mookster4377/notion-embeds/map-data/";
+  var TILE = { lat0: 26.8, lon0: -83.0, step: 0.1, rows: 15, cols: 11 };
+  var dataMeta = null;
+  function timedFetchJSON(url, ms) {
+    var ctl = window.AbortController ? new AbortController() : null;
+    var t = setTimeout(function () { if (ctl) ctl.abort(); }, ms);
+    return fetch(url, { signal: ctl ? ctl.signal : undefined })
+      .then(function (r) { clearTimeout(t); if (!r.ok) throw new Error(r.status); return r.json(); }, function (e) { clearTimeout(t); throw e; });
+  }
+  var dataReady = timedFetchJSON(DATA_BASE + "meta.json", 6000)
+    .then(function (m) { dataMeta = m; if (m.grid) TILE = m.grid; showDataDate(); return true; })
+    .catch(function () { return false; });
+  function showDataDate() {
+    var el = document.getElementById("dataDate");
+    if (el && dataMeta && dataMeta.generated) el.textContent = "Map details from OpenStreetMap, refreshed nightly (last: " + new Date(dataMeta.generated).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + ").";
+  }
+  var tileCache = {};
+  function tileIds(b) {
+    var ids = [];
+    var r0 = Math.floor((b.getSouth() - TILE.lat0) / TILE.step), r1 = Math.floor((b.getNorth() - TILE.lat0) / TILE.step);
+    var c0 = Math.floor((b.getWest() - TILE.lon0) / TILE.step), c1 = Math.floor((b.getEast() - TILE.lon0) / TILE.step);
+    if (r0 < 0 || c0 < 0 || r1 >= TILE.rows || c1 >= TILE.cols) return null; // outside the nightly area
+    if ((r1 - r0 + 1) * (c1 - c0 + 1) > 30) return null;                     // too zoomed out for tiles
+    for (var r = r0; r <= r1; r++) for (var c = c0; c <= c1; c++) ids.push("r" + r + "c" + c);
+    return ids;
+  }
+  function loadTile(id) {
+    if (dataMeta && dataMeta.failed && dataMeta.failed.indexOf(id) >= 0) return Promise.reject(new Error("tile missing"));
+    return tileCache[id] || (tileCache[id] = timedFetchJSON(DATA_BASE + "tiles/" + id + ".json", 15000)
+      .catch(function (e) { delete tileCache[id]; throw e; }));
+  }
+  function inBounds(e, b) {
+    if (e.lat != null) return b.contains([e.lat, e.lon]);
+    if (e.center) return b.contains([e.center.lat, e.center.lon]);
+    if (e.geometry) {
+      var s = 90, n = -90, w = 180, ea = -180;
+      e.geometry.forEach(function (g) { if (g) { s = Math.min(s, g.lat); n = Math.max(n, g.lat); w = Math.min(w, g.lon); ea = Math.max(ea, g.lon); } });
+      return b.intersects(L.latLngBounds([s, w], [n, ea]));
+    }
+    return false;
+  }
+  // Elements for an area: from the nightly tiles when available, otherwise from the live servers.
+  // regionFile: a whole-area file to use when the view is too wide for tiles (e.g. main highways, place names).
+  var fileCache = {};
+  function osm(b, q, prio, stale, match, timeout, regionFile) {
+    return dataReady.then(function (ok) {
+      if (!ok) throw new Error("no data");
+      var ids = tileIds(b);
+      if (!ids && regionFile) {
+        return (fileCache[regionFile] = fileCache[regionFile] || timedFetchJSON(DATA_BASE + regionFile, 30000).catch(function (e) { delete fileCache[regionFile]; throw e; }))
+          .then(function (d) { return { elements: (d.elements || []).filter(function (e) { return match(e) && inBounds(e, b); }) }; });
+      }
+      if (!ids) throw new Error("no tiles");
+      return Promise.all(ids.map(loadTile)).then(function (tiles) {
+        var seen = {}, out = [];
+        tiles.forEach(function (t) { (t.elements || []).forEach(function (e) {
+          var k = e.type + e.id;
+          if (seen[k] || !match(e) || !inBounds(e, b)) return;
+          seen[k] = 1; out.push(e);
+        }); });
+        return { elements: out };
+      });
+    }).catch(function () { return overpass(q, prio, stale, timeout); });
+  }
+  // Whole-area files (airports, county lines), with the same live fallback.
+  function osmFile(name, q, prio, timeout) {
+    return dataReady.then(function (ok) {
+      if (!ok) throw new Error("no data");
+      return timedFetchJSON(DATA_BASE + name, 30000);
+    }).catch(function () { return overpass(q, prio, null, timeout); });
+  }
+  function tg(e) { return e.tags || {}; }
+
   function bboxStr(b) { return [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].map(function (v) { return v.toFixed(4); }).join(","); }
   var live = {
     // Interstates, U.S. highways and state roads, by their route numbers.
-    highways: { prio: 1, on: true, minZoom: 10, boxes: [], busy: false, seen: {}, shields: [],
+    highways: { prio: 1, on: true, minZoom: 10, boxes: [], busy: false, seen: {}, shields: [], regionFile: "highways.json",
+      match: function (e) {
+        var t = tg(e), cls = map.getZoom() >= 12 ? /^(motorway|trunk|primary|secondary|tertiary)$/ : /^(motorway|trunk|primary)$/;
+        return e.type === "way" && cls.test(t.highway || "") && /^(I|US|SR|FL|CR) ?[0-9]/.test(t.ref || "");
+      },
       // Zoomed out: only interstates, U.S. and main state routes (smaller download). Closer in: county roads too.
       detail: function () { return map.getZoom() >= 12 ? "full" : "main"; },
       query: function (bb) {
@@ -929,7 +1021,7 @@ tr:last-child td { border-bottom: 0; }
         });
       } },
     // Airports, museums and colleges from OpenStreetMap.
-    airports: { prio: 2, on: true, minZoom: 8, boxes: [], busy: false, seen: {},
+    airports: { prio: 2, on: true, minZoom: 8, boxes: [], busy: false, seen: {}, file: "airports.json",
       query: function () { return '[out:json][timeout:30];nwr["aeroway"="aerodrome"]["name"]["aerodrome:type"!~"private|military"](26.85,-82.95,28.25,-81.95);out center tags;'; },
       draw: function (els) {
         live.airports.boxes.push({ b: L.latLngBounds([[26.85, -82.95], [28.25, -81.95]]), d: "full" });
@@ -940,7 +1032,13 @@ tr:last-child td { border-bottom: 0; }
           (t.iata ? "Commercial airport (" + esc(t.iata) + "). " : "Airport. ") + "Expect heavy pickup and drop-off traffic around flight times.");
       }); } },
     // Museums, colleges, sports venues and shopping centers in one request.
-    places: { prio: 3, on: true, minZoom: 11, boxes: [], busy: false, seen: {},
+    places: { prio: 3, on: true, minZoom: 11, boxes: [], busy: false, seen: {}, regionFile: "points.json",
+      match: function (e) {
+        var t = tg(e); if (!t.name) return false;
+        return t.tourism === "museum" || /^(university|college)$/.test(t.amenity || "") || t.leisure === "stadium" || t.building === "stadium" ||
+          t.leisure === "sports_centre" && /arena|stadium|ballpark|speedway/i.test(t.name) || t.shop === "mall" ||
+          t.landuse === "retail" && /mall|town cent|outlets|shoppes|galleria|marketplace|square/i.test(t.name);
+      },
       query: function (bb) { return '[out:json][timeout:25];(nwr["tourism"="museum"]["name"](' + bb + ');nwr["amenity"~"^(university|college)$"]["name"](' + bb + ');' +
         'nwr["leisure"="stadium"]["name"](' + bb + ');nwr["building"="stadium"]["name"](' + bb + ');nwr["leisure"="sports_centre"]["name"~"Arena|Stadium|Ballpark|Speedway",i](' + bb + ');' +
         'nwr["shop"="mall"]["name"](' + bb + ');way["landuse"="retail"]["name"~"mall|town cent|outlets|shoppes|galleria|marketplace|square",i](' + bb + '););out center tags;'; },
@@ -953,6 +1051,7 @@ tr:last-child td { border-bottom: 0; }
       }); } },
     // Parking lots and garages, colored by whether OpenStreetMap says they're free or paid.
     parking: { prio: 4, on: true, minZoom: 15, boxes: [], busy: false, seen: {},
+      match: function (e) { return tg(e).amenity === "parking"; },
       query: function (bb) { return '[out:json][timeout:25];nwr["amenity"="parking"](' + bb + ');out center tags;'; },
       draw: function (els) { els.forEach(function (e) {
         var t = e.tags || {}, key = e.type + e.id;
@@ -977,6 +1076,7 @@ tr:last-child td { border-bottom: 0; }
       }); } },
     // Stop signs. Flagged as "backs up" when it's an all-way stop, a side street stopping at a busy road, or a stop on a bigger road.
     stops: { prio: 3, on: true, minZoom: 15, boxes: [], busy: false, seen: {},
+      match: function (e) { return e.type === "node" ? tg(e).highway === "stop" : e.type === "way" && !!tg(e).highway; },
       query: function (bb) { return '[out:json][timeout:25];node["highway"="stop"](' + bb + ')->.s;.s out;way(bn.s)["highway"];out body;way(around.s:40)["highway"~"^(trunk|primary|secondary|tertiary)$"];out geom;'; },
       draw: function (els) {
         var nodes = els.filter(function (e) { return e.type === "node"; });
@@ -1012,8 +1112,33 @@ tr:last-child td { border-bottom: 0; }
             .addTo(layers.stops);
         });
       } },
+    // Bars, pubs and nightclubs, sorted into nightclubs, college bars (near a campus) and 20s bars (in a nightlife district).
+    nightlife: { prio: 3, on: true, minZoom: 12, boxes: [], busy: false, seen: {},
+      match: function (e) { return /^(bar|pub|nightclub)$/.test(tg(e).amenity || "") && !!tg(e).name; },
+      query: function (bb) { return '[out:json][timeout:25];nwr["amenity"~"^(bar|pub|nightclub)$"]["name"](' + bb + ');out center tags;'; },
+      draw: function (els) { els.forEach(function (e) {
+        var t = tg(e), lat = e.lat || (e.center && e.center.lat), lon = e.lon || (e.center && e.center.lon); if (!lat) return;
+        var campus = nearest(CAMPUSES, lat, lon), district = nearest(DISTRICTS, lat, lon);
+        var club = t.amenity === "nightclub";
+        var layer = club ? "nightclubs" : campus ? "collegebars" : district ? "twentybars" : null;
+        if (!layer) return; // other bars aren't shown
+        var crowd = campus ? "Mostly college students, 21 to mid-20s (near " + campus.n + ")."
+          : district ? district.crowd : "Mostly 21 to early 30s.";
+        poiMarker(layer, e, club ? "🪩" : campus ? "🍺" : "🍸", club ? "Nightclub" : campus ? "College bar" : "20s bar",
+          "<b>Estimated crowd:</b> " + crowd + (district ? " In " + district.n + "." : "") +
+          "<br><span class='note'>Estimate from location, not survey data. Busiest Thu–Sat after 10 pm; expect rideshare pickups and closed lanes nearby at closing time (3 am).</span>");
+      }); } },
+    gyms: { prio: 4, on: true, minZoom: 12, boxes: [], busy: false, seen: {},
+      match: function (e) { var t = tg(e); return (t.leisure === "fitness_centre" || t.amenity === "gym" || t.leisure === "sports_centre" && t.sport === "fitness") && !!t.name; },
+      query: function (bb) { return '[out:json][timeout:25];(nwr["leisure"="fitness_centre"]["name"](' + bb + ');nwr["amenity"="gym"]["name"](' + bb + '););out center tags;'; },
+      draw: function (els) { els.forEach(function (e) {
+        var t = tg(e), lat = e.lat || (e.center && e.center.lat), lon = e.lon || (e.center && e.center.lon); if (!lat) return;
+        poiMarker("gyms", e, "🏋️", "Gym", "<b>Estimated crowd:</b> " + gymCrowd(t, lat, lon) +
+          "<br><span class='note'>Estimate from the type of gym and where it is, not survey data. Busiest weekdays 5–8 pm and 6–8 am.</span>");
+      }); } },
     // Urban / suburban / rural from OpenStreetMap place types.
-    areas: { prio: 3, on: true, minZoom: 11, boxes: [], busy: false, seen: {},
+    areas: { prio: 3, on: true, minZoom: 11, boxes: [], busy: false, seen: {}, regionFile: "points.json",
+      match: function (e) { return e.type === "node" && /^(city|town|suburb|village|hamlet|neighbourhood|quarter)$/.test(tg(e).place || ""); },
       query: function (bb) { return '[out:json][timeout:25];node["place"~"^(city|town|suburb|village|hamlet|neighbourhood|quarter)$"](' + bb + ');out;'; },
       draw: function (els) {
         var cities = els.filter(function (e) { return e.tags.place === "city"; });
@@ -1035,6 +1160,11 @@ tr:last-child td { border-bottom: 0; }
       } },
     // Gated communities: private residential gates and areas tagged as gated.
     gates: { prio: 4, on: true, minZoom: 14, boxes: [], busy: false, seen: {},
+      match: function (e) {
+        var t = tg(e);
+        return /^(gate|lift_gate|swing_gate)$/.test(t.barrier || "") && /^(private|residents|permit|customers)$/.test(t.access || "") ||
+          t.gated === "yes" || t.landuse === "residential" && t.access === "private";
+      },
       query: function (bb) { return '[out:json][timeout:25];(node["barrier"~"^(gate|lift_gate|swing_gate)$"]["access"~"^(private|residents|permit|customers)$"](' + bb + ');nwr["gated"="yes"](' + bb + ');way["landuse"="residential"]["access"="private"](' + bb + '););out center;'; },
       draw: function (els) {
         els.forEach(function (e) {
@@ -1075,8 +1205,9 @@ tr:last-child td { border-bottom: 0; }
     if (L_.boxes.some(function (x) { return x.b.contains(map.getBounds()) && (x.d === "full" || x.d === need); })) return;
     var b = map.getBounds().pad(0.15);
     L_.busy = true;
-    overpass(L_.query(bboxStr(b)), L_.prio == null ? 3 : L_.prio, k === "airports" ? null : viewStale(b))
-      .then(function (d) { L_.draw(d.elements || []); L_.boxes.push({ b: b, d: need }); })
+    var req = L_.file ? osmFile(L_.file, L_.query(bboxStr(b)), L_.prio)
+      : osm(b, L_.query(bboxStr(b)), L_.prio == null ? 3 : L_.prio, viewStale(b), L_.match || function () { return true; }, null, L_.regionFile);
+    req.then(function (d) { L_.draw(d.elements || []); L_.boxes.push({ b: b, d: need }); })
       .catch(function () {})
       .then(function () { L_.busy = false; });
   }
@@ -1095,7 +1226,7 @@ tr:last-child td { border-bottom: 0; }
   var countiesLoaded = false;
   function loadCounties() {
     if (countiesLoaded) return; countiesLoaded = true;
-    overpass('[out:json][timeout:60];relation["boundary"="administrative"]["admin_level"="6"](26.85,-82.95,28.25,-81.95);out geom;', 9, null, 60000)
+    osmFile("counties.json", '[out:json][timeout:60];relation["boundary"="administrative"]["admin_level"="6"](26.85,-82.95,28.25,-81.95);out geom;', 9, 60000)
       .then(function (d) {
         (d.elements || []).forEach(function (rel) {
           var name = (rel.tags || {}).name || "County", bounds = L.latLngBounds([]);
@@ -1295,7 +1426,8 @@ tr:last-child td { border-bottom: 0; }
   function findCampusGarages(c) {
     if (campusFound[c]) return Promise.resolve(campusFound[c]);
     var b = CAMPUS[c].bounds;
-    return overpass('[out:json][timeout:25];nwr["amenity"="parking"]["parking"~"multi-storey|underground|rooftop"](' + [b[0][0], b[0][1], b[1][0], b[1][1]].join(",") + ');out center tags;', 0)
+    return osm(L.latLngBounds(b), '[out:json][timeout:25];nwr["amenity"="parking"]["parking"~"multi-storey|underground|rooftop"](' + [b[0][0], b[0][1], b[1][0], b[1][1]].join(",") + ');out center tags;', 0, null,
+      function (e) { return tg(e).amenity === "parking" && /^(multi-storey|underground|rooftop)$/.test(tg(e).parking || ""); })
       .then(function (d) { return (campusFound[c] = d.elements || []); });
   }
   function showGarage(g) {
@@ -1358,7 +1490,9 @@ tr:last-child td { border-bottom: 0; }
         '<br><a href="https://maps.apple.com/?q=' + encodeURIComponent(want + ", Sarasota, FL") + '" target="_blank" rel="noopener">Find it in Apple Maps ↗</a>').openOn(map);
     }
   }
-  overpass('[out:json][timeout:30];nwr["amenity"="cafe"](' + SARASOTA_BOX + ');out center tags;', 5)
+  var sbox = SARASOTA_BOX.split(",").map(Number);
+  osm(L.latLngBounds([sbox[0], sbox[1]], [sbox[2], sbox[3]]), '[out:json][timeout:30];nwr["amenity"="cafe"](' + SARASOTA_BOX + ');out center tags;', 5, null,
+    function (e) { return tg(e).amenity === "cafe"; })
     .then(function (d) {
       var seenName = {};
       var shops = (d.elements || []).map(function (e) {
@@ -1400,6 +1534,58 @@ tr:last-child td { border-bottom: 0; }
       openNamedCoffee();
       document.getElementById("localCoffeeRows").innerHTML = '<tr><td colspan="4" class="note">Couldn\'t load the coffee list right now. Refresh to try again.</td></tr>';
     });
+
+
+  // --- Campuses and nightlife districts (used for bar and gym crowd estimates, and drawn on the map) ---
+  var CAMPUSES = [
+    { n: "USF", lat: 28.0587, lon: -82.4139, r: 1800 },
+    { n: "the University of Tampa", lat: 27.9465, lon: -82.4652, r: 900 },
+    { n: "USF St. Petersburg", lat: 27.7617, lon: -82.6350, r: 800 },
+    { n: "Eckerd College", lat: 27.7150, lon: -82.6880, r: 1200 },
+    { n: "New College / USF Sarasota-Manatee", lat: 27.3870, lon: -82.5600, r: 1200 },
+    { n: "Ringling College", lat: 27.3630, lon: -82.5525, r: 800 }
+  ];
+  var DISTRICTS = [
+    { n: "Ybor City", lat: 27.9600, lon: -82.4370, r: 700, crowd: "Mostly 21–30; college students and young professionals, big on weekends.",
+      about: "Tampa's historic nightlife district along 7th Ave: clubs, bars and late crowds. 7th Ave closes to cars on busy nights; park in the garages and expect slow traffic and rideshare lines after midnight." },
+    { n: "SoHo (South Howard)", lat: 27.9395, lon: -82.4840, r: 900, crowd: "Mostly 20s and young professionals.",
+      about: "Bar strip along S Howard Ave: busy Thursday to Saturday nights and weekend brunch. Street parking is tight and towing is strict." },
+    { n: "Channel District / Sparkman Wharf", lat: 27.9440, lon: -82.4510, r: 500, crowd: "Mostly 20s–30s; busy on Lightning and concert nights.",
+      about: "Waterfront bars and the Sparkman Wharf beer garden by Amalie Arena. Event nights back up Channelside Dr and the Selmon ramps." },
+    { n: "Downtown St. Pete (Central Ave)", lat: 27.7712, lon: -82.6420, r: 900, crowd: "Mostly 20s and young professionals.",
+      about: "Bars, breweries and rooftops along Central Ave and the 600 block. Busy weekend nights; Central Ave traffic slows to a crawl." },
+    { n: "Grand Central District (St. Pete)", lat: 27.7710, lon: -82.6730, r: 600, crowd: "Mostly 20s–30s.",
+      about: "Breweries and bars along Central Ave west of downtown St. Pete." },
+    { n: "Main Street Sarasota", lat: 27.3365, lon: -82.5410, r: 700, crowd: "Mixed: 20s on weekend nights, older crowds earlier.",
+      about: "Downtown Sarasota bars and restaurants on Main St and Lemon Ave. Use the Palm Ave or State St garages on weekend nights." },
+    { n: "Siesta Village", lat: 27.2680, lon: -82.5470, r: 500, crowd: "20s and tourists.",
+      about: "Beach bars on Siesta Key. Expect drawbridge and Stickney Point Rd backups leaving the island." }
+  ];
+  function nearest(list, lat, lon) {
+    var ll = L.latLng(lat, lon), best = null, bd = 1e9;
+    list.forEach(function (x) { var d = ll.distanceTo([x.lat, x.lon]); if (d <= x.r && d < bd) { bd = d; best = x; } });
+    return best;
+  }
+  function gymCrowd(t, lat, lon) {
+    var n = (t.name || "") + " " + (t.brand || "") + " " + (t.sport || "");
+    if (/planet fitness/i.test(n)) return "Broad mix of ages; budget-friendly and popular with beginners and students.";
+    if (/crossfit/i.test(n)) return "Mostly 20s–40s; class-based and tight-knit.";
+    if (/orangetheory|f45|solidcore|barry|pure barre|club pilates|cyclebar|rumble|hotworx|pilates|barre|yoga|spin/i.test(n)) return "Boutique classes; mostly young professionals in their 20s–30s.";
+    if (/ymca|\bthe y\b/i.test(n)) return "Families and all ages.";
+    if (/campus rec|recreation|university|college|usf|spartan/i.test(n)) return "Mostly students (often students and staff only).";
+    if (/la fitness|esporta|eos|crunch|gold'?s|anytime|snap|24 ?hour|youfit|chuze|lifetime|life time/i.test(n)) return "Big-box gym; broad mix, busiest with 20s–40s after work.";
+    if (nearest(CAMPUSES, lat, lon)) return "Near campus: lots of college students.";
+    return "Local gym; mixed crowd.";
+  }
+  DISTRICTS.forEach(function (d) {
+    L.circle([d.lat, d.lon], { radius: d.r, color: color("--night"), weight: 2, dashArray: "6 5", fillOpacity: 0.08 })
+      .bindPopup('<div class="tag" style="color:' + color("--night") + '">Nightlife district</div><h3>' + esc(d.n) + "</h3>" + esc(d.about) + "<br><b>Typical crowd:</b> " + esc(d.crowd) +
+        "<div class='note' style='margin-top:4px'>Crowd is a general estimate.</div>")
+      .addTo(layers.districts);
+    L.marker([d.lat, d.lon], { icon: L.divIcon({ className: "", iconSize: [0, 0], html: '<span class="district-label">' + esc(d.n) + "</span>" }), title: d.n, keyboard: true })
+      .bindPopup(function () { return '<div class="tag" style="color:' + color("--night") + '">Nightlife district</div><h3>' + esc(d.n) + "</h3>" + esc(d.about) + "<br><b>Typical crowd:</b> " + esc(d.crowd); })
+      .addTo(layers.districts);
+  });
 
   // --- Lane table ---
   var tbody = document.getElementById("laneRows");
