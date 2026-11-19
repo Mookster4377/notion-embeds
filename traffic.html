@@ -185,14 +185,14 @@ tr:last-child td { border-bottom: 0; }
   </section>
 
   <section>
-    <h2>Local coffee in Sarasota</h2>
+    <h2 id="coffeeHead">Local coffee in Sarasota</h2>
     <div class="panel table-wrap">
       <table>
         <thead><tr><th>Coffee shop</th><th>Address</th><th>Hours</th><th></th></tr></thead>
         <tbody id="localCoffeeRows"><tr><td colspan="4" class="note">Loading local coffee shops…</td></tr></tbody>
       </table>
     </div>
-    <p class="note">Every café OpenStreetMap lists from Lakewood Ranch and Sarasota down to Osprey, minus national chains. ☕ marks the ones already in your Sarasota Coffee list. New places may be missing.</p>
+    <p class="note" id="coffeeNote">Every café OpenStreetMap lists from Lakewood Ranch and Sarasota down to Osprey, minus national chains. ☕ marks the ones already in your Sarasota Coffee list. New places may be missing.</p>
   </section>
 
   <section>
@@ -222,7 +222,67 @@ tr:last-child td { border-bottom: 0; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 (function () {
-  var REGIONS = {
+  // Which city: traffic.html is Tampa Bay → North Port; traffic.html?city=orlando is Orlando.
+  var CITY = (new URLSearchParams(location.search).get("city") || "").toLowerCase() === "orlando" ? "orlando" : "tampa";
+  var ORL = CITY === "orlando";
+  if (ORL) {
+    document.title = "Orlando Traffic";
+    document.querySelector("h1").textContent = "Orlando Traffic";
+    document.querySelector("header .sub").textContent = "Downtown · Winter Park · UCF · Oviedo · Waterford Lakes · I-Drive · Disney · Lake Nona · Kissimmee";
+  }
+  var ORLANDO_SPOTS = [
+    {"t": "jam", "r": "downtown", "lat": 28.5385, "lon": -81.385, "name": "I-4 at SR 408 interchange", "d": "Downtown's main interchange: I-4 and the East-West Expressway trade traffic in both directions. Backs up both rush hours and on Magic and concert nights."},
+    {"t": "jam", "r": "idrive", "lat": 28.4497, "lon": -81.4265, "name": "I-4 at Sand Lake Rd (Exit 74A)", "d": "Tourist and commuter traffic meet; ramps and Sand Lake back up most afternoons."},
+    {"t": "jam", "r": "idrive", "lat": 28.473, "lon": -81.4515, "name": "I-4 at Kirkman Rd / Universal (Exit 75)", "d": "Universal traffic plus Kirkman commuters; heavy before park opening and after closing."},
+    {"t": "jam", "r": "ucf", "lat": 28.597, "lon": -81.2085, "name": "Alafaya Trail at University Blvd", "d": "The main gateway to UCF. Slow at class changes, game days and evenings."},
+    {"t": "jam", "r": "ucf", "lat": 28.568, "lon": -81.2075, "name": "Alafaya Trail at Colonial Dr (SR 50)", "d": "Two of east Orlando's busiest roads; long signal waits most afternoons."},
+    {"t": "jam", "r": "waterford", "lat": 28.553, "lon": -81.205, "name": "Alafaya Trail by Waterford Lakes", "d": "Shopping traffic around Waterford Lakes Town Center; worst on weekends."},
+    {"t": "jam", "r": "downtown", "lat": 28.5532, "lon": -81.3647, "name": "Colonial Dr at Mills Ave (Mills 50)", "d": "Busy restaurant district; turning traffic and pedestrians slow both roads."},
+    {"t": "jam", "r": "winterpark", "lat": 28.5525, "lon": -81.311, "name": "Semoran Blvd (SR 436) at Colonial Dr", "d": "Two six-lane roads cross; frequent backups."},
+    {"t": "jam", "r": "idrive", "lat": 28.45, "lon": -81.4705, "name": "International Dr at Sand Lake Rd", "d": "Tourist corridor with heavy foot traffic; slow most of the day."},
+    {"t": "jam", "r": "waterford", "lat": 28.544, "lon": -81.241, "name": "SR 408 / SR 417 interchange", "d": "Toll-road interchange; ramps back up at rush hour."},
+    {"t": "jam", "r": "disney", "lat": 28.3345, "lon": -81.588, "name": "I-4 at US-192 (Exit 64)", "d": "Disney and Celebration traffic; heavy on weekends and holidays."},
+    {"t": "crash", "r": "downtown", "lat": 28.55, "lon": -81.382, "name": "I-4 through downtown", "d": "I-4 through Orlando regularly ranks among the most dangerous interstates in the country."},
+    {"t": "crash", "r": "idrive", "lat": 28.4495, "lon": -81.4285, "name": "I-4 & Sand Lake Rd", "d": "Listed among Orlando's most dangerous intersections: heavy pedestrian activity and big speed differences between lanes.", "src": "https://www.boginmunns.com/blog/top-5-most-dangerous-intersections-in-orlando-for-car-accidents", "srcName": "Bogin, Munns & Munns"},
+    {"t": "crash", "r": "ucf", "lat": 28.5645, "lon": -81.247, "name": "Colonial Dr (SR 50) at Tanner Rd", "d": "Crashes rose more than 300% from 2023 to 2024; an FDOT fix is still years away.", "src": "https://www.yahoo.com/news/articles/crashes-surge-300-percent-state-003523674.html", "srcName": "News report via Yahoo"},
+    {"t": "crash", "r": "downtown", "lat": 28.4735, "lon": -81.3965, "name": "Orange Blossom Trail (US-441) at Oak Ridge Rd", "d": "Wide, fast corridor with many driveways; high crash and pedestrian-injury counts."},
+    {"t": "crash", "r": "ucf", "lat": 28.597, "lon": -81.287, "name": "University Blvd at Goldenrod Rd", "d": "Busy six-lane crossing; frequent turning crashes."},
+    {"t": "police", "r": "downtown", "lat": 28.547, "lon": -81.33, "name": "SR 408 east of downtown", "d": "Troopers patrol the East-West Expressway, especially at rush hour.", "when": "Weekday rush hours and late weekend nights."},
+    {"t": "police", "r": "ucf", "lat": 28.585, "lon": -81.2085, "name": "Alafaya Trail near UCF", "d": "Speed enforcement is common between Colonial Dr and University Blvd.", "when": "Weekday mornings, class-change times, and Thursday–Saturday nights."},
+    {"t": "police", "r": "winterpark", "lat": 28.629, "lon": -81.38, "name": "I-4 near Maitland", "d": "Troopers often posted along I-4 and the Express lane entrances.", "when": "Weekday rush hours and weekend nights."},
+    {"t": "police", "r": "disney", "lat": 28.36, "lon": -81.565, "name": "Disney area (World Dr / Osceola Pkwy)", "d": "Lower speed limits and heavy visitor traffic; patrols are common.", "when": "Daytime, weekends and holidays."},
+    {"t": "police", "r": "oviedo", "lat": 28.66, "lon": -81.21, "name": "Oviedo school zones", "d": "School-zone speed limits are enforced on school days.", "when": "School days during drop-off and pickup."},
+    {"t": "merge", "r": "downtown", "lat": 28.555, "lon": -81.382, "name": "I-4 Express entrances (downtown)", "d": "Express lanes enter and exit from the far-left lane at breaks in the barrier wall. Plan ahead; there are few access points."},
+    {"t": "merge", "r": "downtown", "lat": 28.539, "lon": -81.387, "name": "I-4 / SR 408 ramps", "d": "Ramps between I-4 and the 408 merge from both sides; watch for weaving traffic."},
+    {"t": "merge", "r": "waterford", "lat": 28.544, "lon": -81.243, "name": "SR 408 at SR 417", "d": "Interchange ramps merge into the right lane; short merge distances."}
+  ];
+  var ORLANDO_ROADS = [
+    {"r": "downtown", "road": "I-4", "stretch": "Through downtown (I-4 Ultimate)", "lanes": "3 + 2 express", "lat": 28.56, "lon": -81.3815, "merge": "Express lanes (tolled, cars only) enter and exit from the far left at a few breaks; general lanes have many exits."},
+    {"r": "downtown", "road": "SR 408 (East-West Expwy)", "stretch": "Downtown ↔ SR 417 (toll)", "lanes": "3–4", "lat": 28.545, "lon": -81.33, "merge": "Lanes drop at the I-4 and SR 417 interchanges."},
+    {"r": "waterford", "road": "SR 417 (GreeneWay)", "stretch": "East Orlando (toll)", "lanes": "2–3", "lat": 28.58, "lon": -81.245, "merge": "Widens near the SR 408 interchange."},
+    {"r": "lakenona", "road": "SR 528 (Beachline)", "stretch": "Airport ↔ I-4 (toll)", "lanes": "2–3", "lat": 28.45, "lon": -81.35, "merge": "Ramps at the airport and I-4 merge from the right."},
+    {"r": "ucf", "road": "Colonial Dr (SR 50)", "stretch": "Downtown → UCF", "lanes": "3", "lat": 28.565, "lon": -81.27, "merge": "Turn lanes at most signals."},
+    {"r": "ucf", "road": "Alafaya Trail (SR 434)", "stretch": "Waterford → Oviedo", "lanes": "3", "lat": 28.58, "lon": -81.2085, "merge": "Drops to 2 lanes north toward Oviedo."},
+    {"r": "ucf", "road": "University Blvd", "stretch": "Winter Park → UCF", "lanes": "3", "lat": 28.597, "lon": -81.25, "merge": "Turn lanes at Goldenrod, Dean and Rouse."},
+    {"r": "winterpark", "road": "Semoran Blvd (SR 436)", "stretch": "Airport → Altamonte", "lanes": "3", "lat": 28.58, "lon": -81.31, "merge": "Lanes drop at several overpasses."},
+    {"r": "downtown", "road": "Orange Blossom Trail (US-441)", "stretch": "Downtown → south Orlando", "lanes": "3", "lat": 28.5, "lon": -81.397, "merge": "Many driveways; right lane often blocked by turning traffic."},
+    {"r": "idrive", "road": "International Dr", "stretch": "Universal → Convention Center", "lanes": "2–3", "lat": 28.44, "lon": -81.47, "merge": "Narrows to 2 lanes in parts of the tourist corridor."},
+    {"r": "idrive", "road": "Sand Lake Rd", "stretch": "I-Drive → OBT", "lanes": "3", "lat": 28.45, "lon": -81.44, "merge": "Right lanes exit-only at I-4."},
+    {"r": "downtown", "road": "Mills Ave (US-17/92)", "stretch": "Mills 50", "lanes": "2", "lat": 28.56, "lon": -81.3647, "merge": "On-street parking and turning traffic slow the right lane."},
+    {"r": "kissimmee", "road": "US-192", "stretch": "Kissimmee → Disney", "lanes": "3", "lat": 28.33, "lon": -81.48, "merge": "Turn lanes at most signals; heavy tourist traffic."}
+  ];
+  var REGIONS = ORL ? {
+    all:        { name: "All areas",        lat: 28.50, lon: -81.38, z: 10 },
+    downtown:   { name: "Downtown",         lat: 28.5420, lon: -81.3790, z: 13 },
+    winterpark: { name: "Winter Park",      lat: 28.5960, lon: -81.3510, z: 13 },
+    ucf:        { name: "UCF",              lat: 28.6000, lon: -81.2000, z: 13 },
+    oviedo:     { name: "Oviedo",           lat: 28.6600, lon: -81.2100, z: 13 },
+    waterford:  { name: "Waterford Lakes",  lat: 28.5530, lon: -81.2050, z: 13 },
+    idrive:     { name: "I-Drive / Universal", lat: 28.4600, lon: -81.4600, z: 12 },
+    disney:     { name: "Disney",           lat: 28.3850, lon: -81.5600, z: 12 },
+    lakenona:   { name: "Lake Nona / Airport", lat: 28.4200, lon: -81.2900, z: 12 },
+    kissimmee:  { name: "Kissimmee",        lat: 28.3000, lon: -81.4100, z: 12 }
+  } : {
     all:       { name: "All areas",  lat: 27.50,  lon: -82.45,  z: 9 },
     tampa:     { name: "Tampa",      lat: 27.965, lon: -82.47,  z: 11 },
     brandon:   { name: "Brandon / Riverview", lat: 27.86, lon: -82.33, z: 11 },
@@ -234,7 +294,7 @@ tr:last-child td { border-bottom: 0; }
   };
 
   // type: jam | crash | police | merge
-  var SPOTS = [
+  var SPOTS = ORL ? ORLANDO_SPOTS : [
     // Tampa
     { t: "jam", r: "tampa", lat: 27.9615, lon: -82.4490, name: "I-275 / I-4 “Malfunction Junction”", d: "Two interstates meet north of downtown. Backs up both rush hours in every direction; weaving between I-4 and I-275 lanes." },
     { t: "jam", r: "tampa", lat: 27.9520, lon: -82.5330, name: "Westshore interchange (I-275 / SR-60)", d: "Airport, Veterans Expwy and Westshore traffic all funnel onto I-275 here. Heavy 7–9 am and 4–7 pm." },
@@ -319,7 +379,7 @@ tr:last-child td { border-bottom: 0; }
   ];
 
   // lanes: through-lanes per direction. lat/lon: where the badge sits.
-  var ROADS = [
+  var ROADS = ORL ? ORLANDO_ROADS : [
     { r: "tampa",  road: "I-275", stretch: "Howard Frankland Bridge", lanes: "4", lat: 27.9150, lon: -82.6000, merge: "Veterans + SR-60 traffic merges in SB at Westshore." },
     { r: "tampa",  road: "I-275", stretch: "Westshore → downtown", lanes: "3–4", lat: 27.9560, lon: -82.4950, merge: "NB left lanes split off to I-4 at Malfunction Junction." },
     { r: "tampa",  road: "I-275", stretch: "Downtown → Bearss Ave", lanes: "3", lat: 28.0200, lon: -82.4600, merge: "Lanes drop north of Fowler Ave toward Bearss." },
@@ -353,8 +413,8 @@ tr:last-child td { border-bottom: 0; }
   ];
 
   // From the Sarasota Coffee database in Notion. id = the entry's Notion page id (used for ?coffee=<id> links).
-  var COFFEE_DB = "https://app.notion.com/p/cd8bb5242e5c83acb18e010614dda7fb";
-  var COFFEE = [
+  var COFFEE_DB = ORL ? "https://app.notion.com/p/469bb5242e5c8257ba398110f6f49142" : "https://app.notion.com/p/cd8bb5242e5c83acb18e010614dda7fb";
+  var COFFEE = ORL ? [] : [
     {"id": "e1cbb5242e5c82da95e4814443571939", "name": "Project Coffee", "url": "https://www.projectcoffee.us/", "r": "sarasota", "lat": 27.34069, "lon": -82.54223, "addr": "1419 5th St, Sarasota", "rank": "Gets the job done", "cat": "Coffee"},
     {"id": "ff8bb5242e5c82a08d9d8111175f1a91", "name": "Qamaria", "url": "https://www.qamariacoffee.com/", "r": "tampa", "lat": 28.05184, "lon": -82.39279, "addr": "11301 56th St N, Temple Terrace", "rank": "Peak", "cat": "Coffee"},
     {"id": "4d9bb5242e5c82478db901ebf82f7371", "name": "Casa Azul", "url": "https://casaazultpa.com/", "r": "tampa", "lat": 27.90714, "lon": -82.52707, "addr": "4802 W Bay Ct Ave, Tampa", "rank": "Peak", "cat": "Coffee"},
@@ -380,7 +440,7 @@ tr:last-child td { border-bottom: 0; }
     police: { label: "Police / enforcement",   letter: "🚓", v: "--police" },
     merge:  { label: "Merges & lane drops",    letter: "M", v: "--merge" },
     lanes:  { label: "Lane counts",            letter: "",  v: "--lane" },
-    coffee: { label: "Coffee spots",           letter: "☕", v: "--coffee" },
+    coffee: { label: ORL ? "My places" : "Coffee spots", letter: "☕", v: "--coffee" },
     school: { label: "School zones",           letter: "S", v: "--school" },
     lanechg: { label: "Lane drops & adds",     letter: "",  v: "--expand" },
     ramps:   { label: "Highway exits & entrances", letter: "", v: "--exit" },
@@ -396,7 +456,7 @@ tr:last-child td { border-bottom: 0; }
     malls:   { label: "Shopping centers",      letter: "🛍️", v: "--poi" },
     parking: { label: "Parking (free / paid / private)", letter: "P", v: "--free" },
     stops:   { label: "Stop signs",            letter: "", v: "--crash" },
-    localcoffee: { label: "Local coffee (Sarasota)", letter: "☕", v: "--coffee" },
+    localcoffee: { label: ORL ? "Local coffee (Orlando)" : "Local coffee (Sarasota)", letter: "☕", v: "--coffee" },
     districts: { label: "Nightlife districts",   letter: "", v: "--night" },
     nightclubs: { label: "Nightclubs",           letter: "🪩", v: "--night" },
     collegebars: { label: "College bars",        letter: "🍺", v: "--night" },
@@ -409,7 +469,7 @@ tr:last-child td { border-bottom: 0; }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
 
   var params = new URLSearchParams(location.search);
-  var current = REGIONS[params.get("region")] ? params.get("region") : "sarasota"; // Always opens on Sarasota unless ?region= says otherwise.
+  var current = REGIONS[params.get("region")] ? params.get("region") : ORL ? "all" : "sarasota"; // Always opens on Sarasota unless ?region= says otherwise.
 
   // --- Live map (Waze embed) ---
   var liveFrame = document.getElementById("live");
@@ -464,7 +524,7 @@ tr:last-child td { border-bottom: 0; }
   });
 
   var coffeeMarkers = {};
-  COFFEE.forEach(function (c) {
+  function addMine(c) {
     var col = color("--coffee");
     var icon = L.divIcon({ className: "", iconSize: [24, 24], iconAnchor: [12, 12],
       html: '<div class="pin coffee" style="background:' + col + '"><span>☕</span></div>' });
@@ -476,7 +536,41 @@ tr:last-child td { border-bottom: 0; }
         ' · <a href="' + COFFEE_DB + '" target="_blank" rel="noopener">All coffee ↗</a>');
     marker.addTo(layers.coffee);
     coffeeMarkers[c.id] = { m: marker, c: c };
-  });
+  }
+  COFFEE.forEach(addMine);
+
+  // Orlando: every place in the Orlando database (orlando-places.json, exported from Notion), styled by category.
+  var PLACE_STYLE = [
+    [function (p) { return p.type.indexOf("Garage") >= 0; }, "🅿️", "Parking garage"],
+    [function (p) { return /Theme Park|Water Park|Amusement Park|Zoo/.test(p.type.join()); }, "🎢", "Park & attraction"],
+    [function (p) { return /Stadium|Arena|Music Venue/.test(p.type.join()); }, "🏟️", "Venue"],
+    [function (p) { return /Dorm|Apartment|Greek Life/.test(p.type.join()); }, "🏠", "Housing"],
+    [function (p) { return p.type.indexOf("Hotel") >= 0 || p.cat.indexOf("Hotel") >= 0; }, "🏨", "Hotel"],
+    [function (p) { return p.cat.indexOf("Coffee") >= 0; }, "☕", "Coffee"],
+    [function (p) { return /Bar|Pub/.test(p.cat.join()); }, "🍻", "Bar"],
+    [function (p) { return /Dessert|Bakery/.test(p.cat.join()); }, "🧁", "Dessert & bakery"],
+    [function (p) { return p.cat.indexOf("Restaurant") >= 0; }, "🍽️", "Restaurant"],
+    [function (p) { return /Nature|Park|Beach/.test(p.cat.join()); }, "🌿", "Nature & parks"],
+    [function (p) { return /Museum/.test(p.cat.join() + p.type.join()); }, "🏛️", "Museum"],
+    [function (p) { return /Fun|Social|Shopping/.test(p.cat.join()); }, "🎳", "Fun"],
+    [function () { return true; }, "🏢", "Place"]
+  ];
+  function addPlace(p) {
+    var st = PLACE_STYLE.filter(function (x) { return x[0](p); })[0];
+    var col = color("--coffee");
+    var icon = L.divIcon({ className: "", iconSize: [24, 24], iconAnchor: [12, 12], html: '<div class="pin coffee" style="background:' + col + '"><span>' + st[1] + "</span></div>" });
+    var details = [p.cat.concat(p.type).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(", "), (p.cuisine || []).join(", "), p.price].filter(Boolean).join(" · ");
+    var marker = L.marker([p.lat, p.lon], { icon: icon, title: p.name, keyboard: true, zIndexOffset: 500 })
+      .bindPopup('<div class="tag" style="color:' + col + '">' + esc(st[2]) + (p.rank ? " · " + esc(p.rank) : "") + "</div><h3>" + esc(p.name) + "</h3>" + esc(details) +
+        '<br><a href="https://maps.apple.com/?daddr=' + p.lat + "," + p.lon + '" target="_blank" rel="noopener">Directions ↗</a>' +
+        ' · <a href="https://app.notion.com/p/' + p.id + '" target="_blank" rel="noopener">Notion entry ↗</a>' +
+        ' · <a href="' + COFFEE_DB + '" target="_blank" rel="noopener">All places ↗</a>');
+    marker.addTo(layers.coffee);
+    coffeeMarkers[p.id] = { m: marker, c: p };
+    if (p.cat.indexOf("Coffee") >= 0) COFFEE.push(p);
+  }
+  var placesReady = ORL ? fetch("orlando-places.json").then(function (r) { return r.json(); })
+    .then(function (list) { list.forEach(addPlace); }).catch(function () {}) : Promise.resolve();
 
   ROADS.forEach(function (rd) {
     var icon = L.divIcon({ className: "", iconSize: [0, 0], html: '<span class="lanebadge">' + esc(rd.road) + " · <b>" + esc(rd.lanes) + "</b></span>" });
@@ -904,8 +998,8 @@ tr:last-child td { border-bottom: 0; }
   // --- Nightly map data ---
   // A GitHub Action downloads OpenStreetMap data every night into 0.1° tiles on the "map-data" branch.
   // The map loads those files first (fast, no busy servers) and only asks the live servers when a tile is missing.
-  var DATA_BASE = "https://raw.githubusercontent.com/Mookster4377/notion-embeds/map-data/";
-  var TILE = { lat0: 26.8, lon0: -83.0, step: 0.1, rows: 15, cols: 11 };
+  var DATA_BASE = "https://raw.githubusercontent.com/Mookster4377/notion-embeds/map-data/" + (ORL ? "orlando/" : "");
+  var TILE = ORL ? { lat0: 28.2, lon0: -81.75, step: 0.1, rows: 7, cols: 8 } : { lat0: 26.8, lon0: -83.0, step: 0.1, rows: 15, cols: 11 };
   var dataMeta = null;
   function timedFetchJSON(url, ms) {
     var ctl = window.AbortController ? new AbortController() : null;
@@ -1226,7 +1320,7 @@ tr:last-child td { border-bottom: 0; }
   var countiesLoaded = false;
   function loadCounties() {
     if (countiesLoaded) return; countiesLoaded = true;
-    osmFile("counties.json", '[out:json][timeout:60];relation["boundary"="administrative"]["admin_level"="6"](26.85,-82.95,28.25,-81.95);out geom;', 9, 60000)
+    osmFile("counties.json", '[out:json][timeout:60];relation["boundary"="administrative"]["admin_level"="6"](' + (ORL ? "28.25,-81.70,28.85,-81.00" : "26.85,-82.95,28.25,-81.95") + ');out geom;', 9, 60000)
       .then(function (d) {
         (d.elements || []).forEach(function (rel) {
           var name = (rel.tags || {}).name || "County", bounds = L.latLngBounds([]);
@@ -1254,7 +1348,7 @@ tr:last-child td { border-bottom: 0; }
   // --- Police reports: tap the map to report police activity. ---
   // Reports are shared through a free ntfy.sh channel (no account). Anyone who opens this page sees reports
   // from the last 6 hours, and anyone subscribed to the channel in the ntfy app gets a phone alert.
-  var REPORT_TOPIC = "tbt-police-a49fdfc3a0";
+  var REPORT_TOPIC = ORL ? "orl-police-7c31e58d24" : "tbt-police-a49fdfc3a0";
   var REPORT_HOURS = 6;
   var KINDS = { speed: "Speed trap / radar", stop: "Traffic stop", crash: "Police at a crash", checkpoint: "Checkpoint / DUI patrol", other: "Police activity" };
   layers.reports = L.layerGroup().addTo(map);
@@ -1377,6 +1471,7 @@ tr:last-child td { border-bottom: 0; }
   syncLive();
 
 
+  if (!ORL) {
   // --- Selmon Expressway Reversible Express Lanes (downtown Tampa ↔ Brandon) ---
   // Schedule per THEA (July 2026): weekdays westbound to Tampa 5 am–noon, eastbound to Brandon noon–5 am.
   // Weekends: eastbound (THEA kept weekend hours; older published schedule = eastbound Fri afternoon to Mon morning).
@@ -1404,15 +1499,32 @@ tr:last-child td { border-bottom: 0; }
   relLayer.bindPopup(relPopup).addTo(layers.lanes);
   var relIcon = L.divIcon({ className: "", iconSize: [0, 0], html: '<span class="lanebadge" style="border-color:' + color("--merge") + '">⇄ Selmon REL</span>' });
   L.marker([27.9545, -82.4150], { icon: relIcon, title: "Selmon reversible lanes schedule", keyboard: true }).bindPopup(relPopup).addTo(layers.lanes);
+  }
 
 
   // --- Campus parking garages (USF Tampa and the University of Tampa) ---
   // Names and addresses from the schools and map listings; the "Map" button finds each garage's exact spot in OpenStreetMap.
-  var CAMPUS = {
+  var CAMPUS = ORL ? {
+    ucf: { name: "UCF", bounds: [[28.590, -81.210], [28.615, -81.188]] },
+    ucfdt: { name: "UCF Downtown", bounds: [[28.540, -81.395], [28.552, -81.383]] }
+  } : {
     usf: { name: "USF Tampa", bounds: [[28.050, -82.432], [28.076, -82.398]] },
     ut:  { name: "University of Tampa", bounds: [[27.940, -82.472], [27.953, -82.458]] }
   };
-  var GARAGES = [
+  // UCF garages come from the Orlando database (exact locations), so no lookup is needed.
+  var UCFV = "UCF permit, or a daily visitor permit.";
+  var GARAGES = ORL ? [
+    { c: "ucf", name: "Garage A", addr: "12494 University Blvd", vis: UCFV, lat: 28.59985, lon: -81.20457 },
+    { c: "ucf", name: "Garage B", addr: "4799 Hydra Ln", vis: UCFV, lat: 28.59701, lon: -81.20035 },
+    { c: "ucf", name: "Garage C", addr: "12998 Gemini Blvd E", vis: UCFV, lat: 28.60237, lon: -81.1957 },
+    { c: "ucf", name: "Garage D", addr: "12898 Gemini Blvd N", vis: UCFV, lat: 28.60489, lon: -81.19701 },
+    { c: "ucf", name: "Garage E", addr: "4220 Mensa Ln", vis: UCFV, lat: 28.60653, lon: -81.19529 },
+    { c: "ucf", name: "Garage F", addr: "4403 Knights Victory Way", vis: UCFV, lat: 28.6087, lon: -81.19646 },
+    { c: "ucf", name: "Garage G", addr: "4282 W Plaza Dr", vis: UCFV, lat: 28.61084, lon: -81.19262 },
+    { c: "ucf", name: "Garage H", addr: "Gemini Blvd N", vis: UCFV, lat: 28.60555, lon: -81.20132 },
+    { c: "ucf", name: "Garage I", addr: "4277 Gemini Blvd W", vis: UCFV, lat: 28.60116, lon: -81.20498 },
+    { c: "ucfdt", name: "Parramore Garage (PG1)", addr: "316 N Parramore Ave", vis: "UCF Downtown permit or paid parking.", lat: 28.54635, lon: -81.38924 }
+  ] : [
     { c: "usf", name: "Collins Boulevard Parking Facility", addr: "12075 Leroy Collins Blvd", vis: "Permit or paid visitor parking.", re: /collins/i },
     { c: "usf", name: "Crescent Hill Parking Facility", addr: "4119 USF Cedar Dr", vis: "Permit or paid visitor parking.", re: /crescent/i },
     { c: "usf", name: "Laurel Drive Parking Facility", addr: "13325 USF Laurel Dr", vis: "Permit or paid visitor parking; patient parking for USF Health.", re: /laurel/i },
@@ -1433,6 +1545,12 @@ tr:last-child td { border-bottom: 0; }
   function showGarage(g) {
     showTab(false);
     document.getElementById("guide").scrollIntoView({ behavior: "smooth", block: "center" });
+    if (g.lat) {
+      map.setView([g.lat, g.lon], 17);
+      L.popup().setLatLng([g.lat, g.lon]).setContent('<div class="tag" style="color:' + color("--paid") + '">' + esc(CAMPUS[g.c].name) + " · Parking garage</div><h3>" + esc(g.name) + "</h3>" + esc(g.addr) + "<br>" + esc(g.vis) +
+        '<br><a href="https://maps.apple.com/?daddr=' + g.lat + "," + g.lon + '" target="_blank" rel="noopener">Directions ↗</a>').openOn(map);
+      return;
+    }
     map.fitBounds(CAMPUS[g.c].bounds);
     findCampusGarages(g.c).then(function (els) {
       var hit = els.filter(function (e) { return g.re.test((e.tags && (e.tags.name || e.tags.ref)) || ""); })[0];
@@ -1440,7 +1558,7 @@ tr:last-child td { border-bottom: 0; }
         var c = L.latLngBounds(CAMPUS[g.c].bounds).getCenter();
         L.popup().setLatLng(c).setContent('<div class="tag" style="color:' + color("--paid") + '">' + esc(CAMPUS[g.c].name) + " · Parking garage</div><h3>" + esc(g.name) + "</h3>" + esc(g.addr) + "<br>" + esc(g.vis) +
           "<div class='note' style='margin-top:4px'>Not pinned on OpenStreetMap, so this shows the campus.</div>" +
-          '<a href="https://maps.apple.com/?q=' + encodeURIComponent(g.name + ", " + g.addr + ", Tampa, FL") + '" target="_blank" rel="noopener">Find it in Apple Maps ↗</a>').openOn(map);
+          '<a href="https://maps.apple.com/?q=' + encodeURIComponent(g.name + ", " + g.addr + (ORL ? ", Orlando, FL" : ", Tampa, FL")) + '" target="_blank" rel="noopener">Find it in Apple Maps ↗</a>').openOn(map);
         return;
       }
       var lat = hit.lat || hit.center.lat, lon = hit.lon || hit.center.lon;
@@ -1450,6 +1568,7 @@ tr:last-child td { border-bottom: 0; }
     }).catch(function () { zoneStatus.textContent = "Couldn't look up the garage right now."; });
   }
   var garageRows = document.getElementById("garageRows");
+  if (ORL) document.getElementById("garageNote").innerHTML = 'Rules change each year. Check <a href="https://parking.ucf.edu/" target="_blank" rel="noopener">UCF Parking Services</a> before you go.';
   GARAGES.forEach(function (g) {
     var tr = document.createElement("tr");
     tr.innerHTML = '<td class="road">' + esc(g.name) + "<div class='note'>" + esc(CAMPUS[g.c].name) + "</div></td><td>" + esc(g.addr) + "</td><td>" + esc(g.vis) +
@@ -1461,13 +1580,18 @@ tr:last-child td { border-bottom: 0; }
 
   // --- Local coffee shops in Sarasota (from OpenStreetMap, national chains removed) ---
   var CHAINS = /starbucks|dunkin|panera|tim hortons|peet|dutch bros|scooter'?s|biggby|7 brew|krispy|mcdonald|mccaf|einstein|caribou|costa|barnie|tropical smoothie|smoothie king|wawa|7-eleven|circle k|duck donuts|first watch|another broken egg|black rifle|ziggi/i;
-  var SARASOTA_BOX = "27.17,-82.62,27.47,-82.33";
+  var SARASOTA_BOX = ORL ? "28.35,-81.60,28.82,-81.15" : "27.17,-82.62,27.47,-82.33";
+  var COFFEE_AREA = ORL ? "Orlando" : "Sarasota";
+  if (ORL) {
+    document.getElementById("coffeeHead").firstChild.textContent = "Local coffee in Orlando";
+    document.getElementById("coffeeNote").textContent = "Every café OpenStreetMap lists from Apopka and Lake Mary down to Kissimmee and east to UCF, minus national chains. ☕ marks the ones already in your Orlando list. New places may be missing.";
+  }
   function addrOf(t) {
     var a = [t["addr:housenumber"], t["addr:street"]].filter(Boolean).join(" ");
     return a ? a + (t["addr:city"] ? ", " + t["addr:city"] : "") : (t["addr:city"] || "");
   }
   // Shops in the Notion database that have no map location yet (matched to OpenStreetMap by name).
-  var MY_LIST_EXTRA = ["Breaking Wave Coffee", "The Clever Cup", "Mama G's Coffee", "Yoder's", "Captain Curt's", "O & A Coffee", "Buddy Brew", "Cedar Fox",
+  var MY_LIST_EXTRA = ORL ? [] : ["Breaking Wave Coffee", "The Clever Cup", "Mama G's Coffee", "Yoder's", "Captain Curt's", "O & A Coffee", "Buddy Brew", "Cedar Fox",
     "Pastry Art", "The Overton", "Perq", "Raining Berries", "Cafe Divan", "Kahwa", "Atria", "Sunsoaked"];
   function norm(x) { return x.toLowerCase().replace(/\(.*?\)/g, "").replace(/&/g, "and").replace(/[^a-z0-9]/g, "").replace(/^the/, ""); }
   function sameShop(a, b) { a = norm(a); b = norm(b); return a && b && (a.indexOf(b) >= 0 || b.indexOf(a) >= 0); }
@@ -1491,8 +1615,8 @@ tr:last-child td { border-bottom: 0; }
     }
   }
   var sbox = SARASOTA_BOX.split(",").map(Number);
-  osm(L.latLngBounds([sbox[0], sbox[1]], [sbox[2], sbox[3]]), '[out:json][timeout:30];nwr["amenity"="cafe"](' + SARASOTA_BOX + ');out center tags;', 5, null,
-    function (e) { return tg(e).amenity === "cafe"; })
+  placesReady.then(function () { return osm(L.latLngBounds([sbox[0], sbox[1]], [sbox[2], sbox[3]]), '[out:json][timeout:30];nwr["amenity"="cafe"](' + SARASOTA_BOX + ');out center tags;', 5, null,
+    function (e) { return tg(e).amenity === "cafe"; }); })
     .then(function (d) {
       var seenName = {};
       var shops = (d.elements || []).map(function (e) {
@@ -1528,7 +1652,7 @@ tr:last-child td { border-bottom: 0; }
         localShops.push({ x: x, m: m });
       });
       openNamedCoffee();
-      document.querySelector("#localCoffeeRows").closest("section").querySelector("h2").firstChild.textContent = "Local coffee in Sarasota (" + shops.length + ")";
+      document.querySelector("#localCoffeeRows").closest("section").querySelector("h2").firstChild.textContent = "Local coffee in " + COFFEE_AREA + " (" + shops.length + ")";
     })
     .catch(function () {
       openNamedCoffee();
@@ -1543,7 +1667,11 @@ tr:last-child td { border-bottom: 0; }
     { n: "USF St. Petersburg", lat: 27.7617, lon: -82.6350, r: 800 },
     { n: "Eckerd College", lat: 27.7150, lon: -82.6880, r: 1200 },
     { n: "New College / USF Sarasota-Manatee", lat: 27.3870, lon: -82.5600, r: 1200 },
-    { n: "Ringling College", lat: 27.3630, lon: -82.5525, r: 800 }
+    { n: "Ringling College", lat: 27.3630, lon: -82.5525, r: 800 },
+    { n: "UCF", lat: 28.6024, lon: -81.2001, r: 2000 },
+    { n: "UCF Downtown", lat: 28.5465, lon: -81.3890, r: 500 },
+    { n: "Rollins College", lat: 28.5925, lon: -81.3487, r: 700 },
+    { n: "Full Sail University", lat: 28.5960, lon: -81.3045, r: 700 }
   ];
   var DISTRICTS = [
     { n: "Ybor City", lat: 27.9600, lon: -82.4370, r: 700, crowd: "Mostly 21–30; college students and young professionals, big on weekends.",
@@ -1559,7 +1687,23 @@ tr:last-child td { border-bottom: 0; }
     { n: "Main Street Sarasota", lat: 27.3365, lon: -82.5410, r: 700, crowd: "Mixed: 20s on weekend nights, older crowds earlier.",
       about: "Downtown Sarasota bars and restaurants on Main St and Lemon Ave. Use the Palm Ave or State St garages on weekend nights." },
     { n: "Siesta Village", lat: 27.2680, lon: -82.5470, r: 500, crowd: "20s and tourists.",
-      about: "Beach bars on Siesta Key. Expect drawbridge and Stickney Point Rd backups leaving the island." }
+      about: "Beach bars on Siesta Key. Expect drawbridge and Stickney Point Rd backups leaving the island." },
+    { n: "Downtown Orlando", lat: 28.5418, lon: -81.3790, r: 600, crowd: "Mostly 21–30; big weekend crowds.",
+      about: "Clubs and bars around Orange Ave, Church St and Wall St. Streets close for events; use the city garages and expect rideshare lines at 2 am." },
+    { n: "Mills 50 / Thornton Park", lat: 28.5530, lon: -81.3650, r: 600, crowd: "Mostly 20s–30s.",
+      about: "Restaurants, bars and late-night spots along Mills Ave and Colonial Dr. Lots fill up fast on weekends." },
+    { n: "Ivanhoe Village", lat: 28.5660, lon: -81.3730, r: 500, crowd: "Mostly 20s–30s.",
+      about: "Breweries and bars along N Orange Ave by Lake Ivanhoe." },
+    { n: "Milk District", lat: 28.5420, lon: -81.3500, r: 400, crowd: "20s–30s; laid-back bar crowd.",
+      about: "Dive bars and music venues along Robinson St." },
+    { n: "Park Avenue (Winter Park)", lat: 28.5975, lon: -81.3510, r: 500, crowd: "Older and upscale by day; more 20s on weekend nights.",
+      about: "Shops, wine bars and restaurants on Park Ave. Parking is tight on weekends." },
+    { n: "UCF area (University & Alafaya)", lat: 28.5970, lon: -81.2085, r: 1000, crowd: "Mostly college students, 21 to mid-20s.",
+      about: "Bars and restaurants around University Blvd and Alafaya Trail by UCF. Busiest Thursday to Saturday and on game days." },
+    { n: "Universal CityWalk", lat: 28.4730, lon: -81.4680, r: 500, crowd: "Tourists and 20s–30s locals.",
+      about: "Clubs and bars between the Universal parks. Paid parking in the Universal garages." },
+    { n: "Disney Springs", lat: 28.3710, lon: -81.5190, r: 600, crowd: "Tourists of all ages; adults at night.",
+      about: "Shopping, dining and bars. Free garages fill up on weekend evenings." }
   ];
   function nearest(list, lat, lon) {
     var ll = L.latLng(lat, lon), best = null, bd = 1e9;
@@ -1639,15 +1783,18 @@ tr:last-child td { border-bottom: 0; }
   var at = (params.get("at") || "").split(",").map(parseFloat);
   if (at.length === 2 && isFinite(at[0]) && isFinite(at[1])) map.setView(at, 16);
 
-  // Deep link from the Notion coffee database: ?coffee=<page id> zooms to that spot and opens it.
-  var want = (params.get("coffee") || "").replace(/-/g, "").toLowerCase();
-  if (coffeeMarkers[want]) {
+  // Deep link from the Notion database: ?coffee=<page id> zooms to that spot and opens it.
+  placesReady.then(function () {
+    var want = (params.get("coffee") || "").replace(/-/g, "").toLowerCase();
+    if (!coffeeMarkers[want]) return;
     var hit = coffeeMarkers[want];
-    chips.querySelectorAll(".chip").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.r === hit.c.r ? "true" : "false"); });
-    current = hit.c.r; setLive(current); renderTable(current);
+    if (hit.c.r) {
+      chips.querySelectorAll(".chip").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.r === hit.c.r ? "true" : "false"); });
+      current = hit.c.r; setLive(current); renderTable(current);
+    }
     map.setView([hit.c.lat, hit.c.lon], 16);
     hit.m.openPopup();
-  }
+  });
 })();
 </script>
 </body>
