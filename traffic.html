@@ -107,6 +107,10 @@ section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); 
 .pin.report { width: 26px; height: 26px; font-size: 13px; animation: pulse 1.6s infinite; }
 .pin.report.old { animation: none; opacity: .65; }
 #guide.reporting { cursor: crosshair; }
+.stopsign { width: 18px; height: 18px; display: grid; place-items: center; color: #fff; font: 800 6px var(--body); letter-spacing: -.02em;
+  clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%); box-shadow: 0 0 0 2px #fff; }
+.stopsign.busy { width: 24px; height: 24px; font-size: 7px; }
+.pin.local { width: 20px; height: 20px; font-size: 10px; opacity: .9; }
 .pin.gate { width: 20px; height: 20px; font-size: 10px; }
 .pin.school { color: #1a1400; width: 20px; height: 20px; font-size: 11px; }
 .zone-status { color: var(--muted); font-size: 12px; margin-left: auto; }
@@ -176,6 +180,28 @@ tr:last-child td { border-bottom: 0; }
         </span>
       </div>
     </div>
+  </section>
+
+  <section>
+    <h2>Local coffee in Sarasota</h2>
+    <div class="panel table-wrap">
+      <table>
+        <thead><tr><th>Coffee shop</th><th>Address</th><th>Hours</th><th></th></tr></thead>
+        <tbody id="localCoffeeRows"><tr><td colspan="4" class="note">Loading local coffee shops…</td></tr></tbody>
+      </table>
+    </div>
+    <p class="note">Every café OpenStreetMap lists from Lakewood Ranch and Sarasota down to Osprey, minus national chains. ☕ marks the ones already in your Sarasota Coffee list. New places may be missing.</p>
+  </section>
+
+  <section>
+    <h2>Campus parking garages</h2>
+    <div class="panel table-wrap">
+      <table>
+        <thead><tr><th>Garage</th><th>Address</th><th>Visitors</th><th></th></tr></thead>
+        <tbody id="garageRows"></tbody>
+      </table>
+    </div>
+    <p class="note" id="garageNote">UT visitors need a parking pass Mon–Fri 7 am–5 pm (request online one business day ahead). Permits and visitor rules change each year. Check <a href="https://www.usf.edu/parking/parking/" target="_blank" rel="noopener">USF Parking</a> and <a href="https://www.ut.edu/content/ut/en/safety/parking/" target="_blank" rel="noopener">UT Parking</a> before you go.</p>
   </section>
 
   <section>
@@ -365,7 +391,9 @@ tr:last-child td { border-bottom: 0; }
     colleges: { label: "Colleges",             letter: "🎓", v: "--poi" },
     venues:  { label: "Sports venues",         letter: "🏟️", v: "--poi" },
     malls:   { label: "Shopping centers",      letter: "🛍️", v: "--poi" },
-    parking: { label: "Parking (free / paid)", letter: "P", v: "--free" }
+    parking: { label: "Parking (free / paid)", letter: "P", v: "--free" },
+    stops:   { label: "Stop signs",            letter: "", v: "--crash" },
+    localcoffee: { label: "Local coffee (Sarasota)", letter: "☕", v: "--coffee" }
   };
 
   var css = getComputedStyle(document.documentElement);
@@ -757,10 +785,14 @@ tr:last-child td { border-bottom: 0; }
   // Arterial: a trunk, primary or secondary road (the main through streets between neighborhoods).
   // Stroad: an arterial built like a highway (4+ lanes, 35–55 mph) but lined with driveways, shops and signals.
   var roadSeen = {};
+  // Roads people treat as arterials even where OpenStreetMap ranks them lower.
+  var EXTRA_ARTERIALS = ["Bahia Vista St"];
   function mph(t) { var m = /(\d+)/.exec(t.maxspeed || ""); if (!m) return null; var v = +m[1]; return /mph/.test(t.maxspeed) ? v : Math.round(v * 0.621); }
   function addRoadLine(e) {
     var t = e.tags || {};
-    if (e.type !== "way" || !/^(trunk|primary|secondary)$/.test(t.highway) || roadSeen[e.id] || !e.geometry) return;
+    var extra = EXTRA_ARTERIALS.some(function (n) { return (t.name || "").indexOf(n) === 0; });
+    if (e.type !== "way" || !(/^(trunk|primary|secondary|tertiary)$/.test(t.highway) || extra) || roadSeen[e.id] || !e.geometry) return;
+    var minor = t.highway === "tertiary" || extra;
     roadSeen[e.id] = 1;
     var lanes = parseInt(t.lanes, 10) || null, sp = mph(t);
     var oneway = t.oneway === "yes" || t.oneway === "-1";
@@ -771,9 +803,10 @@ tr:last-child td { border-bottom: 0; }
     var facts = [(lanes ? lanes + " lanes" + (oneway ? " (one way)" : " total") : "lane count not mapped"), (sp ? sp + " mph" : "speed limit not mapped")];
     var why = stroad
       ? "A <b>stroad</b>: wide and fast like a highway, but with driveways, shops and signals along it. Expect sudden turns in and out, and take extra care with pedestrians."
+      : minor ? "A <b>minor arterial</b>: a through street that links neighborhoods to the main roads."
       : "An <b>arterial</b>: a main through road between neighborhoods.";
-    L.polyline(e.geometry.map(function (g) { return [g.lat, g.lon]; }), { color: col, weight: stroad ? 5 : 3, opacity: stroad ? 0.85 : 0.6, interactive: true })
-      .bindPopup('<div class="tag" style="color:' + col + '">' + (stroad ? "Stroad" : "Arterial road") + "</div><h3>" + esc(name) + "</h3>" + facts.join(" · ") + "<br>" + why)
+    L.polyline(e.geometry.map(function (g) { return [g.lat, g.lon]; }), { color: col, weight: stroad ? 5 : minor ? 2 : 3, opacity: stroad ? 0.85 : 0.6, interactive: true })
+      .bindPopup('<div class="tag" style="color:' + col + '">' + (stroad ? "Stroad" : minor ? "Minor arterial" : "Arterial road") + "</div><h3>" + esc(name) + "</h3>" + facts.join(" · ") + "<br>" + why)
       .addTo(layers.roads);
   }
 
@@ -783,7 +816,8 @@ tr:last-child td { border-bottom: 0; }
     var b = map.getBounds().pad(0.3);
     laneBusy = true; zoneStatus.textContent = "Loading lane changes…";
     var bb = [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].map(function (v) { return v.toFixed(4); }).join(",");
-    var q = '[out:json][timeout:30];(way["highway"~"^(primary|secondary)$"](' + bb + ');way["highway"="tertiary"]["lanes"](' + bb + ');' +
+    var q = '[out:json][timeout:30];(way["highway"~"^(primary|secondary)$"](' + bb + ');way["highway"="tertiary"](' + bb + ');' +
+      'way["highway"~"^(residential|unclassified)$"]["name"~"^(' + EXTRA_ARTERIALS.join("|") + ')"](' + bb + ');' +
       'way["highway"~"^(motorway|trunk)$"](' + bb + ');way["highway"~"^(motorway|trunk)_link$"](' + bb + ');' +
       'node["highway"="motorway_junction"](' + bb + '););out body geom;';
     fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "Content-Type": "application/x-www-form-urlencoded" } })
@@ -898,6 +932,43 @@ tr:last-child td { border-bottom: 0; }
             '<br><a href="https://www.google.com/maps/dir/?api=1&destination=' + lat + "," + lon + '" target="_blank" rel="noopener">Directions ↗</a>')
           .addTo(layers.parking);
       }); } },
+    // Stop signs. Flagged as "backs up" when it's an all-way stop, a side street stopping at a busy road, or a stop on a bigger road.
+    stops: { on: true, minZoom: 15, boxes: [], busy: false, seen: {},
+      query: function (bb) { return '[out:json][timeout:25];node["highway"="stop"](' + bb + ')->.s;.s out;way(bn.s)["highway"];out body;way(around.s:40)["highway"~"^(trunk|primary|secondary|tertiary)$"];out geom;'; },
+      draw: function (els) {
+        var nodes = els.filter(function (e) { return e.type === "node"; });
+        var ways = els.filter(function (e) { return e.type === "way"; });
+        var big = ways.filter(function (w) { return w.geometry; });
+        var onWay = {};
+        ways.forEach(function (w) { (w.nodes || []).forEach(function (n) { (onWay[n] = onWay[n] || []).push(w); }); });
+        function meters(a, b) { var k = Math.cos(a.lat * Math.PI / 180); return { x: (b.lon - a.lon) * 111320 * k, y: (b.lat - a.lat) * 110540 }; }
+        function distTo(p, w) {
+          var best = 1e9;
+          for (var i = 1; i < w.geometry.length; i++) {
+            var A = meters(p, w.geometry[i - 1]), B = meters(p, w.geometry[i]);
+            var dx = B.x - A.x, dy = B.y - A.y, t = dx || dy ? Math.max(0, Math.min(1, -(A.x * dx + A.y * dy) / (dx * dx + dy * dy))) : 0;
+            var x = A.x + t * dx, y = A.y + t * dy; best = Math.min(best, Math.sqrt(x * x + y * y));
+          }
+          return best;
+        }
+        nodes.forEach(function (n) {
+          if (live.stops.seen[n.id]) return; live.stops.seen[n.id] = 1;
+          var t = n.tags || {}, mine = onWay[n.id] || [], road = mine[0] && mine[0].tags || {};
+          var allWay = t.stop === "all";
+          var ownIsBig = /^(trunk|primary|secondary|tertiary)$/.test(road.highway || "");
+          var cross = big.filter(function (w) { return mine.indexOf(w) < 0 && w.tags.name !== road.name && distTo(n, w) < 40; })[0];
+          var busy = allWay && (ownIsBig || cross) || ownIsBig || !!cross;
+          var why = allWay ? "<b>All-way stop.</b> Everyone takes turns, so lines form at rush hour and school times."
+            : cross ? "<b>Stop sign onto " + esc(cross.tags.name || cross.tags.ref || "a busy road") + ".</b> Expect a wait for a gap, especially to turn left at rush hour."
+            : ownIsBig ? "<b>Stop sign on a through road.</b> Traffic queues here at busy times."
+            : "Stop sign.";
+          var icon = L.divIcon({ className: "", iconSize: busy ? [24, 24] : [18, 18], iconAnchor: busy ? [12, 12] : [9, 9],
+            html: '<div class="stopsign' + (busy ? " busy" : "") + '" style="background:' + color("--crash") + '">' + (allWay ? "ALL" : "STOP") + "</div>" });
+          L.marker([n.lat, n.lon], { icon: icon, title: (allWay ? "All-way stop" : "Stop sign") + (road.name ? " on " + road.name : "") + (busy ? " (can back up)" : ""), keyboard: true })
+            .bindPopup('<div class="tag" style="color:' + color("--crash") + '">' + (busy ? "Stop sign · can back up" : "Stop sign") + "</div><h3>" + esc(road.name || "Stop sign") + "</h3>" + why)
+            .addTo(layers.stops);
+        });
+      } },
     // Urban / suburban / rural from OpenStreetMap place types.
     areas: { on: true, minZoom: 11, boxes: [], busy: false, seen: {},
       query: function (bb) { return '[out:json][timeout:25];node["place"~"^(city|town|suburb|village|hamlet|neighbourhood|quarter)$"](' + bb + ');out;'; },
@@ -1151,6 +1222,110 @@ tr:last-child td { border-bottom: 0; }
   relLayer.bindPopup(relPopup).addTo(layers.lanes);
   var relIcon = L.divIcon({ className: "", iconSize: [0, 0], html: '<span class="lanebadge" style="border-color:' + color("--merge") + '">⇄ Selmon REL</span>' });
   L.marker([27.9545, -82.4150], { icon: relIcon, title: "Selmon reversible lanes schedule", keyboard: true }).bindPopup(relPopup).addTo(layers.lanes);
+
+
+  // --- Campus parking garages (USF Tampa and the University of Tampa) ---
+  // Names and addresses from the schools and map listings; the "Map" button finds each garage's exact spot in OpenStreetMap.
+  var CAMPUS = {
+    usf: { name: "USF Tampa", bounds: [[28.050, -82.432], [28.076, -82.398]] },
+    ut:  { name: "University of Tampa", bounds: [[27.940, -82.472], [27.953, -82.458]] }
+  };
+  var GARAGES = [
+    { c: "usf", name: "Collins Boulevard Parking Facility", addr: "12075 Leroy Collins Blvd", vis: "Permit or paid visitor parking.", re: /collins/i },
+    { c: "usf", name: "Crescent Hill Parking Facility", addr: "4119 USF Cedar Dr", vis: "Permit or paid visitor parking.", re: /crescent/i },
+    { c: "usf", name: "Laurel Drive Parking Facility", addr: "13325 USF Laurel Dr", vis: "Permit or paid visitor parking; patient parking for USF Health.", re: /laurel/i },
+    { c: "usf", name: "Beard Drive Parking Facility (Richard A. Beard)", addr: "USF Beard Dr", vis: "Permit or paid visitor parking.", re: /beard/i },
+    { c: "ut", name: "Rick Thomas Parking Garage", addr: "Entrance on W North A St", vis: "Visitor spaces on the 1st floor.", re: /thomas/i },
+    { c: "ut", name: "West Parking Garage", addr: "West side of campus", vis: "Visitor spaces on the 2nd floor.", re: /west/i },
+    { c: "ut", name: "Delaware Parking Garage", addr: "N Delaware Ave", vis: "Visitor spaces on the 1st floor.", re: /delaware/i },
+    { c: "ut", name: "Grand Center Parking Garage", addr: "Grand Center", vis: "Gated: needs vehicle registration and a Spartan ID. Visitors use street parking out front.", re: /grand/i }
+  ];
+  var campusFound = {};
+  function findCampusGarages(c) {
+    if (campusFound[c]) return Promise.resolve(campusFound[c]);
+    var b = CAMPUS[c].bounds;
+    return overpass('[out:json][timeout:25];nwr["amenity"="parking"]["parking"~"multi-storey|underground|rooftop"](' + [b[0][0], b[0][1], b[1][0], b[1][1]].join(",") + ');out center tags;')
+      .then(function (d) { return (campusFound[c] = d.elements || []); });
+  }
+  function showGarage(g) {
+    showTab(false);
+    document.getElementById("guide").scrollIntoView({ behavior: "smooth", block: "center" });
+    map.fitBounds(CAMPUS[g.c].bounds);
+    findCampusGarages(g.c).then(function (els) {
+      var hit = els.filter(function (e) { return g.re.test((e.tags && (e.tags.name || e.tags.ref)) || ""); })[0];
+      if (!hit) {
+        var c = L.latLngBounds(CAMPUS[g.c].bounds).getCenter();
+        L.popup().setLatLng(c).setContent('<div class="tag" style="color:' + color("--paid") + '">' + esc(CAMPUS[g.c].name) + " · Parking garage</div><h3>" + esc(g.name) + "</h3>" + esc(g.addr) + "<br>" + esc(g.vis) +
+          "<div class='note' style='margin-top:4px'>Not pinned on OpenStreetMap, so this shows the campus.</div>" +
+          '<a href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(g.name + ", " + g.addr + ", Tampa, FL") + '" target="_blank" rel="noopener">Find it on Google Maps ↗</a>').openOn(map);
+        return;
+      }
+      var lat = hit.lat || hit.center.lat, lon = hit.lon || hit.center.lon;
+      map.setView([lat, lon], 17);
+      L.popup().setLatLng([lat, lon]).setContent('<div class="tag" style="color:' + color("--paid") + '">' + esc(CAMPUS[g.c].name) + " · Parking garage</div><h3>" + esc(g.name) + "</h3>" + esc(g.addr) + "<br>" + esc(g.vis) +
+        '<br><a href="https://www.google.com/maps/dir/?api=1&destination=' + lat + "," + lon + '" target="_blank" rel="noopener">Directions ↗</a>').openOn(map);
+    }).catch(function () { zoneStatus.textContent = "Couldn't look up the garage right now."; });
+  }
+  var garageRows = document.getElementById("garageRows");
+  GARAGES.forEach(function (g) {
+    var tr = document.createElement("tr");
+    tr.innerHTML = '<td class="road">' + esc(g.name) + "<div class='note'>" + esc(CAMPUS[g.c].name) + "</div></td><td>" + esc(g.addr) + "</td><td>" + esc(g.vis) +
+      '</td><td><button type="button" class="chip">Show on map</button></td>';
+    tr.querySelector("button").addEventListener("click", function () { showGarage(g); });
+    garageRows.appendChild(tr);
+  });
+
+
+  // --- Local coffee shops in Sarasota (from OpenStreetMap, national chains removed) ---
+  var CHAINS = /starbucks|dunkin|panera|tim hortons|peet|dutch bros|scooter'?s|biggby|7 brew|krispy|mcdonald|mccaf|einstein|caribou|costa|barnie|tropical smoothie|smoothie king|wawa|7-eleven|circle k|duck donuts|first watch|another broken egg|black rifle|ziggi/i;
+  var SARASOTA_BOX = "27.17,-82.62,27.47,-82.33";
+  function addrOf(t) {
+    var a = [t["addr:housenumber"], t["addr:street"]].filter(Boolean).join(" ");
+    return a ? a + (t["addr:city"] ? ", " + t["addr:city"] : "") : (t["addr:city"] || "");
+  }
+  function inMyList(name) {
+    var n = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    return COFFEE.some(function (c) { var m = c.name.toLowerCase().replace(/[^a-z0-9]/g, ""); return m && (n.indexOf(m) >= 0 || m.indexOf(n) >= 0); });
+  }
+  overpass('[out:json][timeout:30];nwr["amenity"="cafe"](' + SARASOTA_BOX + ');out center tags;')
+    .then(function (d) {
+      var seenName = {};
+      var shops = (d.elements || []).map(function (e) {
+        var t = e.tags || {};
+        return { t: t, name: t.name, lat: e.lat || (e.center && e.center.lat), lon: e.lon || (e.center && e.center.lon) };
+      }).filter(function (x) {
+        if (!x.name || !x.lat || x.t.brand || x.t["brand:wikidata"] || CHAINS.test(x.name)) return false;
+        var k = x.name.toLowerCase() + Math.round(x.lat * 200) + Math.round(x.lon * 200);
+        if (seenName[k]) return false; seenName[k] = 1; return true;
+      }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+      var rows = document.getElementById("localCoffeeRows");
+      rows.innerHTML = "";
+      if (!shops.length) { rows.innerHTML = '<tr><td colspan="4" class="note">No local coffee shops found.</td></tr>'; return; }
+      shops.forEach(function (x) {
+        var mine = inMyList(x.name), site = x.t.website || x.t["contact:website"];
+        var title = (mine ? "☕ " : "") + (site && /^https?:/.test(site) ? '<a href="' + esc(site) + '" target="_blank" rel="noopener">' + esc(x.name) + "</a>" : esc(x.name));
+        var icon = L.divIcon({ className: "", iconSize: [20, 20], iconAnchor: [10, 10], html: '<div class="pin local" style="background:' + color("--coffee") + '"><span>☕</span></div>' });
+        var m = L.marker([x.lat, x.lon], { icon: icon, title: x.name, keyboard: true })
+          .bindPopup('<div class="tag" style="color:' + color("--coffee") + '">Local coffee' + (mine ? " · in your list" : "") + "</div><h3>" + title + "</h3>" +
+            esc(addrOf(x.t) || "") + (x.t.opening_hours ? "<br>Hours: " + esc(x.t.opening_hours) : "") +
+            '<br><a href="https://www.google.com/maps/dir/?api=1&destination=' + x.lat + "," + x.lon + '" target="_blank" rel="noopener">Directions ↗</a>')
+          .addTo(layers.localcoffee);
+        var tr = document.createElement("tr");
+        tr.innerHTML = '<td class="road">' + title + "</td><td>" + esc(addrOf(x.t) || "—") + "</td><td class='note'>" + esc(x.t.opening_hours || "—") +
+          '</td><td><button type="button" class="chip">Show on map</button></td>';
+        tr.querySelector("button").addEventListener("click", function () {
+          showTab(false);
+          if (!map.hasLayer(layers.localcoffee)) map.addLayer(layers.localcoffee);
+          document.getElementById("guide").scrollIntoView({ behavior: "smooth", block: "center" });
+          map.setView([x.lat, x.lon], 17); m.openPopup();
+        });
+        rows.appendChild(tr);
+      });
+      document.querySelector("#localCoffeeRows").closest("section").querySelector("h2").firstChild.textContent = "Local coffee in Sarasota (" + shops.length + ")";
+    })
+    .catch(function () {
+      document.getElementById("localCoffeeRows").innerHTML = '<tr><td colspan="4" class="note">Couldn\'t load the coffee list right now. Refresh to try again.</td></tr>';
+    });
 
   // --- Lane table ---
   var tbody = document.getElementById("laneRows");
