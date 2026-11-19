@@ -94,6 +94,19 @@ section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); 
 .shield.state { color: #1a1400; }
 .pin.poi { width: 24px; height: 24px; font-size: 13px; }
 .pin.park { width: 20px; height: 20px; font: 800 11px var(--body); border-radius: 4px; }
+.layer-box { flex: 1 1 100%; }
+.layer-box summary { cursor: pointer; font: 600 13px var(--body); padding: 2px 0; }
+.layer-box summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.layer-list { display: flex; flex-wrap: wrap; gap: 6px 14px; padding-top: 8px; }
+.report-btn { font: 600 12px var(--body); background: var(--police); color: #fff; border: 0; border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+.report-btn[aria-pressed="true"] { background: var(--ink); }
+.report-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.report-form { display: grid; gap: 6px; min-width: 200px; }
+.report-form select, .report-form input { font: 13px var(--body); padding: 5px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--ink); }
+.report-form button { font: 600 12px var(--body); border: 0; border-radius: 6px; padding: 6px; cursor: pointer; background: var(--police); color: #fff; }
+.pin.report { width: 26px; height: 26px; font-size: 13px; animation: pulse 1.6s infinite; }
+.pin.report.old { animation: none; opacity: .65; }
+#guide.reporting { cursor: crosshair; }
 .pin.gate { width: 20px; height: 20px; font-size: 10px; }
 .pin.school { color: #1a1400; width: 20px; height: 20px; font-size: 11px; }
 .zone-status { color: var(--muted); font-size: 12px; margin-left: auto; }
@@ -205,9 +218,9 @@ tr:last-child td { border-bottom: 0; }
     { t: "crash", r: "tampa", lat: 27.9960, lon: -82.5050, name: "Dale Mabry & Hillsborough Ave", d: "Two six-lane roads cross; frequent red-light and turning crashes." },
     { t: "crash", r: "tampa", lat: 28.0690, lon: -82.4180, name: "Bruce B. Downs & Fletcher Ave", d: "Very wide intersection near USF; about 84 crashes in 15 months, plus long-running jaywalking problems.", src: "https://brookslawgroup.com/blog/most-dangerous-intersections-in-tampa-fl/", srcName: "Brooks Law Group" },
     { t: "crash", r: "tampa", lat: 28.0545, lon: -82.3990, name: "Fowler Ave & 56th St", d: "Frequent rear-end and turning crashes." },
-    { t: "police", r: "tampa", lat: 27.9200, lon: -82.4870, name: "Bayshore Blvd", d: "35 mph zone with heavy pedestrian traffic; speed enforcement is common." },
-    { t: "police", r: "tampa", lat: 27.9700, lon: -82.6400, name: "Courtney Campbell Causeway (SR-60)", d: "Long straight causeway; regular speed enforcement in both directions." },
-    { t: "police", r: "tampa", lat: 27.9050, lon: -82.6050, name: "Howard Frankland Bridge", d: "Troopers often posted at the ends of the bridge." },
+    { t: "police", r: "tampa", lat: 27.9200, lon: -82.4870, name: "Bayshore Blvd", d: "35 mph zone with heavy pedestrian traffic; speed enforcement is common.", when: "Evenings and weekend mornings, when walkers and runners are out and drivers speed on the open stretch." },
+    { t: "police", r: "tampa", lat: 27.9700, lon: -82.6400, name: "Courtney Campbell Causeway (SR-60)", d: "Long straight causeway; regular speed enforcement in both directions.", when: "Weekday rush hours and weekend afternoons; long straight stretch invites speeding." },
+    { t: "police", r: "tampa", lat: 27.9050, lon: -82.6050, name: "Howard Frankland Bridge", d: "Troopers often posted at the ends of the bridge.", when: "Weekday rush hours (7–9 am, 4–7 pm), and late nights on weekends." },
     // St. Pete
     { t: "jam", r: "stpete", lat: 27.8770, lon: -82.5650, name: "Gandy Bridge", d: "Backs up into Gandy Blvd at 4th St N during rush hours." },
     { t: "jam", r: "stpete", lat: 27.7770, lon: -82.6530, name: "I-275 at I-375 / I-175 (downtown)", d: "Downtown on- and off-ramps stack up, especially on event nights." },
@@ -216,8 +229,8 @@ tr:last-child td { border-bottom: 0; }
     { t: "crash", r: "stpete", lat: 27.8930, lon: -82.6870, name: "US-19 at Ulmerton Rd", d: "US-19 through Pinellas is one of the deadliest roads in Florida for drivers and pedestrians." },
     { t: "crash", r: "stpete", lat: 27.8380, lon: -82.6800, name: "US-19 at Park Blvd", d: "Frontage-road and overpass merges lead to frequent crashes." },
     { t: "crash", r: "stpete", lat: 27.7500, lon: -82.6790, name: "34th St S (US-19) & 22nd Ave S", d: "High pedestrian and turning-crash counts." },
-    { t: "police", r: "stpete", lat: 27.6250, lon: -82.6550, name: "Sunshine Skyway (I-275)", d: "Troopers patrol the approaches and toll plazas." },
-    { t: "police", r: "stpete", lat: 27.8300, lon: -82.6600, name: "I-275 through north St. Pete", d: "Frequent speed enforcement between Gandy Blvd and 54th Ave N." },
+    { t: "police", r: "stpete", lat: 27.6250, lon: -82.6550, name: "Sunshine Skyway (I-275)", d: "Troopers patrol the approaches and toll plazas.", when: "Daytime and weekends, especially holiday weekends when traffic to and from the beaches peaks." },
+    { t: "police", r: "stpete", lat: 27.8300, lon: -82.6600, name: "I-275 through north St. Pete", d: "Frequent speed enforcement between Gandy Blvd and 54th Ave N.", when: "Weekday mornings and evenings, and late weekend nights." },
     // Sarasota
     { t: "jam", r: "sarasota", lat: 27.3372, lon: -82.5415, name: "US-41 (Tamiami Trail) at Fruitville Rd", d: "Downtown core; busy all day, worst in season (Jan–Apr)." },
     { t: "jam", r: "sarasota", lat: 27.3330, lon: -82.5600, name: "John Ringling Causeway → St. Armands Circle", d: "Single-lane roundabout at St. Armands backs traffic onto the bridge, especially on weekends." },
@@ -225,16 +238,16 @@ tr:last-child td { border-bottom: 0; }
     { t: "jam", r: "sarasota", lat: 27.3880, lon: -82.4500, name: "I-75 at University Pkwy", d: "Shopping and Lakewood Ranch traffic; ramps back up at peak times." },
     { t: "crash", r: "sarasota", lat: 27.3370, lon: -82.4530, name: "I-75 at Fruitville Rd", d: "Frequent rear-end crashes in queues at the exit." },
     { t: "crash", r: "sarasota", lat: 27.3000, lon: -82.5270, name: "US-41 & Bee Ridge Rd", d: "Busy commercial intersection with frequent turning crashes." },
-    { t: "police", r: "sarasota", lat: 27.3300, lon: -82.5450, name: "US-41 Bayfront (downtown)", d: "Lower speed limits and pedestrian crossings; enforcement is common." },
-    { t: "police", r: "sarasota", lat: 27.2200, lon: -82.4300, name: "I-75 south of Sarasota", d: "State troopers patrol this stretch regularly." },
+    { t: "police", r: "sarasota", lat: 27.3300, lon: -82.5450, name: "US-41 Bayfront (downtown)", d: "Lower speed limits and pedestrian crossings; enforcement is common.", when: "Evenings and weekends during season (Jan–Apr), and during downtown events." },
+    { t: "police", r: "sarasota", lat: 27.2200, lon: -82.4300, name: "I-75 south of Sarasota", d: "State troopers patrol this stretch regularly.", when: "Holiday weekends and Friday/Sunday afternoons, when long-distance traffic is heaviest." },
     // North Port
     { t: "jam", r: "northport", lat: 27.0630, lon: -82.1950, name: "I-75 at Toledo Blade Blvd (Exit 179)", d: "Commuter ramp backups; grows quickly with new development." },
     { t: "jam", r: "northport", lat: 27.0780, lon: -82.2370, name: "I-75 at Sumter Blvd (Exit 182)", d: "Ramps back up during commute and on spring-training game days." },
     { t: "jam", r: "northport", lat: 27.0430, lon: -82.2350, name: "US-41 at Sumter Blvd", d: "Main shopping corridor; slow at signals." },
     { t: "crash", r: "northport", lat: 27.0170, lon: -82.1680, name: "US-41 & Toledo Blade Blvd", d: "High-speed corridor with turning crashes." },
     { t: "crash", r: "northport", lat: 27.0700, lon: -82.2850, name: "I-75 near River Rd", d: "Two-lane stretch where traffic bunches up; rear-end crashes common." },
-    { t: "police", r: "northport", lat: 27.0560, lon: -82.2000, name: "Price Blvd school zones", d: "School-zone speed limits are enforced on school days." },
-    { t: "police", r: "northport", lat: 27.0350, lon: -82.2000, name: "US-41 through North Port", d: "Speed limit drops through town; patrols are common." },
+    { t: "police", r: "northport", lat: 27.0560, lon: -82.2000, name: "Price Blvd school zones", d: "School-zone speed limits are enforced on school days.", when: "School days during drop-off and pickup (see school zone markers for times)." },
+    { t: "police", r: "northport", lat: 27.0350, lon: -82.2000, name: "US-41 through North Port", d: "Speed limit drops through town; patrols are common.", when: "Weekday afternoons and weekends." },
     // Crash reports from news and police sources
     {"t": "crash", "r": "tampa", "lat": 28.0235, "lon": -82.5808, "name": "Sheldon Rd & Waters Ave", "d": "103 reported crashes in 2017–2018, among the highest counts in Hillsborough County.", "src": "https://www.brookslawgroup.com/blog/dangerous-intersections-in-tampa/", "srcName": "Brooks Law Group"},
     {"t": "crash", "r": "tampa", "lat": 27.894, "lon": -82.5056, "name": "Dale Mabry Hwy & Gandy Blvd", "d": "A cluster of six crashes in a few months, including one fatality.", "src": "https://www.abcactionnews.com/news/region-tampa/abc-action-news-exposes-the-most-dangerous-intersections-in-tampa-bay", "srcName": "ABC Action News"},
@@ -410,6 +423,7 @@ tr:last-child td { border-bottom: 0; }
     });
     L.marker([s.lat, s.lon], { icon: icon, title: s.name, keyboard: true })
       .bindPopup('<div class="tag" style="color:' + c + '">' + T.label + "</div><h3>" + esc(s.name) + "</h3>" + esc(s.d) +
+        (s.when ? "<br><br><b>Most likely:</b> " + esc(s.when) + "<div class='note' style='margin-top:4px'>Everywhere: DUI patrols are heaviest Friday–Saturday nights (10 pm–3 am) and on holiday weekends. These are typical patterns, not schedules.</div>" : "") +
         (s.src ? '<br><a href="' + esc(s.src) + '" target="_blank" rel="noopener">Source: ' + esc(s.srcName) + " ↗</a>" : ""))
       .addTo(layers[s.t]);
   });
@@ -983,7 +997,109 @@ tr:last-child td { border-bottom: 0; }
   }
   loadCounties();
 
+
+  // --- Police reports: tap the map to report police activity. ---
+  // Reports are shared through a free ntfy.sh channel (no account). Anyone who opens this page sees reports
+  // from the last 6 hours, and anyone subscribed to the channel in the ntfy app gets a phone alert.
+  var REPORT_TOPIC = "tbt-police-a49fdfc3a0";
+  var REPORT_HOURS = 6;
+  var KINDS = { speed: "Speed trap / radar", stop: "Traffic stop", crash: "Police at a crash", checkpoint: "Checkpoint / DUI patrol", other: "Police activity" };
+  layers.reports = L.layerGroup().addTo(map);
+  var reportSeen = {}, reporting = false, hidden = {};
+  try { hidden = JSON.parse(localStorage.getItem("tbt-hidden-reports") || "{}"); } catch (e) {}
+  function ago(t) { var m = Math.round((Date.now() / 1000 - t) / 60); return m < 1 ? "just now" : m < 60 ? m + " min ago" : Math.floor(m / 60) + " h " + (m % 60) + " min ago"; }
+  function drawReport(r) {
+    if (reportSeen[r.id] || hidden[r.id]) return;
+    reportSeen[r.id] = r;
+    var old = Date.now() / 1000 - r.time > 2 * 3600;
+    var icon = L.divIcon({ className: "", iconSize: [26, 26], iconAnchor: [13, 13], html: '<div class="pin report' + (old ? " old" : "") + '" style="background:' + color("--police") + '"><span>🚨</span></div>' });
+    r.marker = L.marker([r.lat, r.lon], { icon: icon, title: (KINDS[r.kind] || "Police activity") + " reported", keyboard: true, zIndexOffset: 1000 })
+      .bindPopup(function () {
+        return '<div class="tag" style="color:' + color("--police") + '">Reported by a driver · ' + ago(r.time) + "</div><h3>" + esc(KINDS[r.kind] || "Police activity") + "</h3>" +
+          (r.note ? esc(r.note) + "<br>" : "") + '<button type="button" class="chip" data-hide="' + esc(r.id) + '" style="margin-top:6px">Hide on this device</button>' +
+          "<div class='note' style='margin-top:6px'>Reports disappear after " + REPORT_HOURS + " hours.</div>";
+      })
+      .addTo(layers.reports);
+  }
+  map.on("popupopen", function (e) {
+    var b = e.popup.getElement().querySelector("[data-hide]");
+    if (b) b.addEventListener("click", function () {
+      var id = b.getAttribute("data-hide"); hidden[id] = Date.now();
+      try { localStorage.setItem("tbt-hidden-reports", JSON.stringify(hidden)); } catch (err) {}
+      if (reportSeen[id] && reportSeen[id].marker) layers.reports.removeLayer(reportSeen[id].marker);
+      map.closePopup();
+    });
+  });
+  function tagVal(tags, k) { var t = (tags || []).filter(function (x) { return x.indexOf(k + ":") === 0; })[0]; return t ? t.slice(k.length + 1) : null; }
+  function loadReports() {
+    fetch("https://ntfy.sh/" + REPORT_TOPIC + "/json?poll=1&since=" + REPORT_HOURS + "h")
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then(function (txt) {
+        txt.split("\n").forEach(function (line) {
+          if (!line.trim()) return;
+          var m; try { m = JSON.parse(line); } catch (e) { return; }
+          if (m.event !== "message") return;
+          var lat = parseFloat(tagVal(m.tags, "lat")), lon = parseFloat(tagVal(m.tags, "lon"));
+          if (!isFinite(lat) || !isFinite(lon)) return;
+          drawReport({ id: m.id, time: m.time, lat: lat, lon: lon, kind: tagVal(m.tags, "kind") || "other", note: (m.message || "").replace(/^[^:]*: ?/, "").slice(0, 140) });
+        });
+        // Drop reports that have aged out.
+        Object.keys(reportSeen).forEach(function (id) {
+          var r = reportSeen[id];
+          if (r.marker && Date.now() / 1000 - r.time > REPORT_HOURS * 3600) { layers.reports.removeLayer(r.marker); }
+        });
+      })
+      .catch(function () {});
+  }
+  loadReports();
+  setInterval(loadReports, 60000);
+
+  var reportBtn = document.createElement("button");
+  reportBtn.type = "button"; reportBtn.className = "report-btn"; reportBtn.setAttribute("aria-pressed", "false");
+  reportBtn.textContent = "🚓 Report police";
+  function setReporting(on) {
+    reporting = on;
+    reportBtn.setAttribute("aria-pressed", String(on));
+    reportBtn.textContent = on ? "Tap the map where you saw police… (cancel)" : "🚓 Report police";
+    document.getElementById("guide").classList.toggle("reporting", on);
+  }
+  reportBtn.addEventListener("click", function () { setReporting(!reporting); });
+  map.on("click", function (e) {
+    if (!reporting) return;
+    setReporting(false);
+    var ll = e.latlng;
+    var form = '<form class="report-form"><b>Report police here</b><select name="kind">' +
+      Object.keys(KINDS).map(function (k) { return '<option value="' + k + '">' + KINDS[k] + "</option>"; }).join("") +
+      '</select><input name="note" maxlength="140" placeholder="Note (optional), e.g. northbound shoulder"><button type="submit">Send report</button>' +
+      "<span class='note'>Shared with everyone who uses this map for " + REPORT_HOURS + " hours. Don't include personal details.</span></form>";
+    var pop = L.popup().setLatLng(ll).setContent(form).openOn(map);
+    var f = pop.getElement().querySelector("form");
+    f.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      var kind = f.kind.value, note = f.note.value.trim().slice(0, 140);
+      var btn = f.querySelector("button"); btn.disabled = true; btn.textContent = "Sending…";
+      var here = location.href.split("?")[0] + "?at=" + ll.lat.toFixed(5) + "," + ll.lng.toFixed(5);
+      fetch("https://ntfy.sh/", { method: "POST", body: JSON.stringify({
+          topic: REPORT_TOPIC, title: "🚓 " + KINDS[kind], message: KINDS[kind] + (note ? ": " + note : ""),
+          tags: ["rotating_light", "lat:" + ll.lat.toFixed(5), "lon:" + ll.lng.toFixed(5), "kind:" + kind], click: here })
+        })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function (m) {
+          drawReport({ id: m.id, time: m.time || Date.now() / 1000, lat: ll.lat, lon: ll.lng, kind: kind, note: note });
+          map.closePopup();
+        })
+        .catch(function () { btn.disabled = false; btn.textContent = "Couldn't send. Try again"; });
+    });
+  });
+
   var toggles = document.getElementById("toggles");
+  // Layer checkboxes live in a collapsible "Map layers" list: open on wide screens, closed on phones.
+  var layerBox = document.createElement("details");
+  layerBox.className = "layer-box";
+  layerBox.innerHTML = "<summary>Map layers</summary><div class='layer-list'></div>";
+  if (window.innerWidth > 900) layerBox.open = true;
+  toggles.appendChild(layerBox);
+  var layerList = layerBox.querySelector(".layer-list");
   Object.keys(TYPES).forEach(function (k) {
     var T = TYPES[k];
     var lab = document.createElement("label");
@@ -997,11 +1113,12 @@ tr:last-child td { border-bottom: 0; }
       if (live[k]) { live[k].on = e.target.checked; syncLive(); return; }
       if (e.target.checked) map.addLayer(layers[k]); else map.removeLayer(layers[k]);
     });
-    toggles.appendChild(lab);
+    layerList.appendChild(lab);
   });
   var zoneStatus = document.createElement("span");
   zoneStatus.className = "zone-status"; zoneStatus.setAttribute("aria-live", "polite");
   toggles.appendChild(zoneStatus);
+  toggles.appendChild(reportBtn);
   syncSchools();
   syncLaneChanges();
   syncLive();
@@ -1082,6 +1199,10 @@ tr:last-child td { border-bottom: 0; }
     renderTable(r);
   }
   select(current);
+
+  // Deep link from a police-report alert: ?at=lat,lon
+  var at = (params.get("at") || "").split(",").map(parseFloat);
+  if (at.length === 2 && isFinite(at[0]) && isFinite(at[1])) map.setView(at, 16);
 
   // Deep link from the Notion coffee database: ?coffee=<page id> zooms to that spot and opens it.
   var want = (params.get("coffee") || "").replace(/-/g, "").toLowerCase();
