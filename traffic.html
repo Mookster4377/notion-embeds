@@ -12,20 +12,20 @@
 /* Layout: region chips → big live Waze map → road guide map (hotspots, lanes, merges) → lane table. */
 :root {
   --bg: #eef1f4; --card: #ffffff; --ink: #141a21; --muted: #5b6672; --line: #d8dee5; --chip: #e5eaef;
-  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057; --interstate: #364fc7; --ushwy: #c2255c; --staterd: #e0a800;
+  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057; --interstate: #364fc7; --ushwy: #c2255c; --staterd: #e0a800; --countyrd: #1098ad;
   --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b;
+    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b;
+  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -83,6 +83,8 @@ section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); 
 .pin.drop { border-radius: 5px; transform: rotate(45deg); width: 18px; height: 18px; font-size: 13px; }
 .pin.drop span { transform: rotate(-45deg); }
 .pin.add { width: 18px; height: 18px; font-size: 13px; }
+.pin.lanearrow { width: 22px; height: 22px; }
+.pin.lanearrow svg { display: block; }
 .sign { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; font: 700 10px var(--body); letter-spacing: .04em; color: #fff; background: #0b6b3a; border: 1.5px solid #fff; border-radius: 4px; padding: 1px 5px; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
 .sign.on { background: #fff; color: #0b6b3a; border-color: #0b6b3a; }
 .area { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; font: 600 11px var(--body); color: var(--ink); background: var(--card); border-radius: 999px; padding: 1px 8px 1px 6px; box-shadow: 0 1px 3px rgba(0,0,0,.3); opacity: .92; }
@@ -337,7 +339,7 @@ tr:last-child td { border-bottom: 0; }
     lanechg: { label: "Lane drops & adds",     letter: "",  v: "--expand" },
     ramps:   { label: "Highway exits & entrances", letter: "", v: "--exit" },
     roads:   { label: "Arterials & stroads",   letter: "", v: "--stroad" },
-    highways: { label: "Highways & state roads", letter: "", v: "--interstate" },
+    highways: { label: "Highways, state & county roads", letter: "", v: "--interstate" },
     counties: { label: "County lines",         letter: "", v: "--county" },
     areas:   { label: "Urban / suburban / rural", letter: "", v: "--suburban" },
     gates:   { label: "Gated communities",     letter: "🔒", v: "--gate" }
@@ -568,7 +570,7 @@ tr:last-child td { border-bottom: 0; }
         var kind = outLanes < inLanes ? "drop" : "add";
         if (kind === "drop" && ramps.exitAt[id]) kind = "exitonly";
         if (kind === "add" && ramps.entryAt[id]) kind = "rampadd";
-        notes.push({ kind: kind, from: inLanes, to: outLanes, heading: bearing(prev, node), exit: ramps.exitAt[id] });
+        notes.push({ kind: kind, from: inLanes, to: outLanes, heading: bearing(prev, node), deg: bearingDeg(prev, node), exit: ramps.exitAt[id] });
       });
       if (notes.length) found.push({ id: id, lat: node.lat, lon: node.lon, name: roadName(A.w.tags), notes: notes });
     });
@@ -579,8 +581,10 @@ tr:last-child td { border-bottom: 0; }
     var hasDrop = c.notes.some(function (n) { return n.kind === "drop" || n.kind === "exitonly"; });
     var exitOnly = c.notes.some(function (n) { return n.kind === "exitonly"; });
     var col = color(hasDrop ? "--merge" : "--expand");
-    var icon = L.divIcon({ className: "", iconSize: [18, 18], iconAnchor: [9, 9],
-      html: '<div class="pin ' + (hasDrop ? "drop" : "add") + '" style="background:' + col + '"><span>' + (hasDrop ? "−" : "+") + "</span></div>" });
+    // Arrow points the way traffic is heading where the lanes merge (or, for added lanes, where they're added).
+    var main = c.notes.filter(function (n) { return n.kind === "drop" || n.kind === "exitonly"; })[0] || c.notes[0];
+    var icon = L.divIcon({ className: "", iconSize: [22, 22], iconAnchor: [11, 11],
+      html: '<div class="pin lanearrow" style="background:' + col + '"><svg viewBox="0 0 24 24" width="16" height="16" style="transform:rotate(' + Math.round(main.deg) + 'deg)" aria-hidden="true"><path d="M12 3l6 8h-4v10h-4V11H6z" fill="#fff"/></svg></div>' });
     var lines = c.notes.map(function (n) {
       var w = function (k) { return k + (k === 1 ? " lane" : " lanes"); };
       var h = "<b>Heading " + n.heading + ":</b> ";
@@ -768,7 +772,7 @@ tr:last-child td { border-bottom: 0; }
   var live = {
     // Interstates, U.S. highways and state roads, by their route numbers.
     highways: { on: true, minZoom: 10, boxes: [], busy: false, seen: {}, shields: [],
-      query: function (bb) { return '[out:json][timeout:40];way["highway"~"^(motorway|trunk|primary|secondary|tertiary)$"]["ref"~"^(I|US|SR|FL) ?[0-9]"](' + bb + ');out tags geom qt;'; },
+      query: function (bb) { return '[out:json][timeout:40];way["highway"~"^(motorway|trunk|primary|secondary|tertiary)$"]["ref"~"^(I|US|SR|FL|CR) ?[0-9]"](' + bb + ');out tags geom qt;'; },
       draw: function (els) {
         var H = live.highways;
         els.forEach(function (e) {
@@ -778,16 +782,17 @@ tr:last-child td { border-bottom: 0; }
           var ref = pick(/^I ?\d/), cls = "interstate";
           if (!ref) { ref = pick(/^US ?\d/); cls = "ushwy"; }
           if (!ref) { ref = pick(/^(SR|FL) ?\d/); cls = "staterd"; }
+          if (!ref) { ref = pick(/^CR ?\d/); cls = "countyrd"; }
           if (!ref) return;
-          var num = ref.replace(/^(I|US|SR|FL) ?/, "");
-          var label = cls === "interstate" ? "I-" + num : cls === "ushwy" ? "US " + num : "SR " + num;
-          var kind = { interstate: "Interstate", ushwy: "U.S. highway", staterd: "State road" }[cls];
+          var num = ref.replace(/^(I|US|SR|FL|CR) ?/, "");
+          var label = cls === "interstate" ? "I-" + num : cls === "ushwy" ? "US " + num : cls === "countyrd" ? "CR " + num : "SR " + num;
+          var kind = { interstate: "Interstate", ushwy: "U.S. highway", staterd: "State road", countyrd: "County road" }[cls];
           var col = color("--" + cls), pts = e.geometry.map(function (g) { return [g.lat, g.lon]; });
           var popup = '<div class="tag" style="color:' + col + '">' + kind + "</div><h3>" + esc(label) + (e.tags.name && e.tags.name !== label ? " · " + esc(e.tags.name) : "") + "</h3>" +
             (refs.length > 1 ? "Also signed as " + esc(refs.filter(function (r) { return r !== ref; }).join(", ")) + ". " : "") +
             (e.tags.lanes ? e.tags.lanes + " lanes" + (e.tags.oneway === "yes" ? " (one way)" : " total") + ". " : "") +
             (e.tags.maxspeed ? "Speed limit " + esc(e.tags.maxspeed) + "." : "");
-          L.polyline(pts, { color: col, weight: cls === "interstate" ? 7 : cls === "ushwy" ? 5 : 4, opacity: 0.8 }).bindPopup(popup).addTo(layers.highways);
+          L.polyline(pts, { color: col, weight: cls === "interstate" ? 7 : cls === "ushwy" ? 5 : cls === "staterd" ? 4 : 3, opacity: 0.8 }).bindPopup(popup).addTo(layers.highways);
           // Route label at the middle of longer pieces, at most one per route every ~5 km.
           var mid = pts[Math.floor(pts.length / 2)];
           if (pts.length < 4) return;
