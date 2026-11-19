@@ -12,20 +12,20 @@
 /* Layout: region chips → big live Waze map → road guide map (hotspots, lanes, merges) → lane table. */
 :root {
   --bg: #eef1f4; --card: #ffffff; --ink: #141a21; --muted: #5b6672; --line: #d8dee5; --chip: #e5eaef;
-  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a;
+  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c;
   --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9;
+    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9;
+  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -79,9 +79,12 @@ section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); 
   color: #fff; font: 700 12px var(--body); border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4);
 }
 .pin.coffee { font-size: 12px; }
+.pin.police { font-size: 14px; width: 28px; height: 28px; }
 .pin.drop { border-radius: 5px; transform: rotate(45deg); width: 18px; height: 18px; font-size: 13px; }
 .pin.drop span { transform: rotate(-45deg); }
 .pin.add { width: 18px; height: 18px; font-size: 13px; }
+.sign { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; font: 700 10px var(--body); letter-spacing: .04em; color: #fff; background: #0b6b3a; border: 1.5px solid #fff; border-radius: 4px; padding: 1px 5px; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+.sign.on { background: #fff; color: #0b6b3a; border-color: #0b6b3a; }
 .pin.school { color: #1a1400; width: 20px; height: 20px; font-size: 11px; }
 .zone-status { color: var(--muted); font-size: 12px; margin-left: auto; }
 .hours { margin: 6px 0 0; border-collapse: collapse; font-size: 12px; }
@@ -295,12 +298,14 @@ tr:last-child td { border-bottom: 0; }
   var TYPES = {
     jam:    { label: "Frequent jams",          letter: "J", v: "--jam" },
     crash:  { label: "Crash-prone",            letter: "!", v: "--crash" },
-    police: { label: "Police / enforcement",   letter: "P", v: "--police" },
+    police: { label: "Police / enforcement",   letter: "🚓", v: "--police" },
     merge:  { label: "Merges & lane drops",    letter: "M", v: "--merge" },
     lanes:  { label: "Lane counts",            letter: "",  v: "--lane" },
     coffee: { label: "Coffee spots",           letter: "☕", v: "--coffee" },
     school: { label: "School zones",           letter: "S", v: "--school" },
-    lanechg: { label: "Lane drops & adds",     letter: "",  v: "--expand" }
+    lanechg: { label: "Lane drops & adds",     letter: "",  v: "--expand" },
+    ramps:   { label: "Highway exits & entrances", letter: "", v: "--exit" },
+    roads:   { label: "Arterials & stroads",   letter: "", v: "--stroad" }
   };
 
   var css = getComputedStyle(document.documentElement);
@@ -354,7 +359,7 @@ tr:last-child td { border-bottom: 0; }
     var T = TYPES[s.t], c = color(T.v);
     var icon = L.divIcon({
       className: "", iconSize: [24, 24], iconAnchor: [12, 12],
-      html: '<div class="pin' + (s.t === "merge" ? " merge" : "") + '" style="background:' + c + '"><span>' + T.letter + "</span></div>"
+      html: '<div class="pin' + (s.t === "merge" ? " merge" : s.t === "police" ? " police" : "") + '" style="background:' + c + '"><span>' + T.letter + "</span></div>"
     });
     L.marker([s.lat, s.lon], { icon: icon, title: s.name, keyboard: true })
       .bindPopup('<div class="tag" style="color:' + c + '">' + T.label + "</div><h3>" + esc(s.name) + "</h3>" + esc(s.d) +
@@ -464,7 +469,7 @@ tr:last-child td { border-bottom: 0; }
   function syncSchools() {
     var on = schoolsOn && map.getZoom() >= SCHOOL_MIN_ZOOM;
     if (on) map.addLayer(layers.school); else map.removeLayer(layers.school);
-    if (typeof zoneStatus !== "undefined" && zoneStatus) zoneStatus.textContent = (schoolsOn || laneChgOn) && map.getZoom() < SCHOOL_MIN_ZOOM ? "Zoom in to see school zones and lane drops/adds" : "";
+    if (typeof zoneStatus !== "undefined" && zoneStatus) zoneStatus.textContent = (schoolsOn || laneChgOn) && map.getZoom() < SCHOOL_MIN_ZOOM ? "Zoom in to see school zones, lane changes and highway exits" : "";
     clearTimeout(schoolTimer);
     if (on) schoolTimer = setTimeout(loadSchools, 400);
   }
@@ -474,7 +479,7 @@ tr:last-child td { border-bottom: 0; }
   // --- Lane drops & adds: read live from OpenStreetMap lane counts for the roads on screen. ---
   // Where two pieces of the same road meet with a different number of lanes, mark it:
   // fewer lanes ahead = lanes merge (purple), more lanes ahead = lanes added (teal). Checked for each direction.
-  var laneChgOn = true, laneBoxes = [], laneTimer = null, laneBusy = false, laneSeen = {};
+  var laneChgOn = true, rampsOn = true, roadsOn = true, laneBoxes = [], laneTimer = null, laneBusy = false, laneSeen = {};
   var LANE_MIN_ZOOM = 13;
   function perDir(t) {
     var n = parseInt(t.lanes, 10), f = parseInt(t["lanes:forward"], 10), b = parseInt(t["lanes:backward"], 10);
@@ -485,6 +490,11 @@ tr:last-child td { border-bottom: 0; }
     var half = Math.max(1, Math.floor(n / 2));
     return { f: half, b: half };
   }
+  function bearingDeg(a, b) {
+    var y = Math.sin((b.lon - a.lon) * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180);
+    var x = Math.cos(a.lat * Math.PI / 180) * Math.sin(b.lat * Math.PI / 180) - Math.sin(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.cos((b.lon - a.lon) * Math.PI / 180);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+  }
   function bearing(a, b) {
     var y = Math.sin((b.lon - a.lon) * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180);
     var x = Math.cos(a.lat * Math.PI / 180) * Math.sin(b.lat * Math.PI / 180) - Math.sin(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.cos((b.lon - a.lon) * Math.PI / 180);
@@ -492,7 +502,7 @@ tr:last-child td { border-bottom: 0; }
     return ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"][Math.round(deg / 45) % 8];
   }
   function roadName(t) { return t.name || t.ref || ""; }
-  function findLaneChanges(ways) {
+  function findLaneChanges(ways, ramps) {
     var ends = {};
     ways.forEach(function (w) {
       if (!w.nodes || !w.geometry || w.nodes.length < 2) return;
@@ -519,7 +529,10 @@ tr:last-child td { border-bottom: 0; }
         var outLanes = to.atStart ? to.w.dir.f : to.w.dir.b;
         if (!inLanes || !outLanes || inLanes === outLanes) return;
         var g = from.w.geometry, prev = from.atStart ? g[1] : g[g.length - 2];
-        notes.push({ kind: outLanes < inLanes ? "drop" : "add", from: inLanes, to: outLanes, heading: bearing(prev, node) });
+        var kind = outLanes < inLanes ? "drop" : "add";
+        if (kind === "drop" && ramps.exitAt[id]) kind = "exitonly";
+        if (kind === "add" && ramps.entryAt[id]) kind = "rampadd";
+        notes.push({ kind: kind, from: inLanes, to: outLanes, heading: bearing(prev, node), exit: ramps.exitAt[id] });
       });
       if (notes.length) found.push({ id: id, lat: node.lat, lon: node.lon, name: roadName(A.w.tags), notes: notes });
     });
@@ -527,39 +540,185 @@ tr:last-child td { border-bottom: 0; }
   }
   function addLaneChange(c) {
     if (laneSeen[c.id]) return; laneSeen[c.id] = 1;
-    var hasDrop = c.notes.some(function (n) { return n.kind === "drop"; });
+    var hasDrop = c.notes.some(function (n) { return n.kind === "drop" || n.kind === "exitonly"; });
+    var exitOnly = c.notes.some(function (n) { return n.kind === "exitonly"; });
     var col = color(hasDrop ? "--merge" : "--expand");
     var icon = L.divIcon({ className: "", iconSize: [18, 18], iconAnchor: [9, 9],
       html: '<div class="pin ' + (hasDrop ? "drop" : "add") + '" style="background:' + col + '"><span>' + (hasDrop ? "−" : "+") + "</span></div>" });
     var lines = c.notes.map(function (n) {
       var w = function (k) { return k + (k === 1 ? " lane" : " lanes"); };
+      var h = "<b>Heading " + n.heading + ":</b> ";
+      if (n.kind === "exitonly") return h + "exit-only lane. " + (n.from - n.to === 1 ? "One lane" : (n.from - n.to) + " lanes") + " leave" + (n.from - n.to === 1 ? "s" : "") + " at " + esc(n.exit) + "; " + w(n.to) + " continue.";
+      if (n.kind === "rampadd") return h + "on-ramp lane joins and continues as a through lane (" + w(n.from) + " → " + w(n.to) + ").";
       return n.kind === "drop"
-        ? "<b>Heading " + n.heading + ":</b> " + w(n.from) + " merge into " + w(n.to) + ". " + (n.to === 1 ? "Single lane ahead." : "")
-        : "<b>Heading " + n.heading + ":</b> lanes added, " + w(n.from) + " → " + w(n.to) + ".";
+        ? h + w(n.from) + " merge into " + w(n.to) + ". " + (n.to === 1 ? "Single lane ahead." : "")
+        : h + "lanes added, " + w(n.from) + " → " + w(n.to) + ".";
     });
     L.marker([c.lat, c.lon], { icon: icon, title: c.name + (hasDrop ? " lane merge" : " lanes added"), keyboard: true })
-      .bindPopup('<div class="tag" style="color:' + col + '">' + (hasDrop ? "Lane merge" : "Lanes added") + "</div><h3>" + esc(c.name) + "</h3>" + lines.join("<br>") +
+      .bindPopup('<div class="tag" style="color:' + col + '">' + (exitOnly ? "Exit-only lane" : hasDrop ? "Lane merge" : "Lanes added") + "</div><h3>" + esc(c.name) + "</h3>" + lines.join("<br>") +
         "<div class='note' style='margin-top:6px'>From OpenStreetMap lane counts, read live. Short turn lanes at intersections are not shown.</div>")
       .addTo(layers.lanechg);
   }
+
+  // --- Highway exits & entrances: ramps (motorway/trunk links) and numbered exits from OpenStreetMap. ---
+  // A point ~80 m along the ramp from where it meets the highway, so signs don't cover lane markers.
+  function alongRamp(geom, fromEnd) {
+    var pts = fromEnd ? geom.slice().reverse() : geom, d = 0;
+    for (var i = 1; i < pts.length; i++) {
+      var a = L.latLng(pts[i - 1].lat, pts[i - 1].lon), b = L.latLng(pts[i].lat, pts[i].lon), seg = a.distanceTo(b);
+      if (d + seg >= 80) { var f = (80 - d) / seg; return { lat: a.lat + (b.lat - a.lat) * f, lon: a.lng + (b.lng - a.lng) * f }; }
+      d += seg;
+    }
+    return pts[pts.length - 1];
+  }
+
+  // --- Which lane to use for an on-ramp ---
+  // Looks at the road leading to where the ramp starts. If OpenStreetMap has turn-lane markings (turn:lanes),
+  // it names the exact lane(s); otherwise it says which side to turn from, based on the road shape.
+  var ARROW = { left: "↰", slight_left: "↖", through: "↑", slight_right: "↗", right: "↱", merge_to_left: "↖", merge_to_right: "↗", reverse: "↶", none: "↑", "": "↑" };
+  function laneDiagram(lanes, pick) {
+    return '<span style="display:inline-flex;gap:2px;margin-left:4px;vertical-align:middle">' + lanes.map(function (l, i) {
+      var on = pick.indexOf(i) >= 0, a = l.split(";").map(function (x) { return ARROW[x] || "↑"; }).join("");
+      return '<span style="min-width:20px;text-align:center;padding:1px 3px;border-radius:3px;border:1px solid ' + (on ? color("--exit") : "var(--line)") + ";background:" + (on ? color("--exit") : "transparent") + ";color:" + (on ? "#fff" : "var(--muted)") + '">' + a + "</span>";
+    }).join("") + "</span>";
+  }
+  function ordinal(i, n) {
+    if (n === 1) return "the only lane";
+    if (i === 0) return "the far-left lane";
+    if (i === n - 1) return "the far-right lane";
+    return "lane " + (i + 1) + " from the left";
+  }
+  function laneGuide(link, els) {
+    var start = link.nodes[0], g0 = link.geometry[0], g1 = link.geometry[1] || link.geometry[0];
+    var rampHeading = bearingDeg(g0, g1), out = [];
+    els.forEach(function (w) {
+      var t = w.tags || {};
+      if (w.type !== "way" || /_link$|^(motorway|trunk)$/.test(t.highway || "") || !w.nodes) return;
+      var i = w.nodes.indexOf(start);
+      if (i < 0 || out.length >= 2) return;
+      var oneway = t.oneway === "yes";
+      [["forward", i > 0 ? i - 1 : -1], ["backward", i < w.nodes.length - 1 ? i + 1 : -1]].forEach(function (d) {
+        if (d[1] < 0 || (oneway && d[0] === "backward")) return;
+        var from = w.geometry[d[1]], at = w.geometry[i];
+        var diff = ((rampHeading - bearingDeg(from, at)) + 540) % 360 - 180;
+        var side = diff > 25 ? "right" : diff < -25 ? "left" : "through";
+        var road = t.name || t.ref || "the road", head = bearing(from, at);
+        var raw = t["turn:lanes:" + d[0]] || (oneway ? t["turn:lanes"] : null);
+        if (raw) {
+          var lanes = raw.split("|"), want = side === "right" ? /(^|;)(right|slight_right)($|;)/ : side === "left" ? /(^|;)(left|slight_left)($|;)/ : /(^|;)(through|none|)($|;)/;
+          var pick = []; lanes.forEach(function (l, k) { if (want.test(l)) pick.push(k); });
+          if (pick.length) {
+            var txt = pick.length === 1 ? ordinal(pick[0], lanes.length) : pick.length === lanes.length ? "any lane" : "any of the " + pick.length + " " + (side === "left" ? "left" : side === "right" ? "right" : "middle") + " lanes";
+            out.push("On " + esc(road) + " heading " + head + ": use <b>" + txt + "</b> (" + lanes.length + " lanes)" + laneDiagram(lanes, pick));
+            return;
+          }
+        }
+        out.push("On " + esc(road) + " heading " + head + ": " + (side === "through" ? "continue straight onto the ramp." : "turn <b>" + side + "</b>, so get in the <b>" + side + "most lane</b>.") +
+          " <span class='note'>(No lane markings mapped here; check the signs.)</span>");
+      });
+    });
+    return out;
+  }
+
+  function findRamps(els) {
+    var junction = {}, mainNode = {}, mainName = {}, nodeLL = {}, out = { list: [], exitAt: {}, entryAt: {} };
+    els.forEach(function (e) {
+      if (e.type === "node" && e.tags && e.tags.highway === "motorway_junction") { junction[e.id] = e.tags; nodeLL[e.id] = { lat: e.lat, lon: e.lon }; }
+    });
+    els.forEach(function (e) {
+      var hw = e.type === "way" && (e.tags || {}).highway;
+      if (hw === "motorway" || hw === "trunk") e.nodes.forEach(function (n, i) { mainNode[n] = 1; mainName[n] = e.tags.ref || e.tags.name; nodeLL[n] = e.geometry[i]; });
+    });
+    var seen = {};
+    els.forEach(function (e) {
+      if (e.type !== "way" || !/_link$/.test((e.tags || {}).highway || "")) return;
+      var t = e.tags, first = e.nodes[0], last = e.nodes[e.nodes.length - 1];
+      var dest = t["destination:ref"] && t.destination ? t["destination:ref"] + " " + t.destination : (t.destination || t["destination:ref"] || t["destination:street"] || "");
+      dest = dest.replace(/;/g, " / ");
+      if (mainNode[first] && !seen["x" + first]) {
+        seen["x" + first] = 1;
+        var j = junction[first] || {};
+        var label = j.ref ? "Exit " + j.ref : "Exit";
+        out.exitAt[first] = label + (j.name || j.exit_to ? " (" + (j.exit_to || j.name).replace(/;/g, " / ") + ")" : "");
+        var ge = alongRamp(e.geometry, false);
+        out.list.push({ kind: "exit", lat: ge.lat, lon: ge.lon, label: label, road: mainName[first], to: j.exit_to || j.name || dest });
+      }
+      if (mainNode[last] && !seen["e" + last]) {
+        seen["e" + last] = 1;
+        out.entryAt[last] = 1;
+        var g = alongRamp(e.geometry, true);
+        out.list.push({ kind: "entrance", lat: g.lat, lon: g.lon, label: "ON", road: mainName[last], to: dest || t.name || "", lanes: laneGuide(e, els) });
+      }
+    });
+    return out;
+  }
+  var rampSeen = {};
+  function addRamp(r) {
+    var k = r.kind + r.lat.toFixed(5) + r.lon.toFixed(5); if (rampSeen[k]) return; rampSeen[k] = 1;
+    var icon = L.divIcon({ className: "", iconSize: [0, 0], html: '<span class="sign' + (r.kind === "entrance" ? " on" : "") + '">' + esc(r.label) + "</span>" });
+    var title = r.kind === "exit" ? r.label + (r.road ? " off " + r.road : "") : "Entrance to " + (r.road || "highway");
+    var body = r.kind === "exit"
+      ? "Off-ramp" + (r.road ? " from " + esc(r.road) : "") + (r.to ? " to <b>" + esc(r.to) + "</b>" : "") + ". Get in the right lane early; some exits have an exit-only lane (marked separately)."
+      : "On-ramp" + (r.road ? " onto " + esc(r.road) : "") + (r.to ? " toward <b>" + esc(r.to) + "</b>" : "") + ". Merge with highway traffic." +
+        (r.lanes && r.lanes.length ? "<div style='margin-top:6px'><b>Which lane to be in:</b>" + r.lanes.map(function (x) { return "<div style='margin-top:4px'>" + x + "</div>"; }).join("") + "</div>" : "");
+    L.marker([r.lat, r.lon], { icon: icon, title: title, keyboard: true })
+      .bindPopup('<div class="tag" style="color:' + color("--exit") + '">' + (r.kind === "exit" ? "Highway exit" : "Highway entrance") + "</div><h3>" + esc(title) + "</h3>" + body)
+      .addTo(layers.ramps);
+  }
+
+
+  // --- Arterials & stroads ---
+  // Arterial: a trunk, primary or secondary road (the main through streets between neighborhoods).
+  // Stroad: an arterial built like a highway (4+ lanes, 35–55 mph) but lined with driveways, shops and signals.
+  var roadSeen = {};
+  function mph(t) { var m = /(\d+)/.exec(t.maxspeed || ""); if (!m) return null; var v = +m[1]; return /mph/.test(t.maxspeed) ? v : Math.round(v * 0.621); }
+  function addRoadLine(e) {
+    var t = e.tags || {};
+    if (e.type !== "way" || !/^(trunk|primary|secondary)$/.test(t.highway) || roadSeen[e.id] || !e.geometry) return;
+    roadSeen[e.id] = 1;
+    var lanes = parseInt(t.lanes, 10) || null, sp = mph(t);
+    var oneway = t.oneway === "yes" || t.oneway === "-1";
+    var wide = lanes && (oneway ? lanes >= 2 : lanes >= 4);
+    var stroad = wide && t.bridge !== "yes" && (sp ? sp >= 35 && sp <= 55 : /^(trunk|primary)$/.test(t.highway));
+    var col = color(stroad ? "--stroad" : "--arterial");
+    var name = t.name || t.ref || "Unnamed road";
+    var facts = [(lanes ? lanes + " lanes" + (oneway ? " (one way)" : " total") : "lane count not mapped"), (sp ? sp + " mph" : "speed limit not mapped")];
+    var why = stroad
+      ? "A <b>stroad</b>: wide and fast like a highway, but with driveways, shops and signals along it. Expect sudden turns in and out, and take extra care with pedestrians."
+      : "An <b>arterial</b>: a main through road between neighborhoods.";
+    L.polyline(e.geometry.map(function (g) { return [g.lat, g.lon]; }), { color: col, weight: stroad ? 5 : 3, opacity: stroad ? 0.85 : 0.6, interactive: true })
+      .bindPopup('<div class="tag" style="color:' + col + '">' + (stroad ? "Stroad" : "Arterial road") + "</div><h3>" + esc(name) + "</h3>" + facts.join(" · ") + "<br>" + why)
+      .addTo(layers.roads);
+  }
+
   function loadLaneChanges() {
-    if (!laneChgOn || map.getZoom() < LANE_MIN_ZOOM || laneBusy) return;
+    if (!(laneChgOn || rampsOn || roadsOn) || map.getZoom() < LANE_MIN_ZOOM || laneBusy) return;
     if (laneBoxes.some(function (x) { return x.contains(map.getBounds()); })) return;
     var b = map.getBounds().pad(0.3);
     laneBusy = true; zoneStatus.textContent = "Loading lane changes…";
-    var q = '[out:json][timeout:25];way["highway"~"^(motorway|trunk|primary|secondary|tertiary)$"]["lanes"](' +
-      [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].map(function (v) { return v.toFixed(4); }).join(",") + ');out body geom;';
+    var bb = [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].map(function (v) { return v.toFixed(4); }).join(",");
+    var q = '[out:json][timeout:30];(way["highway"~"^(primary|secondary)$"](' + bb + ');way["highway"="tertiary"]["lanes"](' + bb + ');' +
+      'way["highway"~"^(motorway|trunk)$"](' + bb + ');way["highway"~"^(motorway|trunk)_link$"](' + bb + ');' +
+      'node["highway"="motorway_junction"](' + bb + '););out body geom;';
     fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "Content-Type": "application/x-www-form-urlencoded" } })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(function (d) { findLaneChanges(d.elements || []).forEach(addLaneChange); laneBoxes.push(b); zoneStatus.textContent = ""; })
+      .then(function (d) {
+        var els = d.elements || [], ramps = findRamps(els);
+        findLaneChanges(els.filter(function (e) { return e.type === "way" && !/_link$/.test((e.tags || {}).highway || ""); }), ramps).forEach(addLaneChange);
+        ramps.list.forEach(addRamp);
+        els.forEach(addRoadLine);
+        laneBoxes.push(b); zoneStatus.textContent = "";
+      })
       .catch(function () { zoneStatus.textContent = "Couldn't load lane changes right now. Try moving the map."; })
       .then(function () { laneBusy = false; });
   }
   function syncLaneChanges() {
-    var on = laneChgOn && map.getZoom() >= LANE_MIN_ZOOM;
-    if (on) map.addLayer(layers.lanechg); else map.removeLayer(layers.lanechg);
+    var z = map.getZoom() >= LANE_MIN_ZOOM;
+    if (laneChgOn && z) map.addLayer(layers.lanechg); else map.removeLayer(layers.lanechg);
+    if (rampsOn && z) map.addLayer(layers.ramps); else map.removeLayer(layers.ramps);
+    if (roadsOn && z) map.addLayer(layers.roads); else map.removeLayer(layers.roads);
     clearTimeout(laneTimer);
-    if (on) laneTimer = setTimeout(loadLaneChanges, 900);
+    if (z && (laneChgOn || rampsOn || roadsOn)) laneTimer = setTimeout(loadLaneChanges, 900);
   }
   map.on("moveend", syncLaneChanges);
 
@@ -572,6 +731,8 @@ tr:last-child td { border-bottom: 0; }
       if (k === "lanes") { lanesOn = e.target.checked; syncLanes(); return; }
       if (k === "school") { schoolsOn = e.target.checked; syncSchools(); return; }
       if (k === "lanechg") { laneChgOn = e.target.checked; syncLaneChanges(); return; }
+      if (k === "ramps") { rampsOn = e.target.checked; syncLaneChanges(); return; }
+      if (k === "roads") { roadsOn = e.target.checked; syncLaneChanges(); return; }
       if (e.target.checked) map.addLayer(layers[k]); else map.removeLayer(layers[k]);
     });
     toggles.appendChild(lab);
