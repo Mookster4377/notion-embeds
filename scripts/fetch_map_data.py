@@ -22,9 +22,10 @@ from datetime import datetime, timezone
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else "out"
 # Each city: output subfolder, tile grid (must match TILE in traffic.html) and area (south, west, north, east).
+# Orlando first: it's small, so it finishes even on a slow night.
 CITIES = [
-    {"dir": "", "grid": {"lat0": 26.8, "lon0": -83.0, "step": 0.1, "rows": 15, "cols": 11}, "region": (26.85, -82.95, 28.25, -81.95)},
     {"dir": "orlando", "grid": {"lat0": 28.2, "lon0": -81.75, "step": 0.1, "rows": 7, "cols": 8}, "region": (28.25, -81.70, 28.85, -81.00)},
+    {"dir": "", "grid": {"lat0": 26.8, "lon0": -83.0, "step": 0.1, "rows": 15, "cols": 11}, "region": (26.85, -82.95, 28.25, -81.95)},
 ]
 SERVERS = [
     "https://overpass-api.de/api/interpreter",
@@ -93,14 +94,22 @@ out geom qt;""",
     }
 
 
-def fetch(query, attempts=6):
+START = time.time()
+BUDGET = 100 * 60  # stop starting new downloads after 100 minutes; whatever is missing loads live on the map
+
+
+def out_of_time():
+    return time.time() - START > BUDGET
+
+
+def fetch(query, attempts=4):
     last = None
     for i in range(attempts):
         url = SERVERS[i % len(SERVERS)]
         try:
             req = urllib.request.Request(url, data=urllib.parse.urlencode({"data": query}).encode(),
                                          headers={"User-Agent": USER_AGENT})
-            with urllib.request.urlopen(req, timeout=300) as r:
+            with urllib.request.urlopen(req, timeout=120) as r:
                 data = json.load(r)
             if "remark" in data and "error" in data.get("remark", "").lower():
                 raise RuntimeError(data["remark"][:200])
@@ -108,7 +117,9 @@ def fetch(query, attempts=6):
         except Exception as e:  # busy server, timeout, bad reply: wait and try the next server
             last = e
             print(f"  attempt {i + 1} on {url} failed: {e}", flush=True)
-            time.sleep(min(60, 5 * (i + 1)))
+            if out_of_time():
+                break
+            time.sleep(min(30, 5 * (i + 1)))
     raise RuntimeError(f"gave up: {last}")
 
 
@@ -151,37 +162,48 @@ def run_city(city):
     failed = []
     for name, q in region_files(city["region"]).items():
         print(f"{name} ...", flush=True)
+        if out_of_time():
+            print("  skipped (out of time)", flush=True)
+            if not os.path.exists(os.path.join(out_dir, name)):
+                failed.append(name)
+            continue
         try:
             print(f"  {save(os.path.join(out_dir, name), fetch(q))} elements", flush=True)
         except Exception as e:
-            print(f"  FAILED {name}: {e}", flush=True)
-            failed.append(name)
+            print(f"  FAILED {name}: {e} (keeping yesterday's file if there is one)", flush=True)
+            if not os.path.exists(os.path.join(out_dir, name)):
+                failed.append(name)
         time.sleep(3)
     g = city["grid"]
     total = g["rows"] * g["cols"]
     for r in range(g["rows"]):
         for c in range(g["cols"]):
             tid = f"r{r}c{c}"
+            tile_file = os.path.join(out_dir, "tiles", tid + ".json")
+            if out_of_time():
+                if not os.path.exists(tile_file):
+                    failed.append(tid)
+                continue
             s, w = g["lat0"] + r * g["step"], g["lon0"] + c * g["step"]
             box = bb(s, w, s + g["step"], w + g["step"])
             try:
                 n = save(os.path.join(out_dir, "tiles", tid + ".json"), fetch(tile_query(box)))
                 print(f"{tid}: {n} elements", flush=True)
             except Exception as e:
-                print(f"{tid}: FAILED {e}", flush=True)
-                failed.append(tid)
+                print(f"{tid}: FAILED {e} (keeping yesterday's tile if there is one)", flush=True)
+                if not os.path.exists(tile_file):
+                    failed.append(tid)
             time.sleep(2)  # be polite to the shared servers
     with open(os.path.join(out_dir, "meta.json"), "w") as f:
         json.dump({"generated": datetime.now(timezone.utc).isoformat(timespec="seconds"), "grid": g, "failed": failed}, f)
     print(f"done: {total} tiles, {len(failed)} failed: {failed}", flush=True)
-    return len([x for x in failed if x.startswith("r")]) > total * 0.2
+    # "failed" lists only tiles with no data at all; the map loads those live.
 
 
 def main():
-    bad = [c["dir"] or "tampa" for c in CITIES if run_city(c)]
-    # Don't publish a mostly-empty set over yesterday's good data.
-    if bad:
-        sys.exit(f"too many tiles failed for {bad}; keeping the previous data")
+    # The workflow starts from yesterday's published data, so anything that fails tonight keeps its previous version.
+    for c in CITIES:
+        run_city(c)
 
 
 if __name__ == "__main__":

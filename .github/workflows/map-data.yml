@@ -18,13 +18,18 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 140
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - name: Start from the last published data
+        run: |
+          git clone -q --depth 1 --branch map-data "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" out || mkdir -p out
+          rm -rf out/.git
 
       - name: Download OpenStreetMap data
         run: python scripts/fetch_map_data.py out
