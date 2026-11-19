@@ -54,11 +54,22 @@ section h2 {
 section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 #live { display: block; width: 100%; height: min(78vh, 760px); min-height: 460px; border: 0; }
+[hidden] { display: none !important; }
+.tabs { display: flex; gap: 4px; padding: 8px 10px 0; border-bottom: 1px solid var(--line); }
+.tabs button {
+  font: 600 13px var(--body); color: var(--muted); background: none; border: 0; border-bottom: 2px solid transparent;
+  padding: 8px 12px 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+}
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.tabs .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--crash); animation: pulse 1.4s infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .tabs .dot { animation: none; } }
 .bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; padding: 10px 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
 .bar a { color: var(--accent); font-weight: 600; text-decoration: none; }
 .bar a:hover { text-decoration: underline; }
 .links { display: flex; flex-wrap: wrap; gap: 12px; }
-#guide { height: min(70vh, 640px); min-height: 420px; background: var(--chip); }
+#guide { height: min(78vh, 760px); min-height: 460px; background: var(--chip); }
 .toggles { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
 .toggles label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; border-radius: 6px; }
 .sw { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
@@ -92,7 +103,7 @@ tr:last-child td { border-bottom: 0; }
 @media (max-width: 640px) {
   h1 { font-size: 24px; }
   #live { min-height: 380px; height: 62vh; }
-  #guide { min-height: 360px; height: 60vh; }
+  #guide { min-height: 380px; height: 62vh; }
   th, td { padding: 8px; }
 }
 </style>
@@ -108,24 +119,25 @@ tr:last-child td { border-bottom: 0; }
   </header>
 
   <section>
-    <h2>Live traffic, police &amp; crashes</h2>
     <div class="panel">
-      <iframe id="live" title="Live traffic map" allow="geolocation" loading="eager"></iframe>
+      <div class="tabs" role="tablist" aria-label="Map view">
+        <button type="button" role="tab" id="tabRoad" aria-selected="true" aria-controls="viewRoad">Road map</button>
+        <button type="button" role="tab" id="tabLive" aria-selected="false" aria-controls="viewLive"><span class="dot"></span>Live traffic</button>
+      </div>
+      <div id="viewRoad" role="tabpanel" aria-labelledby="tabRoad">
+        <div class="toggles" id="toggles"></div>
+        <div id="guide" role="region" aria-label="Road map"></div>
+      </div>
+      <div id="viewLive" role="tabpanel" aria-labelledby="tabLive" hidden>
+        <iframe id="live" title="Live traffic map" allow="geolocation"></iframe>
+      </div>
       <div class="bar">
-        <span>Live from Waze: red/orange lines are slowdowns; icons show reported police, crashes, hazards and closures. Tap any icon for details.</span>
+        <span id="barText">OpenStreetMap with recurring jams, crash-prone spots, police zones and merges. Zoom in for lane counts. Tap any marker for details. Switch to <b>Live traffic</b> for real-time slowdowns, police and crash reports from Waze.</span>
         <span class="links">
           <a id="lnkGoogle" target="_blank" rel="noopener">Google traffic ↗</a>
           <a href="https://fl511.com/map" target="_blank" rel="noopener">FL511 incidents &amp; cameras ↗</a>
         </span>
       </div>
-    </div>
-  </section>
-
-  <section>
-    <h2>Road guide: trouble spots, lanes &amp; merges</h2>
-    <div class="panel">
-      <div class="toggles" id="toggles"></div>
-      <div id="guide" role="region" aria-label="Road guide map"></div>
     </div>
   </section>
 
@@ -137,7 +149,7 @@ tr:last-child td { border-bottom: 0; }
         <tbody id="laneRows"></tbody>
       </table>
     </div>
-    <p class="note">Zoom in on the road guide to see lane badges. Lane counts are typical through-lanes per direction and can change with construction. Trouble spots are recurring patterns, not live reports. For what's happening right now, use the live map above.</p>
+    <p class="note">Zoom in on the road map to see lane badges. Lane counts are typical through-lanes per direction and can change with construction. Trouble spots are recurring patterns, not live reports. For what's happening right now, open the Live traffic tab.</p>
   </section>
 </div>
 
@@ -256,10 +268,12 @@ tr:last-child td { border-bottom: 0; }
   // --- Live map (Waze embed) ---
   var live = document.getElementById("live");
   var lnkGoogle = document.getElementById("lnkGoogle");
+  var liveShown = false;
   function setLive(r) {
     var g = REGIONS[r];
-    live.src = "https://embed.waze.com/iframe?zoom=" + g.z + "&lat=" + g.lat + "&lon=" + g.lon + "&ct=livemap";
     lnkGoogle.href = "https://www.google.com/maps/@" + g.lat + "," + g.lon + "," + (g.z + 1) + "z/data=!5m1!1e1";
+    if (!liveShown) return; // Waze loads only when its tab is opened.
+    live.src = "https://embed.waze.com/iframe?zoom=" + g.z + "&lat=" + g.lat + "&lon=" + g.lon + "&ct=livemap";
   }
 
   // --- Road guide (Leaflet) ---
@@ -321,6 +335,27 @@ tr:last-child td { border-bottom: 0; }
       return '<tr><td class="road">' + esc(x.road) + "<div class='note'>" + REGIONS[x.r].name + "</div></td><td>" + esc(x.stretch) + '</td><td class="n">' + esc(x.lanes) + "</td><td>" + esc(x.merge) + "</td></tr>";
     }).join("");
   }
+
+  // --- Tabs: Road map (OpenStreetMap) / Live traffic (Waze) ---
+  var tabRoad = document.getElementById("tabRoad"), tabLive = document.getElementById("tabLive");
+  var viewRoad = document.getElementById("viewRoad"), viewLive = document.getElementById("viewLive");
+  var barText = document.getElementById("barText"), roadText = barText.innerHTML;
+  var liveText = "Live from Waze: red and orange lines are slowdowns; icons show reported police, crashes, hazards and closures. Tap any icon for details.";
+  function showTab(isLive) {
+    tabRoad.setAttribute("aria-selected", String(!isLive));
+    tabLive.setAttribute("aria-selected", String(isLive));
+    viewRoad.hidden = isLive; viewLive.hidden = !isLive;
+    barText.innerHTML = isLive ? liveText : roadText;
+    if (isLive && !liveShown) { liveShown = true; setLive(current); }
+    if (!isLive) map.invalidateSize();
+  }
+  tabRoad.addEventListener("click", function () { showTab(false); });
+  tabLive.addEventListener("click", function () { showTab(true); });
+  [tabRoad, tabLive].forEach(function (t) {
+    t.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") { var o = t === tabRoad ? tabLive : tabRoad; o.focus(); o.click(); }
+    });
+  });
 
   // --- Region chips ---
   var chips = document.getElementById("chips");
