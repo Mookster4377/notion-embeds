@@ -12,20 +12,20 @@
 /* Layout: region chips → big live Waze map → road guide map (hotspots, lanes, merges) → lane table. */
 :root {
   --bg: #eef1f4; --card: #ffffff; --ink: #141a21; --muted: #5b6672; --line: #d8dee5; --chip: #e5eaef;
-  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c;
+  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f;
   --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a;
+    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a;
+  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -78,6 +78,7 @@ section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); 
   width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
   color: #fff; font: 700 12px var(--body); border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4);
 }
+.pin.coffee { font-size: 12px; }
 .pin.merge { border-radius: 5px; transform: rotate(45deg); width: 20px; height: 20px; }
 .pin.merge span { transform: rotate(-45deg); }
 .tiles-dark { filter: invert(1) hue-rotate(180deg) brightness(.9) contrast(.9); }
@@ -132,7 +133,7 @@ tr:last-child td { border-bottom: 0; }
         <iframe id="live" title="Live traffic map" allow="geolocation"></iframe>
       </div>
       <div class="bar">
-        <span id="barText">OpenStreetMap with recurring jams, crash-prone spots, police zones and merges. Zoom in for lane counts. Tap any marker for details. Switch to <b>Live traffic</b> for real-time slowdowns, police and crash reports from Waze.</span>
+        <span id="barText">OpenStreetMap with recurring jams, crash-prone spots, police zones, merges and your coffee spots. Zoom in for lane counts. Tap any marker for details. Switch to <b>Live traffic</b> for real-time slowdowns, police and crash reports from Waze.</span>
         <span class="links">
           <a id="lnkGoogle" target="_blank" rel="noopener">Google traffic ↗</a>
           <a href="https://fl511.com/map" target="_blank" rel="noopener">FL511 incidents &amp; cameras ↗</a>
@@ -249,12 +250,34 @@ tr:last-child td { border-bottom: 0; }
     { r: "northport", road: "Toledo Blade Blvd", stretch: "US-41 → I-75", lanes: "2", lat: 27.0400, lon: -82.1800, merge: "Merges at the I-75 ramps." }
   ];
 
+  // From the Sarasota Coffee database in Notion.
+  var COFFEE = [
+    {"name": "Project Coffee", "url": "https://www.projectcoffee.us/", "r": "sarasota", "lat": 27.34069, "lon": -82.54223, "addr": "1419 5th St, Sarasota", "rank": "Gets the job done", "cat": "Coffee"},
+    {"name": "Qamaria", "url": "https://www.qamariacoffee.com/", "r": "tampa", "lat": 28.05184, "lon": -82.39279, "addr": "11301 56th St N, Temple Terrace", "rank": "Peak", "cat": "Coffee"},
+    {"name": "Casa Azul", "url": "https://casaazultpa.com/", "r": "tampa", "lat": 27.90714, "lon": -82.52707, "addr": "4802 W Bay Ct Ave, Tampa", "rank": "Peak", "cat": "Coffee"},
+    {"name": "OfKors Bakery", "url": "https://www.ofkorsbakery.com/menu.php", "r": "sarasota", "lat": 27.33605, "lon": -82.54339, "addr": "1359 Main St, Sarasota", "rank": "Gets the job done", "cat": "Coffee, Bakery"},
+    {"name": "Oxford Exchange", "url": "", "r": "tampa", "lat": 27.94493, "lon": -82.46463, "addr": "420 W John F Kennedy Blvd, Tampa", "rank": "", "cat": "Coffee, Bakery"},
+    {"name": "The Blend (Old Northeast)", "url": "https://realcoffeeclub.com/place/florida/st-petersburg/the-blend-old-northeast-coffee-cocktails", "r": "stpete", "lat": 27.79966, "lon": -82.6546, "addr": "3001 16th St N, St. Petersburg", "rank": "", "cat": "Coffee"},
+    {"name": "CoffeeMe", "url": "https://coffeemefl.wixsite.com/coffeemee", "r": "tampa", "lat": 28.03378, "lon": -82.47561, "addr": "1457 W Busch Blvd, Tampa", "rank": "", "cat": "Coffee"},
+    {"name": "Leads Coffeehouse", "url": "https://www.networkingleads.com/leadscoffeehouse", "r": "tampa", "lat": 27.96495, "lon": -82.50098, "addr": "2701 N Himes Ave, Tampa", "rank": "", "cat": "Coffee"},
+    {"name": "Black Crow Coffee Shop", "url": "https://www.blackcrowcoffeeco.com/", "r": "stpete", "lat": 27.77975, "lon": -82.63576, "addr": "722 2nd St N, St. Petersburg", "rank": "", "cat": "Coffee"},
+    {"name": "Postal 98 Cafe", "url": "https://postal98cafe.com/index.php/menu/", "r": "sarasota", "lat": 27.3226, "lon": -82.50218, "addr": "1240 Yoder Ave, Sarasota", "rank": "Gets the job done", "cat": "Coffee"},
+    {"name": "Paradeco Coffee Roasters", "url": "https://paradecocoffee.com/menu/", "r": "stpete", "lat": 27.77426, "lon": -82.63353, "addr": "111 2nd Ave NE, St. Petersburg", "rank": "", "cat": "Coffee"},
+    {"name": "Pistil House", "url": "https://www.pistilhouse.com/", "r": "stpete", "lat": 27.77041, "lon": -82.66791, "addr": "2533 1st Ave S, St. Petersburg", "rank": "", "cat": "Coffee"},
+    {"name": "Flatbread & Butter", "url": "https://www.flatbreadandbutter.com/menus-order-online", "r": "stpete", "lat": 27.77956, "lon": -82.64048, "addr": "497 7th Ave N, St. Petersburg", "rank": "", "cat": "Coffee"},
+    {"name": "Grove Surf + Coffee", "url": "https://www.grovesurfandcoffee.com/", "r": "stpete", "lat": 27.74094, "lon": -82.7512, "addr": "7370 Gulf Blvd, St. Pete Beach", "rank": "", "cat": "Coffee"},
+    {"name": "Bad Ass Coffee", "url": "https://badasscoffee.com/", "r": "sarasota", "lat": 27.38579, "lon": -82.42711, "addr": "6588 University Pkwy, Sarasota", "rank": "Dogwater", "cat": "Coffee"},
+    {"name": "Bad Mother", "url": "https://www.badmother.coffee/", "r": "stpete", "lat": 27.77006, "lon": -82.63666, "addr": "260 1st Ave S, St. Petersburg", "rank": "", "cat": "Coffee"},
+    {"name": "Buttermilk Handcrafted Food", "url": "https://www.yelp.com/biz/buttermilk-handcrafted-food-sarasota", "r": "sarasota", "lat": 27.32642, "lon": -82.45852, "addr": "5520 Palmer Blvd, Sarasota", "rank": "Great", "cat": "Coffee, Bakery, Sandwiches"}
+  ];
+
   var TYPES = {
     jam:    { label: "Frequent jams",          letter: "J", v: "--jam" },
     crash:  { label: "Crash-prone",            letter: "!", v: "--crash" },
     police: { label: "Police / enforcement",   letter: "P", v: "--police" },
     merge:  { label: "Merges & lane drops",    letter: "M", v: "--merge" },
-    lanes:  { label: "Lane counts",            letter: "",  v: "--lane" }
+    lanes:  { label: "Lane counts",            letter: "",  v: "--lane" },
+    coffee: { label: "Coffee spots",           letter: "☕", v: "--coffee" }
   };
 
   var css = getComputedStyle(document.documentElement);
@@ -299,6 +322,17 @@ tr:last-child td { border-bottom: 0; }
     L.marker([s.lat, s.lon], { icon: icon, title: s.name, keyboard: true })
       .bindPopup('<div class="tag" style="color:' + c + '">' + T.label + "</div><h3>" + esc(s.name) + "</h3>" + esc(s.d))
       .addTo(layers[s.t]);
+  });
+
+  COFFEE.forEach(function (c) {
+    var col = color("--coffee");
+    var icon = L.divIcon({ className: "", iconSize: [24, 24], iconAnchor: [12, 12],
+      html: '<div class="pin coffee" style="background:' + col + '"><span>☕</span></div>' });
+    var title = c.url ? '<a href="' + esc(c.url) + '" target="_blank" rel="noopener">' + esc(c.name) + "</a>" : esc(c.name);
+    L.marker([c.lat, c.lon], { icon: icon, title: c.name, keyboard: true, zIndexOffset: 500 })
+      .bindPopup('<div class="tag" style="color:' + col + '">' + esc(c.cat) + (c.rank ? " · " + esc(c.rank) : "") + "</div><h3>" + title + "</h3>" + esc(c.addr) +
+        '<br><a href="https://www.google.com/maps/dir/?api=1&destination=' + c.lat + "," + c.lon + '" target="_blank" rel="noopener">Directions ↗</a>')
+      .addTo(layers.coffee);
   });
 
   ROADS.forEach(function (rd) {
