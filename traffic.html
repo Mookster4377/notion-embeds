@@ -12,20 +12,20 @@
 /* Layout: region chips → big live Waze map → road guide map (hotspots, lanes, merges) → lane table. */
 :root {
   --bg: #eef1f4; --card: #ffffff; --ink: #141a21; --muted: #5b6672; --line: #d8dee5; --chip: #e5eaef;
-  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00;
+  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a;
   --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230;
+    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230;
+  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -79,6 +79,9 @@ section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); 
   color: #fff; font: 700 12px var(--body); border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4);
 }
 .pin.coffee { font-size: 12px; }
+.pin.drop { border-radius: 5px; transform: rotate(45deg); width: 18px; height: 18px; font-size: 13px; }
+.pin.drop span { transform: rotate(-45deg); }
+.pin.add { width: 18px; height: 18px; font-size: 13px; }
 .pin.school { color: #1a1400; width: 20px; height: 20px; font-size: 11px; }
 .zone-status { color: var(--muted); font-size: 12px; margin-left: auto; }
 .hours { margin: 6px 0 0; border-collapse: collapse; font-size: 12px; }
@@ -138,7 +141,7 @@ tr:last-child td { border-bottom: 0; }
         <iframe id="live" title="Live traffic map" allow="geolocation"></iframe>
       </div>
       <div class="bar">
-        <span id="barText">Satellite map with recurring jams, crash-prone spots, police zones, merges, your coffee spots and school zones (zoom in to see schools). Zoom in for lane counts. Tap any marker for details. Switch to <b>Live traffic</b> for real-time slowdowns, police and crash reports from Waze.</span>
+        <span id="barText">Satellite map with recurring jams, crash-prone spots, police zones, merges, your coffee spots and school zones. Zoom in to see schools and every spot where lanes merge or are added. Zoom in for lane counts. Tap any marker for details. Switch to <b>Live traffic</b> for real-time slowdowns, police and crash reports from Waze.</span>
         <span class="links">
           <a id="lnkGoogle" target="_blank" rel="noopener">Google traffic ↗</a>
           <a href="https://fl511.com/map" target="_blank" rel="noopener">FL511 incidents &amp; cameras ↗</a>
@@ -296,7 +299,8 @@ tr:last-child td { border-bottom: 0; }
     merge:  { label: "Merges & lane drops",    letter: "M", v: "--merge" },
     lanes:  { label: "Lane counts",            letter: "",  v: "--lane" },
     coffee: { label: "Coffee spots",           letter: "☕", v: "--coffee" },
-    school: { label: "School zones",           letter: "S", v: "--school" }
+    school: { label: "School zones",           letter: "S", v: "--school" },
+    lanechg: { label: "Lane drops & adds",     letter: "",  v: "--expand" }
   };
 
   var css = getComputedStyle(document.documentElement);
@@ -460,11 +464,104 @@ tr:last-child td { border-bottom: 0; }
   function syncSchools() {
     var on = schoolsOn && map.getZoom() >= SCHOOL_MIN_ZOOM;
     if (on) map.addLayer(layers.school); else map.removeLayer(layers.school);
-    if (typeof zoneStatus !== "undefined" && zoneStatus) zoneStatus.textContent = schoolsOn && !on ? "Zoom in to see school zones" : "";
+    if (typeof zoneStatus !== "undefined" && zoneStatus) zoneStatus.textContent = (schoolsOn || laneChgOn) && map.getZoom() < SCHOOL_MIN_ZOOM ? "Zoom in to see school zones and lane drops/adds" : "";
     clearTimeout(schoolTimer);
     if (on) schoolTimer = setTimeout(loadSchools, 400);
   }
   map.on("moveend", syncSchools);
+
+
+  // --- Lane drops & adds: read live from OpenStreetMap lane counts for the roads on screen. ---
+  // Where two pieces of the same road meet with a different number of lanes, mark it:
+  // fewer lanes ahead = lanes merge (purple), more lanes ahead = lanes added (teal). Checked for each direction.
+  var laneChgOn = true, laneBoxes = [], laneTimer = null, laneBusy = false, laneSeen = {};
+  var LANE_MIN_ZOOM = 13;
+  function perDir(t) {
+    var n = parseInt(t.lanes, 10), f = parseInt(t["lanes:forward"], 10), b = parseInt(t["lanes:backward"], 10);
+    if (t.oneway === "yes" || t.oneway === "1" || t.highway === "motorway" && t.oneway !== "no") return { f: n, b: 0 };
+    if (t.oneway === "-1") return { f: 0, b: n };
+    if (f && b) return { f: f, b: b };
+    if (!n) return null;
+    var half = Math.max(1, Math.floor(n / 2));
+    return { f: half, b: half };
+  }
+  function bearing(a, b) {
+    var y = Math.sin((b.lon - a.lon) * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180);
+    var x = Math.cos(a.lat * Math.PI / 180) * Math.sin(b.lat * Math.PI / 180) - Math.sin(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.cos((b.lon - a.lon) * Math.PI / 180);
+    var deg = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    return ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"][Math.round(deg / 45) % 8];
+  }
+  function roadName(t) { return t.name || t.ref || ""; }
+  function findLaneChanges(ways) {
+    var ends = {};
+    ways.forEach(function (w) {
+      if (!w.nodes || !w.geometry || w.nodes.length < 2) return;
+      w.dir = perDir(w.tags || {});
+      if (!w.dir || !roadName(w.tags)) return;
+      [0, w.nodes.length - 1].forEach(function (i) {
+        var id = w.nodes[i];
+        (ends[id] = ends[id] || []).push({ w: w, atStart: i === 0 });
+      });
+    });
+    var found = [];
+    Object.keys(ends).forEach(function (id) {
+      var list = ends[id];
+      if (list.length !== 2) return;
+      var A = list[0], B = list[1];
+      var key = function (e) { return (e.w.tags.ref || "") + "|" + (e.w.tags.name || ""); };
+      if (key(A) !== key(B)) return;
+      var node = A.atStart ? A.w.geometry[0] : A.w.geometry[A.w.geometry.length - 1];
+      var notes = [];
+      [[A, B], [B, A]].forEach(function (pair) {
+        var from = pair[0], to = pair[1];
+        // Lanes while driving along "from" toward the node, then along "to" away from it.
+        var inLanes = from.atStart ? from.w.dir.b : from.w.dir.f;
+        var outLanes = to.atStart ? to.w.dir.f : to.w.dir.b;
+        if (!inLanes || !outLanes || inLanes === outLanes) return;
+        var g = from.w.geometry, prev = from.atStart ? g[1] : g[g.length - 2];
+        notes.push({ kind: outLanes < inLanes ? "drop" : "add", from: inLanes, to: outLanes, heading: bearing(prev, node) });
+      });
+      if (notes.length) found.push({ id: id, lat: node.lat, lon: node.lon, name: roadName(A.w.tags), notes: notes });
+    });
+    return found;
+  }
+  function addLaneChange(c) {
+    if (laneSeen[c.id]) return; laneSeen[c.id] = 1;
+    var hasDrop = c.notes.some(function (n) { return n.kind === "drop"; });
+    var col = color(hasDrop ? "--merge" : "--expand");
+    var icon = L.divIcon({ className: "", iconSize: [18, 18], iconAnchor: [9, 9],
+      html: '<div class="pin ' + (hasDrop ? "drop" : "add") + '" style="background:' + col + '"><span>' + (hasDrop ? "−" : "+") + "</span></div>" });
+    var lines = c.notes.map(function (n) {
+      var w = function (k) { return k + (k === 1 ? " lane" : " lanes"); };
+      return n.kind === "drop"
+        ? "<b>Heading " + n.heading + ":</b> " + w(n.from) + " merge into " + w(n.to) + ". " + (n.to === 1 ? "Single lane ahead." : "")
+        : "<b>Heading " + n.heading + ":</b> lanes added, " + w(n.from) + " → " + w(n.to) + ".";
+    });
+    L.marker([c.lat, c.lon], { icon: icon, title: c.name + (hasDrop ? " lane merge" : " lanes added"), keyboard: true })
+      .bindPopup('<div class="tag" style="color:' + col + '">' + (hasDrop ? "Lane merge" : "Lanes added") + "</div><h3>" + esc(c.name) + "</h3>" + lines.join("<br>") +
+        "<div class='note' style='margin-top:6px'>From OpenStreetMap lane counts, read live. Short turn lanes at intersections are not shown.</div>")
+      .addTo(layers.lanechg);
+  }
+  function loadLaneChanges() {
+    if (!laneChgOn || map.getZoom() < LANE_MIN_ZOOM || laneBusy) return;
+    if (laneBoxes.some(function (x) { return x.contains(map.getBounds()); })) return;
+    var b = map.getBounds().pad(0.3);
+    laneBusy = true; zoneStatus.textContent = "Loading lane changes…";
+    var q = '[out:json][timeout:25];way["highway"~"^(motorway|trunk|primary|secondary|tertiary)$"]["lanes"](' +
+      [b.getSouth(), b.getWest(), b.getNorth(), b.getEast()].map(function (v) { return v.toFixed(4); }).join(",") + ');out body geom;';
+    fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "Content-Type": "application/x-www-form-urlencoded" } })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (d) { findLaneChanges(d.elements || []).forEach(addLaneChange); laneBoxes.push(b); zoneStatus.textContent = ""; })
+      .catch(function () { zoneStatus.textContent = "Couldn't load lane changes right now. Try moving the map."; })
+      .then(function () { laneBusy = false; });
+  }
+  function syncLaneChanges() {
+    var on = laneChgOn && map.getZoom() >= LANE_MIN_ZOOM;
+    if (on) map.addLayer(layers.lanechg); else map.removeLayer(layers.lanechg);
+    clearTimeout(laneTimer);
+    if (on) laneTimer = setTimeout(loadLaneChanges, 900);
+  }
+  map.on("moveend", syncLaneChanges);
 
   var toggles = document.getElementById("toggles");
   Object.keys(TYPES).forEach(function (k) {
@@ -474,6 +571,7 @@ tr:last-child td { border-bottom: 0; }
     lab.querySelector("input").addEventListener("change", function (e) {
       if (k === "lanes") { lanesOn = e.target.checked; syncLanes(); return; }
       if (k === "school") { schoolsOn = e.target.checked; syncSchools(); return; }
+      if (k === "lanechg") { laneChgOn = e.target.checked; syncLaneChanges(); return; }
       if (e.target.checked) map.addLayer(layers[k]); else map.removeLayer(layers[k]);
     });
     toggles.appendChild(lab);
@@ -482,6 +580,7 @@ tr:last-child td { border-bottom: 0; }
   zoneStatus.className = "zone-status"; zoneStatus.setAttribute("aria-live", "polite");
   toggles.appendChild(zoneStatus);
   syncSchools();
+  syncLaneChanges();
 
   // --- Lane table ---
   var tbody = document.getElementById("laneRows");
