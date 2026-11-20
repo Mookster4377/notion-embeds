@@ -216,7 +216,7 @@ tr:last-child td { border-bottom: 0; }
 
   <section>
     <h2 id="repsHead">Who represents this area</h2>
-    <p class="note">Tap <b>🏛️ Who represents here?</b> above the map, then tap any spot to see its U.S. senators, U.S. House member, Florida senator and Florida House member, plus its county and city. <span id="repsUpdated"></span></p>
+    <p class="note">Tap <b>🏛️ Who represents here?</b> above the map, then tap any spot to see its U.S. senators, U.S. House member, Florida senator and Florida House member, plus its county, school board and city council. <span id="repsUpdated"></span></p>
     <div class="panel" id="repsTables"><p class="note" style="padding:10px 14px">Loading districts…</p></div>
   </section>
 
@@ -1758,6 +1758,16 @@ tr:last-child td { border-bottom: 0; }
     return (m.url ? '<a href="' + esc(m.url) + '" target="_blank" rel="noopener">' + esc(m.n) + "</a>" : esc(m.n)) + " " + partyHtml(m.party) +
       (m.phone ? ' · <a href="tel:' + esc(m.phone.replace(/[^0-9+]/g, "")) + '">' + esc(m.phone) + "</a>" : "");
   }
+  // School boards and city councils (local-officials.json; names only where the official roster was confirmed current).
+  var LOCAL = null;
+  fetch("local-officials.json").then(function (r) { return r.json(); }).then(function (d) { LOCAL = d; if (repsData) drawRepsTables(); }).catch(function () {});
+  function bodyHtml(b, max) {
+    var link = '<a href="' + esc(b.url) + '" target="_blank" rel="noopener">' + esc(b.name) + " ↗</a>";
+    if (!b.members) return link + "<br><span class='note'>Members just changed after the November election; see the official list.</span>";
+    var ms = b.members.slice(0, max);
+    return link + (b.mayor ? "<br>Mayor: " + esc(b.mayor) : "") + "<br>" + ms.map(function (m) { return esc(m.name) + " <span class='note'>(" + esc(m.seat) + ")</span>"; }).join("<br>") +
+      (b.members.length > max ? "<br><span class='note'>and " + (b.members.length - max) + " more</span>" : "");
+  }
   function repsAt(lat, lon) {
     var d = repsData, out = '<div class="reps-pop"><div class="tag" style="color:' + color("--rep") + '">Who represents here</div>';
     var county = d.counties.filter(function (c) { return inPolys(lat, lon, c.p); })[0], city = d.places.filter(function (c) { return inPolys(lat, lon, c.p); })[0];
@@ -1769,7 +1779,10 @@ tr:last-child td { border-bottom: 0; }
     });
     if (county) out += "<h4>County</h4><div class='who'>" + esc(county.n) + " County Commission" +
       (COUNTY_SITES[county.n] ? ' · <a href="' + COUNTY_SITES[county.n] + '" target="_blank" rel="noopener">County site ↗</a>' : "") + "</div>";
-    out += "<h4>City</h4><div class='who'>" + (city ? esc(city.n) + " city council and mayor" : "Not in a city; the county commission handles local issues") + "</div>";
+    var sb = county && LOCAL && LOCAL.schoolBoards[county.n];
+    if (sb) out += "<h4>School board (countywide)</h4><div class='who'>" + bodyHtml(sb, 9) + "</div>";
+    var cc = city && LOCAL && LOCAL.cities[city.n];
+    out += "<h4>City</h4><div class='who'>" + (cc ? bodyHtml(cc, 8) : city ? esc(city.n) + " city council and mayor" : "Not in a city; the county commission handles local issues") + "</div>";
     return out + "<p class='note' style='margin-top:8px'>Data as of " + esc(d.updated) + ". After an election, new members can take a few weeks to show up.</p></div>";
   }
   function drawRepsTables() {
@@ -1787,6 +1800,18 @@ tr:last-child td { border-bottom: 0; }
             "</td></tr>";
         }).join("") + "</tbody></table></div></details>";
     });
+    if (LOCAL) {
+      var inArea = function (names, list) { return Object.keys(list).filter(function (k) { return names.indexOf(k) >= 0; }); };
+      var counties = d.counties.map(function (c) { return c.n; }), cities = d.places.map(function (c) { return c.n; });
+      var rowsFor = function (keys, list) { return keys.map(function (k) {
+        var b = list[k];
+        return "<tr><td><a href='" + esc(b.url) + "' target='_blank' rel='noopener'>" + esc(b.name) + " ↗</a></td><td>" +
+          (b.members ? (b.mayor ? "<b>Mayor:</b> " + esc(b.mayor) + "<br>" : "") + b.members.map(function (m) { return esc(m.name) + " <span class='note'>(" + esc(m.seat) + ")</span>"; }).join("<br>")
+            : "<span class='note'>See the official list (members changed after the Nov 2026 election)</span>") + "</td></tr>"; }).join(""); };
+      html += "<details><summary><b>School boards</b> (countywide)</summary><div class='table-wrap'><table><tbody>" + rowsFor(inArea(counties, LOCAL.schoolBoards), LOCAL.schoolBoards) + "</tbody></table></div></details>";
+      html += "<details><summary><b>City councils &amp; commissions</b></summary><div class='table-wrap'><table><tbody>" + rowsFor(inArea(cities, LOCAL.cities), LOCAL.cities) + "</tbody></table></div></details>";
+      html += "<p class='note' style='padding:6px 14px'>School board and city rosters as of " + esc(LOCAL.asOf) + ", listed only where the official roster was confirmed current.</p>";
+    }
     document.getElementById("repsTables").innerHTML = html;
     document.getElementById("repsUpdated").textContent = "Updated " + d.updated + " from the U.S. Census, the congress-legislators project and Open States; new members can take a few weeks to show up after an election.";
   }
