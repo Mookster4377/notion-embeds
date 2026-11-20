@@ -16,3 +16,5 @@
 !.github/workflows/
 !.github/workflows/map-data.yml
 !orlando-places.json
+!precincts-tampa.json
+!precincts-orlando.json
