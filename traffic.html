@@ -524,8 +524,7 @@ tr:last-child td { border-bottom: 0; }
     stops:   { label: "Stop signs",            letter: "", v: "--crash" },
     districts: { label: "Nightlife districts",   letter: "", v: "--night" },
     nightclubs: { label: "Nightclubs",           letter: "🪩", v: "--night" },
-    collegebars: { label: "College bars",        letter: "🍺", v: "--night" },
-    twentybars: { label: "20s bars",             letter: "🍸", v: "--night" },
+    bars:    { label: "College & 20s bars",    letter: "🍻", v: "--night" },
     gyms:    { label: "Gyms",                  letter: "🏋️", v: "--gym" },
     nature:  { label: "Parks & nature",        letter: "🌳", v: "--nature" },
     vote:    { label: "2024 vote by precinct (D / R)", letter: "", v: "--vote" }
@@ -1288,7 +1287,7 @@ tr:last-child td { border-bottom: 0; }
             .addTo(layers.stops);
         });
       } },
-    // Bars, pubs and nightclubs, sorted into nightclubs, college bars (near a campus) and 20s bars (in a nightlife district).
+    // Bars, pubs and nightclubs: nightclubs, plus one "College & 20s bars" layer (near a campus 🍺, or in a nightlife district 🍸).
     nightlife: { prio: 3, on: true, minZoom: 12, boxes: [], busy: false, seen: {},
       match: function (e) { return /^(bar|pub|nightclub)$/.test(tg(e).amenity || "") && !!tg(e).name; },
       query: function (bb) { return '[out:json][timeout:25];nwr["amenity"~"^(bar|pub|nightclub)$"]["name"](' + bb + ');out center tags;'; },
@@ -1296,7 +1295,7 @@ tr:last-child td { border-bottom: 0; }
         var t = tg(e), lat = e.lat || (e.center && e.center.lat), lon = e.lon || (e.center && e.center.lon); if (!lat) return;
         var campus = nearest(CAMPUSES, lat, lon), district = nearest(DISTRICTS, lat, lon);
         var club = t.amenity === "nightclub";
-        var layer = club ? "nightclubs" : campus ? "collegebars" : district ? "twentybars" : null;
+        var layer = club ? "nightclubs" : campus || district ? "bars" : null;
         if (!layer) return; // other bars aren't shown
         var crowd = campus ? "Mostly college students, 21 to mid-20s (near " + campus.n + ")."
           : district ? district.crowd : "Mostly 21 to early 30s.";
