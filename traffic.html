@@ -12,20 +12,20 @@
 /* Layout: region chips → big live Waze map → road guide map (hotspots, lanes, merges) → lane table. */
 :root {
   --bg: #eef1f4; --card: #ffffff; --ink: #141a21; --muted: #5b6672; --line: #d8dee5; --chip: #e5eaef;
-  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057; --interstate: #364fc7; --ushwy: #c2255c; --staterd: #e0a800; --countyrd: #1098ad; --poi: #5f3dc4; --nature: #2f9e44; --vote: #7b5ea7; --night: #d6336c; --gym: #0b7285; --free: #2b8a3e; --paid: #c92a2a; --parkunk: #495057;
+  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057; --interstate: #364fc7; --ushwy: #c2255c; --staterd: #e0a800; --countyrd: #1098ad; --poi: #5f3dc4; --nature: #2f9e44; --bagel: #b8860b; --vote: #7b5ea7; --night: #d6336c; --gym: #0b7285; --free: #2b8a3e; --paid: #c92a2a; --parkunk: #495057;
   --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --nature: #51cf66; --vote: #b197fc; --night: #f783ac; --gym: #3bc9db; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
+    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --nature: #51cf66; --bagel: #f0b429; --vote: #b197fc; --night: #f783ac; --gym: #3bc9db; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
+  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --bagel: #f0b429; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -198,6 +198,17 @@ tr:last-child td { border-bottom: 0; }
       </table>
     </div>
     <p class="note" id="coffeeNote">Your Sarasota Coffee list plus every other local café OpenStreetMap lists from Lakewood Ranch and Sarasota down to Osprey (national chains left out). ☕ marks the ones in your list. Brand-new places may be missing.</p>
+  </section>
+
+  <section>
+    <h2 id="bagelHead">Bagel places</h2>
+    <div class="panel table-wrap">
+      <table>
+        <thead><tr><th>Bagel place</th><th>Address</th><th>Hours</th><th></th></tr></thead>
+        <tbody id="bagelRows"><tr><td colspan="4" class="note">Loading bagel places…</td></tr></tbody>
+      </table>
+    </div>
+    <p class="note" id="bagelNote">Every bagel shop OpenStreetMap lists across the map area, local spots first and chains marked. Tap a row to see it on the map with its typical crowd times. Brand-new places may be missing.</p>
   </section>
 
   <section>
@@ -447,6 +458,7 @@ tr:last-child td { border-bottom: 0; }
     lanes:  { label: "Lane counts",            letter: "",  v: "--lane" },
     coffee: { label: "Coffee (your list + local)", letter: "☕", v: "--coffee" },
     places: { label: "My places (Orlando list)", letter: "📍", v: "--coffee" },
+    bagels: { label: "Bagels",                 letter: "🥯", v: "--bagel" },
     school: { label: "School zones",           letter: "S", v: "--school" },
     lanechg: { label: "Lane drops & adds",     letter: "",  v: "--expand" },
     ramps:   { label: "Highway exits & entrances", letter: "", v: "--exit" },
@@ -1654,7 +1666,7 @@ tr:last-child td { border-bottom: 0; }
   Object.keys(TYPES).forEach(function (k) {
     var T = TYPES[k];
     var lab = document.createElement("label");
-    lab.innerHTML = '<input type="checkbox" checked> <span class="sw' + (k === "lanes" ? " lane" : "") + '" style="background:' + color(T.v) + '"></span>' + T.label;
+    lab.innerHTML = '<input type="checkbox" data-k="' + k + '" checked> <span class="sw' + (k === "lanes" ? " lane" : "") + '" style="background:' + color(T.v) + '"></span>' + T.label;
     lab.querySelector("input").addEventListener("change", function (e) {
       if (k === "lanes") { lanesOn = e.target.checked; syncLanes(); return; }
       if (k === "school") { schoolsOn = e.target.checked; syncSchools(); return; }
@@ -1924,6 +1936,54 @@ tr:last-child td { border-bottom: 0; }
       document.getElementById("localCoffeeRows").innerHTML = '<tr><td colspan="4" class="note">Couldn\'t load the coffee list right now. Refresh to try again.</td></tr>';
     });
 
+
+  // --- Bagel places (whole map area, from the nightly OpenStreetMap data) ---
+  var BAGEL_CHAINS = /einstein|bruegger|big apple bagel|manhattan bagel|new york bagel ?(and|&) deli|panera|dunkin|noah'?s/i;
+  var BAGEL_BOX = ORL ? "28.25,-81.70,28.85,-81.00" : "26.85,-82.95,28.25,-81.95";
+  var BAGEL_AREA = ORL ? "the Orlando area" : "Tampa Bay → North Port";
+  osmFile("bagels.json", '[out:json][timeout:60];(nwr["name"~"bagel",i](' + BAGEL_BOX + ');nwr["cuisine"~"bagel"]["name"](' + BAGEL_BOX + '););out center tags;', 6, 60000)
+    .then(function (d) {
+      var seen = {}, items = [];
+      (d.elements || []).forEach(function (e) {
+        var t = e.tags || {}, lat = e.lat || (e.center && e.center.lat), lon = e.lon || (e.center && e.center.lon);
+        if (!t.name || !lat || t.disused || t["disused:shop"]) return;
+        var k = t.name.toLowerCase() + Math.round(lat * 200) + Math.round(lon * 200);
+        if (seen[k]) return; seen[k] = 1;
+        var chain = !!(t.brand || t["brand:wikidata"] || BAGEL_CHAINS.test(t.name));
+        var site = t.website || t["contact:website"]; site = site && /^https?:/.test(site) ? site : "";
+        var title = site ? '<a href="' + esc(site) + '" target="_blank" rel="noopener">' + esc(t.name) + "</a>" : esc(t.name);
+        var icon = L.divIcon({ className: "", iconSize: [22, 22], iconAnchor: [11, 11],
+          html: '<div class="pin poi" style="background:' + color("--bagel") + '"><span>🥯</span></div>' });
+        var m = L.marker([lat, lon], { icon: icon, title: t.name, keyboard: true })
+          .bindPopup(function () { return '<div class="tag" style="color:' + color("--bagel") + '">' + (chain ? "Bagels · chain" : "Local bagels") + "</div><h3>" + title + "</h3>" +
+            esc(addrOf(t) || "") + coffeeCrowdHtml({ lat: lat, lon: lon, ohours: t.opening_hours }) +
+            '<br><a href="https://maps.apple.com/?daddr=' + lat + "," + lon + '" target="_blank" rel="noopener">Directions ↗</a>'; })
+          .addTo(layers.bagels);
+        items.push({ name: t.name, chain: chain, site: site, addr: addrOf(t), hours: t.opening_hours || "", lat: lat, lon: lon, m: m });
+      });
+      items.sort(function (a, b) { return (a.chain - b.chain) || a.name.localeCompare(b.name); });
+      var rows = document.getElementById("bagelRows");
+      rows.innerHTML = items.length ? "" : '<tr><td colspan="4" class="note">No bagel places found.</td></tr>';
+      items.forEach(function (it) {
+        var tr = document.createElement("tr");
+        tr.innerHTML = '<td class="road">🥯 ' + (it.site ? '<a href="' + esc(it.site) + '" target="_blank" rel="noopener">' + esc(it.name) + "</a>" : esc(it.name)) +
+          (it.chain ? " <span class='note'>(chain)</span>" : "") + "</td><td>" + esc(it.addr || "—") + "</td><td class='note'>" + esc(it.hours || "—") +
+          '</td><td><button type="button" class="chip">Show on map</button></td>';
+        tr.querySelector("button").addEventListener("click", function () {
+          showTab(false);
+          if (!map.hasLayer(layers.bagels)) map.addLayer(layers.bagels);
+          var box = document.querySelector('#toggles input[data-k="bagels"]'); if (box) box.checked = true;
+          document.getElementById("guide").scrollIntoView({ behavior: "smooth", block: "center" });
+          map.setView([it.lat, it.lon], 17); it.m.openPopup();
+        });
+        rows.appendChild(tr);
+      });
+      var local = items.filter(function (i) { return !i.chain; }).length;
+      document.getElementById("bagelHead").textContent = "Bagel places in " + BAGEL_AREA + " (" + items.length + (items.length ? ", " + local + " local" : "") + ")";
+    })
+    .catch(function () {
+      document.getElementById("bagelRows").innerHTML = '<tr><td colspan="4" class="note">Couldn\'t load the bagel list right now. Refresh to try again.</td></tr>';
+    });
 
   // --- Campuses and nightlife districts (used for bar and gym crowd estimates, and drawn on the map) ---
   var CAMPUSES = [
