@@ -1370,6 +1370,33 @@ tr:last-child td { border-bottom: 0; }
     return "<b>Hours:</b> not listed. Most parks and preserves are open sunrise to sunset (today about " + clock(SUN[nowFL().month][0]) + "–" + clock(SUN[nowFL().month][1]) + ").";
   }
 
+
+  // --- Typical crowds by type of place (an estimate, not live data) ---
+  // peak: [weekday hours, weekend hours] when it's usually busiest; season: months (0-11) that are busier.
+  var CROWDS = {
+    "Spring":          { busy: "Summer weekends and holidays, 10 am–3 pm (often hits capacity by mid-morning)", quiet: "Weekday mornings and winter", wk: [[11, 15]], we: [[9, 16]], season: [4, 5, 6, 7] },
+    "Beach":           { busy: "Weekends and holidays 11 am–4 pm, spring break (March) and summer; sunset draws a second crowd", quiet: "Weekday mornings outside March–August", wk: [[12, 15], [18, 20]], we: [[10, 17], [18, 20]], season: [2, 5, 6, 7] },
+    "State park":      { busy: "Weekends and holidays 10 am–2 pm, especially in the cooler months (Nov–Apr)", quiet: "Weekday mornings and summer afternoons", wk: [[10, 13]], we: [[9, 15]], season: [10, 11, 0, 1, 2, 3] },
+    "Nature preserve": { busy: "Weekend mornings 7–10 am (hikers and birders), more in the cooler months", quiet: "Weekday afternoons", wk: [[7, 9]], we: [[7, 11]], season: [10, 11, 0, 1, 2, 3] },
+    "Wetland":         { busy: "Early mornings, especially weekends during birding season (Nov–Apr)", quiet: "Midday and summer", wk: [[7, 9]], we: [[7, 10]], season: [10, 11, 0, 1, 2, 3] },
+    "Garden":          { busy: "Weekend late mornings and during events", quiet: "Weekday mornings right after opening", wk: [[11, 13]], we: [[10, 15]], season: [0, 1, 2, 3, 11] },
+    "Park":            { busy: "After school and work (4–7 pm) and weekend mornings; youth sports on weekday evenings", quiet: "Weekday mid-mornings and early afternoons", wk: [[16, 19]], we: [[8, 12]], season: [] }
+  };
+  function crowdHtml(kind, t) {
+    var c = CROWDS[kind]; if (!c) return "";
+    var n = nowFL(), weekend = n.day >= 5, h = n.min / 60;
+    var inPeak = (weekend ? c.we : c.wk).some(function (r) { return h >= r[0] && h < r[1]; });
+    var inSeason = c.season.indexOf(n.month) >= 0;
+    var week = t && t.opening_hours ? parseHours(t.opening_hours) : null, sun = SUN[n.month];
+    // No listed hours: assume open sunrise to sunset (state parks 8 am to sunset).
+    var closed = week ? !openNow(week) : (n.min < (kind === "State park" ? 480 : sun[0]) || n.min >= sun[1]);
+    var level = closed ? null : inPeak ? (inSeason || weekend ? "Busy" : "Moderate") : (weekend && h >= 9 && h < 17 ? "Moderate" : "Quiet");
+    var col = level === "Busy" ? color("--crash") : level === "Moderate" ? color("--jam") : color("--free");
+    return "<div style='margin-top:6px'><b>Crowds:</b> busiest " + esc(c.busy.charAt(0).toLowerCase() + c.busy.slice(1)) + ". Quietest: " + esc(c.quiet.charAt(0).toLowerCase() + c.quiet.slice(1)) + "." +
+      (level ? '<br><b>Likely right now:</b> <b style="color:' + col + '">' + level + "</b>" : "<br><b>Likely right now:</b> probably closed") +
+      " <span class='note'>(typical pattern, not live data)</span></div>";
+  }
+
   // What kind of natural place an OpenStreetMap feature is (or null).
   function natureKind(t) {
     if (!t.name) return null;
@@ -1386,7 +1413,7 @@ tr:last-child td { border-bottom: 0; }
   function drawNature(els) {
     els.forEach(function (e) {
       var k = natureKind(tg(e));
-      if (k) poiMarker("nature", e, k.e, k.k, function () { return hoursHtml(tg(e), k) + (k.note ? "<br><span class='note'>" + esc(k.note) + "</span>" : ""); }, "--nature");
+      if (k) poiMarker("nature", e, k.e, k.k, function () { return hoursHtml(tg(e), k) + crowdHtml(k.k, tg(e)) + (k.note ? "<br><span class='note'>" + esc(k.note) + "</span>" : ""); }, "--nature");
     });
   }
   var poiSeen = {};
