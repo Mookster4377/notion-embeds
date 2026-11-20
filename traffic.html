@@ -12,20 +12,20 @@
 /* Layout: region chips → big live Waze map → road guide map (hotspots, lanes, merges) → lane table. */
 :root {
   --bg: #eef1f4; --card: #ffffff; --ink: #141a21; --muted: #5b6672; --line: #d8dee5; --chip: #e5eaef;
-  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057; --interstate: #364fc7; --ushwy: #c2255c; --staterd: #e0a800; --countyrd: #1098ad; --poi: #5f3dc4; --nature: #2f9e44; --bagel: #b8860b; --library: #1864ab; --transit: #0c8599; --vote: #7b5ea7; --night: #d6336c; --gym: #0b7285; --free: #2b8a3e; --paid: #c92a2a; --parkunk: #495057;
+  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057; --interstate: #364fc7; --ushwy: #c2255c; --staterd: #e0a800; --countyrd: #1098ad; --poi: #5f3dc4; --nature: #2f9e44; --bagel: #b8860b; --library: #1864ab; --transit: #0c8599; --trail: #087f5b; --bike: #12b886; --hike: #8c5a2b; --vote: #7b5ea7; --night: #d6336c; --gym: #0b7285; --free: #2b8a3e; --paid: #c92a2a; --parkunk: #495057;
   --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --nature: #51cf66; --bagel: #f0b429; --library: #74c0fc; --transit: #3bc9db; --transit: #3bc9db; --vote: #b197fc; --night: #f783ac; --gym: #3bc9db; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
+    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --nature: #51cf66; --bagel: #f0b429; --library: #74c0fc; --transit: #3bc9db; --trail: #38d9a9; --bike: #63e6be; --hike: #d9a066; --vote: #b197fc; --night: #f783ac; --gym: #3bc9db; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --bagel: #f0b429; --library: #74c0fc; --transit: #3bc9db; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
+  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --nature: #51cf66; --bagel: #f0b429; --library: #74c0fc; --transit: #3bc9db; --trail: #38d9a9; --bike: #63e6be; --hike: #d9a066; --vote: #b197fc; --night: #f783ac; --gym: #3bc9db; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -209,6 +209,17 @@ tr:last-child td { border-bottom: 0; }
       </table>
     </div>
     <p class="note" id="bagelNote">Every bagel shop OpenStreetMap lists across the map area, local spots first and chains marked. Tap a row to see it on the map with its typical crowd times. Brand-new places may be missing.</p>
+  </section>
+
+  <section>
+    <h2 id="trailHead">Trails</h2>
+    <div class="panel table-wrap">
+      <table>
+        <thead><tr><th>Trail</th><th>Length on map</th><th>Type</th><th></th></tr></thead>
+        <tbody id="trailRows"><tr><td colspan="4" class="note">Loading trails…</td></tr></tbody>
+      </table>
+    </div>
+    <p class="note">Named trails over half a mile, longest first. <b>Trails</b> on the map: paved multi-use trails (solid) and hiking trails (dashed). <b>Protected bike lanes</b>: bike paths separated from traffic and on-road lanes with a physical barrier (painted-only lanes left out); they show once you zoom in. From OpenStreetMap, so newer segments may be missing.</p>
   </section>
 
   <section>
@@ -484,6 +495,8 @@ tr:last-child td { border-bottom: 0; }
     libraries: { label: "Libraries",           letter: "📚", v: "--library" },
     transit: { label: "Bus & rail routes",     letter: "🚌", v: "--transit" },
     stations: { label: "Transit stations",     letter: "🚉", v: "--transit" },
+    trails:  { label: "Trails",                letter: "🚲", v: "--trail" },
+    bikelanes: { label: "Protected bike lanes", letter: "", v: "--bike" },
     school: { label: "School zones",           letter: "S", v: "--school" },
     lanechg: { label: "Lane drops & adds",     letter: "",  v: "--expand" },
     ramps:   { label: "Highway exits & entrances", letter: "", v: "--exit" },
@@ -2141,6 +2154,92 @@ tr:last-child td { border-bottom: 0; }
     label: function (it) { return " <span class='note'>(" + esc(stationKind(it.t).k.toLowerCase()) + ")</span>"; },
     cell: function (it) { return esc(it.t.network || it.t.operator || ""); },
     count: function (items) { return ", " + items.filter(function (i) { return stationKind(i.t).rank < 2; }).length + " train & bus stations"; } });
+
+  // --- Trails and protected bike lanes ---
+  var BIKE_KIND = { trail: "Multi-use trail", hike: "Hiking trail", path: "Separated bike path", lane: "Protected bike lane" };
+  var trailLines = L.layerGroup().addTo(layers.trails), bikeDetail = L.layerGroup(), bikesLoaded = false;
+  function syncBikeLanes() { if (map.getZoom() >= 13) bikeDetail.addTo(layers.bikelanes); else layers.bikelanes.removeLayer(bikeDetail); }
+  function lineMiles(g) { var m = 0; for (var i = 1; i < g.length; i++) m += L.latLng(g[i - 1]).distanceTo(g[i]); return m / 1609.34; }
+  // Live fallback: classify OpenStreetMap ways the same way the nightly build does.
+  function bikesFromOverpass(d) {
+    var trailOf = {}, trails = {}, ways = [];
+    (d.elements || []).forEach(function (e) {
+      if (e.type !== "relation" || !e.tags || !e.tags.name) return;
+      trails[e.tags.name] = { route: e.tags.route, network: e.tags.network, website: e.tags.website, distance: e.tags.distance };
+      (e.members || []).forEach(function (m) { if (m.type === "way") trailOf[m.ref] = trailOf[m.ref] || e.tags.name; });
+    });
+    (d.elements || []).forEach(function (e) {
+      if (e.type !== "way" || !e.geometry) return;
+      var t = e.tags || {}, hw = t.highway || "", tr = trailOf[e.id], k = null;
+      var named = /trail|greenway|trailway|riverwalk|bayway|bayshore|multi.?use|linear park/i.test(t.name || ""), bikeOk = /^(designated|yes|permissive)$/.test(t.bicycle || "");
+      if (/^(private|no)$/.test(t.access || "")) return;
+      if (/^(cycleway|path|footway|track|bridleway|pedestrian)$/.test(hw)) {
+        if (tr || (named && (hw === "cycleway" || hw === "path" || bikeOk))) k = hw === "cycleway" || bikeOk || /^(asphalt|concrete|paved)$/.test(t.surface || "") ? "trail" : "hike";
+        else if (named && /^(path|footway|track)$/.test(hw)) k = "hike";
+        else if (hw === "cycleway" || (/^(path|footway)$/.test(hw) && t.bicycle === "designated")) k = "path";
+      } else if (["cycleway", "cycleway:both", "cycleway:left", "cycleway:right"].some(function (x) { return t[x] === "track"; })) k = "lane";
+      if (!k) return;
+      ways.push({ k: k, n: (k === "trail" || k === "hike") && tr ? tr : t.name, s: t.surface, l: t.lit, g: e.geometry.map(function (p) { return [p.lat, p.lon]; }) });
+    });
+    return { ways: ways, trails: trails };
+  }
+  function loadBikes() {
+    if (bikesLoaded) return; bikesLoaded = true;
+    osmFile("bikes.json", '[out:json][timeout:120];(way["highway"="cycleway"](' + AREA_BOX + ');way["highway"~"^(path|footway|track)$"]["name"~"Trail|Greenway",i](' + AREA_BOX + ');way["cycleway"="track"](' + AREA_BOX + ');way["cycleway:right"="track"](' + AREA_BOX + ');way["cycleway:left"="track"](' + AREA_BOX + ');way["cycleway:both"="track"](' + AREA_BOX + ');relation["route"~"^(bicycle|hiking|foot)$"]["name"](' + AREA_BOX + '););out geom;', 8, 120000)
+      .then(function (d) {
+        if (!d.ways) d = bikesFromOverpass(d);
+        var byName = {};
+        d.ways.forEach(function (w) {
+          var trail = w.k === "trail" || w.k === "hike", col = color(w.k === "hike" ? "--hike" : trail ? "--trail" : "--bike");
+          var style = { color: col, weight: trail ? 4 : 3, opacity: 0.9, dashArray: w.k === "hike" ? "5 5" : null };
+          var line = L.polyline(w.g, style).addTo(trail ? trailLines : bikeDetail);
+          if (w.n) {
+            var g = byName[w.n] = byName[w.n] || { name: w.n, k: w.k, lines: [], miles: 0, bounds: L.latLngBounds([]) };
+            if (w.k === "trail") g.k = "trail";
+            g.lines.push(line); g.miles += lineMiles(w.g); g.bounds.extend(w.g);
+          }
+          line.bindTooltip(esc(w.n || BIKE_KIND[w.k]), { sticky: true });
+          line.bindPopup(function () {
+            var info = w.n && d.trails && d.trails[w.n], grp = w.n && byName[w.n];
+            return '<div class="tag" style="color:' + col + '">' + BIKE_KIND[w.k] + "</div><h3>" + esc(w.n || BIKE_KIND[w.k]) + "</h3>" +
+              (grp && trail ? "About " + grp.miles.toFixed(grp.miles < 10 ? 1 : 0) + " miles mapped in this area" + (info && parseFloat(info.distance) ? " (" + Math.round(parseFloat(info.distance) * 0.621) + " miles in total)" : "") + "<br>" : "") +
+              (w.s ? "Surface: " + esc(w.s) + "<br>" : "") + (w.l ? (w.l === "yes" ? "Lit at night" : "Not lit at night") + "<br>" : "") +
+              (w.k === "lane" ? "Bike lane with a physical barrier from traffic.<br>" : w.k === "path" ? "Bike path separated from the road.<br>" : "") +
+              (info && info.website ? '<a href="' + esc(info.website) + '" target="_blank" rel="noopener">Trail website ↗</a> · ' : "") +
+              '<a href="https://maps.apple.com/?daddr=' + w.g[0][0] + "," + w.g[0][1] + '" target="_blank" rel="noopener">Directions ↗</a>';
+          });
+          line.on("popupopen", function () { var grp = w.n && byName[w.n]; (grp ? grp.lines : [line]).forEach(function (l) { l.setStyle({ weight: style.weight + 3 }); l.bringToFront(); }); });
+          line.on("popupclose", function () { var grp = w.n && byName[w.n]; (grp ? grp.lines : [line]).forEach(function (l) { l.setStyle({ weight: style.weight }); }); });
+        });
+        syncBikeLanes();
+        var list = Object.keys(byName).map(function (n) { return byName[n]; })
+          .filter(function (g) { return (g.k === "trail" || g.k === "hike") && g.miles >= 0.5; })
+          .sort(function (a, b) { return b.miles - a.miles; });
+        var rows = document.getElementById("trailRows");
+        rows.innerHTML = list.length ? "" : '<tr><td colspan="4" class="note">No trails found.</td></tr>';
+        list.forEach(function (g) {
+          var tr = document.createElement("tr");
+          tr.innerHTML = '<td class="road">' + (g.k === "hike" ? "🥾 " : "🚲 ") + esc(g.name) + "</td><td>" + g.miles.toFixed(g.miles < 10 ? 1 : 0) + " mi</td><td class='note'>" +
+            BIKE_KIND[g.k] + '</td><td><button type="button" class="chip">Show on map</button></td>';
+          tr.querySelector("button").addEventListener("click", function () {
+            showTab(false);
+            if (!map.hasLayer(layers.trails)) map.addLayer(layers.trails);
+            var box = document.querySelector('#toggles input[data-k="trails"]'); if (box) box.checked = true;
+            document.getElementById("guide").scrollIntoView({ behavior: "smooth", block: "center" });
+            map.fitBounds(g.bounds, { padding: [30, 30], maxZoom: 16 });
+            setTimeout(function () { g.lines[Math.floor(g.lines.length / 2)].openPopup(); }, 400);
+          });
+          rows.appendChild(tr);
+        });
+        document.getElementById("trailHead").textContent = "Trails in " + AREA_NAME + " (" + list.length + ")";
+      })
+      .catch(function () {
+        bikesLoaded = false;
+        document.getElementById("trailRows").innerHTML = '<tr><td colspan="4" class="note">Couldn\'t load trails right now. Refresh to try again.</td></tr>';
+      });
+  }
+  map.on("zoomend", syncBikeLanes);
+  setTimeout(loadBikes, 2500);
 
   // --- Campuses and nightlife districts (used for bar and gym crowd estimates, and drawn on the map) ---
   var CAMPUSES = [
