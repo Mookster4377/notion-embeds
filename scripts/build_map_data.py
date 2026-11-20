@@ -14,6 +14,8 @@ Florida file with osmium-tool, keeps only the tags the map uses, and writes the 
   <out>/[orlando/]airports.json            public airports
   <out>/[orlando/]bagels.json              bagel shops (the bagel list)
   <out>/[orlando/]libraries.json           libraries (the library list)
+  <out>/[orlando/]transit.json             bus, streetcar and rail routes: {"routes": [{id, tags, ways}], "ways": {id: [[lat, lon], ...]}}
+  <out>/[orlando/]stations.json            bus stations, train stations and streetcar stops
   <out>/[orlando/]nature.json              preserves, state parks, wetlands, beaches, springs (zoomed-out views)
   <out>/[orlando/]counties.json            county boundaries
   <out>/[orlando/]meta.json                build time, tile grid, tiles with no data
@@ -43,7 +45,8 @@ FILTERS = [
     "nwr/tourism=museum", "nwr/leisure=stadium,sports_centre,fitness_centre", "nwr/building=stadium",
     "nwr/shop=mall", "nwr/landuse=retail,residential", "n/place=city,town,suburb,village,hamlet,neighbourhood,quarter",
     "n/barrier=gate,lift_gate,swing_gate", "nwr/gated=yes", "nwr/aeroway=aerodrome", "r/boundary=administrative",
-    "nwr/leisure=park,nature_reserve,garden", "nwr/amenity=fast_food,restaurant,library", "nwr/shop=bakery,deli", "nwr/cuisine", "nwr/boundary=protected_area,national_park", "nwr/natural=wetland,beach,spring",
+    "nwr/leisure=park,nature_reserve,garden", "nwr/amenity=fast_food,restaurant,library,bus_station",
+    "r/route=bus,trolleybus,tram,train,light_rail", "nwr/public_transport=station", "n/railway=station,halt,tram_stop", "nwr/shop=bakery,deli", "nwr/cuisine", "nwr/boundary=protected_area,national_park", "nwr/natural=wetland,beach,spring",
 ]
 DROP_PREFIXES = ("tiger:", "source", "gnis:", "NHD:", "note", "fixme", "FIXME", "created_by", "check_date", "survey", "attribution",
                  "import", "wikimedia", "name:", "old_name", "alt_name:", "is_in", "ref:", "nhd", "building:levels", "roof:",
@@ -118,6 +121,22 @@ def is_library(t):
     return t.get("amenity") == "library" and bool(t.get("name")) and t.get("access") not in ("private", "no")
 
 
+TRANSIT_ROUTES = ("bus", "trolleybus", "tram", "train", "light_rail")
+ROUTE_TAGS = ("ref", "name", "from", "to", "operator", "network", "colour", "route", "website", "interval", "opening_hours")
+
+
+def is_transit_route(t):
+    return t.get("type") == "route" and t.get("route") in TRANSIT_ROUTES and not t.get("disused")
+
+
+def is_station(t):
+    """stations.json: named bus stations, train stations and streetcar stops still in use."""
+    if not t.get("name") or t.get("disused") or t.get("abandoned") or t.get("historic") or "disused:railway" in t:
+        return False
+    return (t.get("amenity") == "bus_station" or t.get("public_transport") == "station" or
+            t.get("railway") in ("station", "halt", "tram_stop"))
+
+
 def is_airport(t):
     return t.get("aeroway") == "aerodrome" and t.get("name") and not re.search(r"private|military", t.get("aerodrome:type", ""))
 
@@ -139,7 +158,7 @@ class Pass1(osmium.SimpleHandler):
 
     def relation(self, r):
         t = tags_of(r)
-        if is_county(t) or is_poi(t, "r") or is_airport(t) or is_point_of_region(t, "r") or is_nature(t) or is_bagel(t) or is_library(t):
+        if is_county(t) or is_poi(t, "r") or is_airport(t) or is_point_of_region(t, "r") or is_nature(t) or is_bagel(t) or is_library(t) or is_transit_route(t):
             for m in r.members:
                 if m.type == "w":
                     self.member_ways.add(m.ref)
@@ -150,7 +169,7 @@ class Pass2(osmium.SimpleHandler):
         super().__init__()
         self.p1 = p1
         self.lines, self.pois, self.region_pts, self.airports, self.highways, self.counties = [], [], [], [], [], []
-        self.nature, self.bagels, self.libraries = [], [], []
+        self.nature, self.bagels, self.libraries, self.stations, self.routes = [], [], [], [], []
         self.way_geom = {}
 
     def node(self, n):
@@ -170,6 +189,8 @@ class Pass2(osmium.SimpleHandler):
             self.bagels.append(el)
         if is_library(t):
             self.libraries.append(el)
+        if is_station(t):
+            self.stations.append(el)
 
     def way(self, w):
         geom, ids = [], []
@@ -192,7 +213,7 @@ class Pass2(osmium.SimpleHandler):
         center = None
         for test, bucket in ((is_poi(t, "w"), self.pois), (is_point_of_region(t, "w"), self.region_pts), (is_airport(t), self.airports),
                              (is_big_nature(t), self.nature), (is_bagel(t), self.bagels),
-                             (is_library(t), self.libraries)):
+                             (is_library(t), self.libraries), (is_station(t), self.stations)):
             if test:
                 center = center or bbox_center(geom)
                 bucket.append({"type": "way", "id": w.id, "center": center, "tags": t})
@@ -205,11 +226,13 @@ class Pass2(osmium.SimpleHandler):
         if is_county(t):
             self.counties.append({"type": "relation", "id": r.id, "tags": t,
                                   "members": [{"type": "way", "role": role, "geometry": self.way_geom[ref]} for ref, role in members]})
+        if is_transit_route(t):
+            self.routes.append({"id": r.id, "tags": {k: t[k] for k in ROUTE_TAGS if k in t}, "ways": [ref for ref, _ in members]})
         pts = [g for ref, _ in members for g in self.way_geom[ref]]
         center = None
         for test, bucket in ((is_poi(t, "r"), self.pois), (is_point_of_region(t, "r"), self.region_pts), (is_airport(t), self.airports),
                              (is_big_nature(t), self.nature), (is_bagel(t), self.bagels),
-                             (is_library(t), self.libraries)):
+                             (is_library(t), self.libraries), (is_station(t), self.stations)):
             if test:
                 center = center or bbox_center(pts)
                 bucket.append({"type": "relation", "id": r.id, "center": center, "tags": t})
@@ -229,6 +252,27 @@ def write(path, elements):
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     with open(path, "w") as f:
         json.dump({"elements": elements}, f, separators=(",", ":"))
+
+
+def write_transit(path, p2, region):
+    """Routes that reach the map area, sharing each way's (lightly simplified) geometry between routes."""
+    routes, ways = [], {}
+    for rt in p2.routes:
+        if not any(in_box(g["lat"], g["lon"], region) for ref in rt["ways"] for g in p2.way_geom[ref][::5]):
+            continue
+        routes.append(rt)
+        for ref in rt["ways"]:
+            if ref in ways:
+                continue
+            pts = []
+            for g in p2.way_geom[ref]:
+                pt = [round(g["lat"], 4), round(g["lon"], 4)]
+                if not pts or pts[-1] != pt:
+                    pts.append(pt)
+            ways[ref] = pts
+    with open(path, "w") as f:
+        json.dump({"routes": routes, "ways": ways}, f, separators=(",", ":"))
+    print(f"  transit: {len(routes)} routes, {len(ways)} ways, {os.path.getsize(path) // 1024} KB", flush=True)
 
 
 def build_city(pbf, out, city, work):
@@ -251,6 +295,8 @@ def build_city(pbf, out, city, work):
     write(os.path.join(out_dir, "points.json"), [x for x in p2.region_pts if in_box(*point_of(x), region)])
     write(os.path.join(out_dir, "airports.json"), [x for x in p2.airports if in_box(*point_of(x), region)])
     write(os.path.join(out_dir, "bagels.json"), [x for x in p2.bagels if in_box(*point_of(x), region)])
+    write(os.path.join(out_dir, "stations.json"), [x for x in p2.stations if in_box(*point_of(x), region)])
+    write_transit(os.path.join(out_dir, "transit.json"), p2, region)
     write(os.path.join(out_dir, "libraries.json"), [x for x in p2.libraries if in_box(*point_of(x), region)])
     write(os.path.join(out_dir, "nature.json"), [x for x in p2.nature if in_box(*point_of(x), region)])
     write(os.path.join(out_dir, "counties.json"), p2.counties)

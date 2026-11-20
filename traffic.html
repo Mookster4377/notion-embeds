@@ -12,20 +12,20 @@
 /* Layout: region chips → big live Waze map → road guide map (hotspots, lanes, merges) → lane table. */
 :root {
   --bg: #eef1f4; --card: #ffffff; --ink: #141a21; --muted: #5b6672; --line: #d8dee5; --chip: #e5eaef;
-  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057; --interstate: #364fc7; --ushwy: #c2255c; --staterd: #e0a800; --countyrd: #1098ad; --poi: #5f3dc4; --nature: #2f9e44; --bagel: #b8860b; --library: #1864ab; --vote: #7b5ea7; --night: #d6336c; --gym: #0b7285; --free: #2b8a3e; --paid: #c92a2a; --parkunk: #495057;
+  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057; --interstate: #364fc7; --ushwy: #c2255c; --staterd: #e0a800; --countyrd: #1098ad; --poi: #5f3dc4; --nature: #2f9e44; --bagel: #b8860b; --library: #1864ab; --transit: #0c8599; --vote: #7b5ea7; --night: #d6336c; --gym: #0b7285; --free: #2b8a3e; --paid: #c92a2a; --parkunk: #495057;
   --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --nature: #51cf66; --bagel: #f0b429; --library: #74c0fc; --vote: #b197fc; --night: #f783ac; --gym: #3bc9db; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
+    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --nature: #51cf66; --bagel: #f0b429; --library: #74c0fc; --transit: #3bc9db; --transit: #3bc9db; --vote: #b197fc; --night: #f783ac; --gym: #3bc9db; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --bagel: #f0b429; --library: #74c0fc; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
+  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --bagel: #f0b429; --library: #74c0fc; --transit: #3bc9db; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -209,6 +209,17 @@ tr:last-child td { border-bottom: 0; }
       </table>
     </div>
     <p class="note" id="bagelNote">Every bagel shop OpenStreetMap lists across the map area, local spots first and chains marked. Tap a row to see it on the map with its typical crowd times. Brand-new places may be missing.</p>
+  </section>
+
+  <section>
+    <h2 id="stationHead">Transit stations</h2>
+    <div class="panel table-wrap">
+      <table>
+        <thead><tr><th>Station</th><th>Address</th><th>Serves</th><th></th></tr></thead>
+        <tbody id="stationRows"><tr><td colspan="4" class="note">Loading transit stations…</td></tr></tbody>
+      </table>
+    </div>
+    <p class="note">Train stations and main bus transfer centers first, then streetcar stops. Turn on <b>Bus &amp; rail routes</b> to see every line; tap a line for its name, ends and operator. <span id="transitLinks"></span></p>
   </section>
 
   <section>
@@ -471,6 +482,8 @@ tr:last-child td { border-bottom: 0; }
     places: { label: "My places (Orlando list)", letter: "📍", v: "--coffee" },
     bagels: { label: "Bagels",                 letter: "🥯", v: "--bagel" },
     libraries: { label: "Libraries",           letter: "📚", v: "--library" },
+    transit: { label: "Bus & rail routes",     letter: "🚌", v: "--transit" },
+    stations: { label: "Transit stations",     letter: "🚉", v: "--transit" },
     school: { label: "School zones",           letter: "S", v: "--school" },
     lanechg: { label: "Lane drops & adds",     letter: "",  v: "--expand" },
     ramps:   { label: "Highway exits & entrances", letter: "", v: "--exit" },
@@ -1969,10 +1982,10 @@ tr:last-child td { border-bottom: 0; }
           if (!t.name || !lat || t.disused || t["disused:shop"] || (o.skip && o.skip(t))) return;
           var k = t.name.toLowerCase() + Math.round(lat * 200) + Math.round(lon * 200);
           if (seen[k]) return; seen[k] = 1;
-          var it = { t: t, name: t.name, lat: lat, lon: lon, addr: addrOf(t), site: siteOfTags(t), tag: o.tag(t) };
+          var it = { t: t, name: t.name, lat: lat, lon: lon, addr: addrOf(t), site: siteOfTags(t), tag: o.tag(t), em: typeof o.emoji === "function" ? o.emoji(t) : o.emoji };
           var title = it.site ? '<a href="' + esc(it.site) + '" target="_blank" rel="noopener">' + esc(t.name) + "</a>" : esc(t.name);
           var icon = L.divIcon({ className: "", iconSize: [22, 22], iconAnchor: [11, 11],
-            html: '<div class="pin poi" style="background:' + color(o.colorVar) + '"><span>' + o.emoji + "</span></div>" });
+            html: '<div class="pin poi" style="background:' + color(o.colorVar) + '"><span>' + it.em + "</span></div>" });
           it.m = L.marker([lat, lon], { icon: icon, title: t.name, keyboard: true })
             .bindPopup(function () { return '<div class="tag" style="color:' + color(o.colorVar) + '">' + esc(it.tag) + "</div><h3>" + title + "</h3>" +
               esc(it.addr || "") + o.popup(it) +
@@ -1985,7 +1998,7 @@ tr:last-child td { border-bottom: 0; }
         rows.innerHTML = items.length ? "" : '<tr><td colspan="4" class="note">None found.</td></tr>';
         items.forEach(function (it) {
           var tr = document.createElement("tr");
-          tr.innerHTML = '<td class="road">' + o.emoji + " " + (it.site ? '<a href="' + esc(it.site) + '" target="_blank" rel="noopener">' + esc(it.name) + "</a>" : esc(it.name)) +
+          tr.innerHTML = '<td class="road">' + it.em + " " + (it.site ? '<a href="' + esc(it.site) + '" target="_blank" rel="noopener">' + esc(it.name) + "</a>" : esc(it.name)) +
             (o.label ? o.label(it) : "") + "</td><td>" + esc(it.addr || "—") + "</td><td class='note'>" + (o.cell(it) || "—") +
             '</td><td><button type="button" class="chip">Show on map</button></td>';
           tr.querySelector("button").addEventListener("click", function () {
@@ -2043,6 +2056,91 @@ tr:last-child td { border-bottom: 0; }
     count: function (items) { return ", " + items.filter(function (i) { return listHours(i.t).cell; }).length + " with hours listed"; } });
   document.getElementById("librarySystems").innerHTML = "Library systems (holiday hours and closures): " +
     LIB_SYSTEMS.map(function (x) { return '<a href="' + x[1] + '" target="_blank" rel="noopener">' + esc(x[0]) + " ↗</a>"; }).join(" · ");
+
+  // --- Public transportation: bus, streetcar and rail routes plus stations ---
+  var TRANSIT_SITES = [[/HART|Hillsborough Area Regional/i, "HART", "https://www.gohart.org/"], [/PSTA|Pinellas Suncoast/i, "PSTA", "https://www.psta.net/"],
+    [/LYNX|Central Florida Regional Transportation/i, "LYNX", "https://www.golynx.com/"], [/SunRail/i, "SunRail", "https://sunrail.com/"],
+    [/Brightline/i, "Brightline", "https://www.gobrightline.com/"], [/Amtrak/i, "Amtrak", "https://www.amtrak.com/"],
+    [/TECO|Streetcar/i, "TECO Line Streetcar", "https://www.tecolinestreetcar.org/"],
+    [/SCAT|Sarasota County Area Transit|Breeze/i, "SCAT", "https://www.scgov.net/"], [/MCAT|Manatee County Area Transit/i, "MCAT", "https://www.mymanatee.org/"]];
+  function transitSite(t) {
+    if (siteOfTags(t)) return siteOfTags(t);
+    var who = [t.network, t.operator, t.name].filter(Boolean).join(" ");
+    var hit = TRANSIT_SITES.filter(function (x) { return x[0].test(who); })[0];
+    return hit ? hit[2] : "";
+  }
+  document.getElementById("transitLinks").innerHTML = "Schedules: " + TRANSIT_SITES.filter(function (x) {
+    return ORL ? /LYNX|SunRail|Brightline|Amtrak/.test(x[1]) : /HART|PSTA|TECO|SCAT|MCAT|Amtrak/.test(x[1]);
+  }).map(function (x) { return '<a href="' + x[2] + '" target="_blank" rel="noopener">' + x[1] + " ↗</a>"; }).join(" · ");
+  var RAIL = { train: 1, tram: 1, light_rail: 1 };
+  var busLines = L.layerGroup(), railLines = L.layerGroup().addTo(layers.transit), transitLoaded = false;
+  function routeColor(t) {
+    if (/^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(t.colour || "")) return t.colour;
+    return RAIL[t.route] ? (t.route === "tram" ? "#c92a2a" : "#5f3dc4") : color("--transit");
+  }
+  function drawRoutes(routes) {
+    routes.forEach(function (r) {
+      var t = r.tags || {}, rail = !!RAIL[t.route];
+      if (!r.lines.length) return;
+      var kind = { bus: "Bus", trolleybus: "Trolley", tram: "Streetcar", train: "Train", light_rail: "Light rail" }[t.route] || "Transit";
+      var name = (t.ref ? kind + " " + t.ref : "") + (t.name && t.name !== t.ref ? (t.ref ? " · " : "") + t.name : "") || kind + " route";
+      var site = transitSite(t), base = { color: routeColor(t), weight: rail ? 4 : 2.5, opacity: rail ? 0.9 : 0.75, dashArray: rail ? null : "6 4" };
+      var line = L.polyline(r.lines, base)
+        .bindTooltip(esc(name), { sticky: true })
+        .bindPopup('<div class="tag" style="color:' + base.color + '">' + esc(kind + (t.network || t.operator ? " · " + (t.network || t.operator) : "")) + "</div><h3>" + esc(name) + "</h3>" +
+          (t.from && t.to ? esc(t.from) + " → " + esc(t.to) + "<br>" : "") + (t.interval ? "Every " + esc(t.interval) + (/^\d+$/.test(t.interval) ? " min" : "") + "<br>" : "") +
+          (t.opening_hours ? "Runs: " + esc(t.opening_hours) + "<br>" : "") +
+          (site ? '<a href="' + esc(site) + '" target="_blank" rel="noopener">Schedule &amp; fares ↗</a>' : "<span class='note'>Check the operator for schedules.</span>"));
+      line.on("popupopen", function () { line.setStyle({ weight: base.weight + 3, opacity: 1 }); line.bringToFront(); });
+      line.on("popupclose", function () { line.setStyle(base); });
+      line.addTo(rail ? railLines : busLines);
+    });
+  }
+  function syncBusLines() {
+    if (map.getZoom() >= 11) busLines.addTo(layers.transit); else layers.transit.removeLayer(busLines);
+  }
+  function loadTransit() {
+    if (transitLoaded || !map.hasLayer(layers.transit) || map.getZoom() < 9) return;
+    transitLoaded = true;
+    osmFile("transit.json", '[out:json][timeout:120];relation["type"="route"]["route"~"^(bus|trolleybus|tram|train|light_rail)$"](' + AREA_BOX + ');out geom;', 7, 120000)
+      .then(function (d) {
+        var routes = d.routes ? d.routes.map(function (r) {
+          return { tags: r.tags, lines: r.ways.map(function (id) { return d.ways[id]; }).filter(function (g) { return g && g.length > 1; }) };
+        }) : (d.elements || []).map(function (rel) {
+          return { tags: rel.tags || {}, lines: (rel.members || []).filter(function (m) { return m.type === "way" && m.geometry; })
+            .map(function (m) { return m.geometry.filter(Boolean).map(function (p) { return [p.lat, p.lon]; }); }) };
+        });
+        // Rail on top of buses; shorter (local) bus routes on top of long ones.
+        routes.sort(function (a, b) { return (!!RAIL[a.tags.route] - !!RAIL[b.tags.route]) || b.lines.length - a.lines.length; });
+        drawRoutes(routes);
+        syncBusLines();
+      })
+      .catch(function () { transitLoaded = false; });
+  }
+  map.on("zoomend", syncBusLines);
+  map.on("moveend", loadTransit);
+  map.on("layeradd", function (e) { if (e.layer === layers.transit) setTimeout(loadTransit, 0); });
+  setTimeout(loadTransit, 1500);
+
+  function stationKind(t) {
+    if (t.railway === "tram_stop") return { e: "🚋", k: "Streetcar stop", rank: 2 };
+    if (t.railway === "station" || t.railway === "halt" || t.train === "yes" || /SunRail|Brightline|Amtrak|Union Station/i.test(t.name + " " + (t.network || "") + " " + (t.operator || "")))
+      return { e: "🚆", k: "Train station", rank: 0 };
+    return { e: "🚌", k: "Bus station", rank: 1 };
+  }
+  areaList({ file: "stations.json", layer: "stations", emoji: function (t) { return stationKind(t).e; }, colorVar: "--transit", rows: "stationRows", head: "stationHead", title: "Transit stations",
+    query: function (bb) { return 'nwr["amenity"="bus_station"]["name"](' + bb + ');nwr["public_transport"="station"]["name"](' + bb + ');node["railway"~"^(station|halt|tram_stop)$"]["name"](' + bb + ');'; },
+    tag: function (t) { return stationKind(t).k; },
+    popup: function (it) {
+      var t = it.t, site = transitSite(t), who = t.network || t.operator;
+      return (who ? "<br>" + esc(who) : "") + (t.opening_hours ? "<br><b>Hours:</b> " + esc(t.opening_hours) : "") +
+        '<br><a href="https://maps.apple.com/?daddr=' + it.lat + "," + it.lon + '&dirflg=r" target="_blank" rel="noopener">Transit directions ↗</a>' +
+        (site ? ' · <a href="' + esc(site) + '" target="_blank" rel="noopener">Schedules ↗</a>' : "");
+    },
+    sort: function (a, b) { return (stationKind(a.t).rank - stationKind(b.t).rank) || a.name.localeCompare(b.name); },
+    label: function (it) { return " <span class='note'>(" + esc(stationKind(it.t).k.toLowerCase()) + ")</span>"; },
+    cell: function (it) { return esc(it.t.network || it.t.operator || ""); },
+    count: function (items) { return ", " + items.filter(function (i) { return stationKind(i.t).rank < 2; }).length + " train & bus stations"; } });
 
   // --- Campuses and nightlife districts (used for bar and gym crowd estimates, and drawn on the map) ---
   var CAMPUSES = [
