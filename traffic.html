@@ -491,7 +491,11 @@ tr:last-child td { border-bottom: 0; }
 
   // --- Road guide (Leaflet) ---
   var dark = matchMedia("(prefers-color-scheme: dark)").matches && document.documentElement.dataset.theme !== "light";
-  var map = L.map("guide", { scrollWheelZoom: false, zoomControl: true, preferCanvas: true /* thousands of road lines draw much faster on canvas */ }).setView([REGIONS[current].lat, REGIONS[current].lon], REGIONS[current].z);
+  var map = L.map("guide", {
+    zoomControl: true, preferCanvas: true, // thousands of road lines draw much faster on canvas
+    // Mouse-wheel / trackpad zoom, always on, in smooth small steps.
+    scrollWheelZoom: true, wheelPxPerZoomLevel: 90, wheelDebounceTime: 20, zoomSnap: 0.25, zoomDelta: 0.5
+  }).setView([REGIONS[current].lat, REGIONS[current].lon], REGIONS[current].z);
   // Base maps (no API key needed): Esri satellite imagery with road/place labels, or OpenStreetMap streets.
   var ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/";
   var esriAttr = 'Imagery &copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics';
@@ -511,8 +515,6 @@ tr:last-child td { border-bottom: 0; }
   BASES[baseName].addTo(map);
   L.control.layers(BASES, null, { position: "topright", collapsed: false }).addTo(map);
   map.on("baselayerchange", function (e) { try { localStorage.setItem("tbt-base", e.name); } catch (err) {} });
-  map.on("focus", function () { map.scrollWheelZoom.enable(); });
-  map.on("blur", function () { map.scrollWheelZoom.disable(); });
 
   var layers = {};
   Object.keys(TYPES).forEach(function (k) { layers[k] = L.layerGroup().addTo(map); });
