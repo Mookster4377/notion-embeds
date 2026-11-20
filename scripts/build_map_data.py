@@ -13,6 +13,7 @@ Florida file with osmium-tool, keeps only the tags the map uses, and writes the 
   <out>/[orlando/]points.json              place names, museums, colleges, venues, malls (zoomed-out views)
   <out>/[orlando/]airports.json            public airports
   <out>/[orlando/]bagels.json              bagel shops (the bagel list)
+  <out>/[orlando/]libraries.json           libraries (the library list)
   <out>/[orlando/]nature.json              preserves, state parks, wetlands, beaches, springs (zoomed-out views)
   <out>/[orlando/]counties.json            county boundaries
   <out>/[orlando/]meta.json                build time, tile grid, tiles with no data
@@ -42,7 +43,7 @@ FILTERS = [
     "nwr/tourism=museum", "nwr/leisure=stadium,sports_centre,fitness_centre", "nwr/building=stadium",
     "nwr/shop=mall", "nwr/landuse=retail,residential", "n/place=city,town,suburb,village,hamlet,neighbourhood,quarter",
     "n/barrier=gate,lift_gate,swing_gate", "nwr/gated=yes", "nwr/aeroway=aerodrome", "r/boundary=administrative",
-    "nwr/leisure=park,nature_reserve,garden", "nwr/amenity=fast_food,restaurant", "nwr/shop=bakery,deli", "nwr/cuisine", "nwr/boundary=protected_area,national_park", "nwr/natural=wetland,beach,spring",
+    "nwr/leisure=park,nature_reserve,garden", "nwr/amenity=fast_food,restaurant,library", "nwr/shop=bakery,deli", "nwr/cuisine", "nwr/boundary=protected_area,national_park", "nwr/natural=wetland,beach,spring",
 ]
 DROP_PREFIXES = ("tiger:", "source", "gnis:", "NHD:", "note", "fixme", "FIXME", "created_by", "check_date", "survey", "attribution",
                  "import", "wikimedia", "name:", "old_name", "alt_name:", "is_in", "ref:", "nhd", "building:levels", "roof:",
@@ -112,6 +113,11 @@ def is_bagel(t):
     return bool(name) and (re.search(r"bagel", name, re.I) is not None or "bagel" in t.get("cuisine", "").lower())
 
 
+def is_library(t):
+    """libraries.json: named libraries that aren't private."""
+    return t.get("amenity") == "library" and bool(t.get("name")) and t.get("access") not in ("private", "no")
+
+
 def is_airport(t):
     return t.get("aeroway") == "aerodrome" and t.get("name") and not re.search(r"private|military", t.get("aerodrome:type", ""))
 
@@ -133,7 +139,7 @@ class Pass1(osmium.SimpleHandler):
 
     def relation(self, r):
         t = tags_of(r)
-        if is_county(t) or is_poi(t, "r") or is_airport(t) or is_point_of_region(t, "r") or is_nature(t) or is_bagel(t):
+        if is_county(t) or is_poi(t, "r") or is_airport(t) or is_point_of_region(t, "r") or is_nature(t) or is_bagel(t) or is_library(t):
             for m in r.members:
                 if m.type == "w":
                     self.member_ways.add(m.ref)
@@ -144,7 +150,7 @@ class Pass2(osmium.SimpleHandler):
         super().__init__()
         self.p1 = p1
         self.lines, self.pois, self.region_pts, self.airports, self.highways, self.counties = [], [], [], [], [], []
-        self.nature, self.bagels = [], []
+        self.nature, self.bagels, self.libraries = [], [], []
         self.way_geom = {}
 
     def node(self, n):
@@ -162,6 +168,8 @@ class Pass2(osmium.SimpleHandler):
             self.nature.append(el)
         if is_bagel(t):
             self.bagels.append(el)
+        if is_library(t):
+            self.libraries.append(el)
 
     def way(self, w):
         geom, ids = [], []
@@ -183,7 +191,8 @@ class Pass2(osmium.SimpleHandler):
             self.highways.append({"type": "way", "id": w.id, "geometry": geom, "tags": t})
         center = None
         for test, bucket in ((is_poi(t, "w"), self.pois), (is_point_of_region(t, "w"), self.region_pts), (is_airport(t), self.airports),
-                             (is_big_nature(t), self.nature), (is_bagel(t), self.bagels)):
+                             (is_big_nature(t), self.nature), (is_bagel(t), self.bagels),
+                             (is_library(t), self.libraries)):
             if test:
                 center = center or bbox_center(geom)
                 bucket.append({"type": "way", "id": w.id, "center": center, "tags": t})
@@ -199,7 +208,8 @@ class Pass2(osmium.SimpleHandler):
         pts = [g for ref, _ in members for g in self.way_geom[ref]]
         center = None
         for test, bucket in ((is_poi(t, "r"), self.pois), (is_point_of_region(t, "r"), self.region_pts), (is_airport(t), self.airports),
-                             (is_big_nature(t), self.nature), (is_bagel(t), self.bagels)):
+                             (is_big_nature(t), self.nature), (is_bagel(t), self.bagels),
+                             (is_library(t), self.libraries)):
             if test:
                 center = center or bbox_center(pts)
                 bucket.append({"type": "relation", "id": r.id, "center": center, "tags": t})
@@ -241,6 +251,7 @@ def build_city(pbf, out, city, work):
     write(os.path.join(out_dir, "points.json"), [x for x in p2.region_pts if in_box(*point_of(x), region)])
     write(os.path.join(out_dir, "airports.json"), [x for x in p2.airports if in_box(*point_of(x), region)])
     write(os.path.join(out_dir, "bagels.json"), [x for x in p2.bagels if in_box(*point_of(x), region)])
+    write(os.path.join(out_dir, "libraries.json"), [x for x in p2.libraries if in_box(*point_of(x), region)])
     write(os.path.join(out_dir, "nature.json"), [x for x in p2.nature if in_box(*point_of(x), region)])
     write(os.path.join(out_dir, "counties.json"), p2.counties)
 
