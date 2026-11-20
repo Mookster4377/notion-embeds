@@ -542,7 +542,7 @@ tr:last-child td { border-bottom: 0; }
     reps: { label: "Congressional districts", letter: "🏛️", v: "--L-reps", group: "roads" },
     districts: { label: "Neighborhoods & districts", letter: "", v: "--L-districts", group: "areas" },
     gates: { label: "Gated communities", letter: "🔒", v: "--L-gates", group: "areas" },
-    vote: { label: "2024 vote by precinct (D / R)", letter: "", v: "--L-vote", group: "areas" },
+    vote: { label: "2024 vote by precinct (D / R)", letter: "", v: "--L-vote", group: "areas", off: true },
     transit: { label: "Bus & rail routes", letter: "🚌", v: "--L-transit", group: "move" },
     stations: { label: "Transit stations", letter: "🚉", v: "--L-stations", group: "move" },
     shuttles: { label: "Campus buses & shuttles", letter: "🎓", v: "--L-shuttles", group: "move" },
@@ -1740,7 +1740,7 @@ tr:last-child td { border-bottom: 0; }
 
 
   // --- 2024 presidential vote by precinct (New York Times precinct data), shaded blue/red by margin ---
-  var VOTE_MIN_ZOOM = 10, voteOn = true, voteLoaded = false, voteLayerGeo = null;
+  var VOTE_MIN_ZOOM = 10, voteOn = false, voteLoaded = false, voteLayerGeo = null;
   function voteStyle(f) {
     var p = f.properties, t = p.t || ((p.d || 0) + (p.r || 0)) || 1, m = ((p.d || 0) - (p.r || 0)) / t;
     return { stroke: true, weight: 0.6, color: "#ffffff", opacity: 0.5, fillColor: m >= 0 ? "#2166ac" : "#b2182b",
@@ -1806,7 +1806,7 @@ tr:last-child td { border-bottom: 0; }
     var items = box.querySelector(".group-items");
     keys.forEach(function (k) {
       var T = TYPES[k], lab = document.createElement("label");
-      lab.innerHTML = '<input type="checkbox" data-k="' + k + '" checked> <span class="sw' + (k === "lanes" ? " lane" : "") + '" style="background:' + color(T.v) + '"></span>' + esc(T.label);
+      lab.innerHTML = '<input type="checkbox" data-k="' + k + '"' + (T.off ? "" : " checked") + '> <span class="sw' + (k === "lanes" ? " lane" : "") + '" style="background:' + color(T.v) + '"></span>' + esc(T.label);
       lab.querySelector("input").addEventListener("change", function (e) { setLayer(k, e.target.checked); updateLayerCounts(); });
       items.appendChild(lab);
     });
