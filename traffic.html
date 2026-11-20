@@ -476,7 +476,7 @@ tr:last-child td { border-bottom: 0; }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
 
   var params = new URLSearchParams(location.search);
-  var current = REGIONS[params.get("region")] ? params.get("region") : ORL ? "all" : "sarasota"; // Always opens on Sarasota unless ?region= says otherwise.
+  var current = REGIONS[params.get("region")] ? params.get("region") : ORL ? "ucf" : "sarasota"; // Orlando opens on UCF, Tampa Bay on Sarasota, unless ?region= says otherwise.
 
   // --- Live map (Waze embed) ---
   var liveFrame = document.getElementById("live");
@@ -1894,7 +1894,8 @@ tr:last-child td { border-bottom: 0; }
   }
   select(current);
   // Tampa Bay map opens zoomed in on Fruitville Rd in Sarasota (unless a link asks for a region or a spot).
-  if (!ORL && !params.get("region") && !params.get("at") && !params.get("coffee")) map.setView([27.3375, -82.497], 14);
+  // Orlando map opens zoomed in on the UCF campus.
+  if (!params.get("region") && !params.get("at") && !params.get("coffee")) map.setView(ORL ? [28.6015, -81.2005] : [27.3375, -82.497], ORL ? 15 : 14);
 
   // Deep link from a police-report alert: ?at=lat,lon
   var at = (params.get("at") || "").split(",").map(parseFloat);
