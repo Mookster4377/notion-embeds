@@ -35,8 +35,20 @@ jobs:
           sudo apt-get install -y -q osmium-tool
           pip install -q osmium
 
-      - name: Download the Florida map (Geofabrik)
-        run: curl -fsSL --retry 5 --retry-delay 20 -o florida.osm.pbf https://download.geofabrik.de/north-america/us/florida-latest.osm.pbf
+      - name: Download the Florida map (Geofabrik, with a mirror as backup)
+        run: |
+          # Geofabrik briefly 404s while it swaps in a new file, so retry for a while, then try the openstreetmap.fr mirror.
+          for attempt in 1 2 3 4 5 6; do
+            for url in https://download.geofabrik.de/north-america/us/florida-latest.osm.pbf \
+                       https://download.openstreetmap.fr/extracts/north-america/us/florida-latest.osm.pbf; do
+              if curl -fsSL --retry 3 --retry-delay 15 -o florida.osm.pbf "$url" && [ "$(stat -c %s florida.osm.pbf)" -gt 100000000 ]; then
+                echo "Downloaded $url ($(du -h florida.osm.pbf | cut -f1))"; exit 0
+              fi
+              echo "::warning::Download failed from $url (attempt $attempt)"
+            done
+            sleep 300
+          done
+          echo "::error::Couldn't download the Florida map; keeping yesterday's data."; exit 1
 
       - name: Build Tampa Bay and Orlando tiles
         run: python scripts/build_map_data.py florida.osm.pbf out
