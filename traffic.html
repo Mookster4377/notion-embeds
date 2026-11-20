@@ -12,20 +12,20 @@
 /* Layout: region chips → big live Waze map → road guide map (hotspots, lanes, merges) → lane table. */
 :root {
   --bg: #eef1f4; --card: #ffffff; --ink: #141a21; --muted: #5b6672; --line: #d8dee5; --chip: #e5eaef;
-  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057; --interstate: #364fc7; --ushwy: #c2255c; --staterd: #e0a800; --countyrd: #1098ad; --poi: #5f3dc4; --nature: #2f9e44; --bagel: #b8860b; --library: #1864ab; --transit: #0c8599; --trail: #087f5b; --bike: #12b886; --hike: #8c5a2b; --vote: #7b5ea7; --night: #d6336c; --gym: #0b7285; --free: #2b8a3e; --paid: #c92a2a; --parkunk: #495057;
+  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057; --interstate: #364fc7; --ushwy: #c2255c; --staterd: #e0a800; --countyrd: #1098ad; --poi: #5f3dc4; --nature: #2f9e44; --bagel: #b8860b; --library: #1864ab; --transit: #0c8599; --trail: #087f5b; --bike: #12b886; --hike: #8c5a2b; --rep: #5c3d99; --dem: #1c64c8; --gop: #c92a2a; --vote: #7b5ea7; --night: #d6336c; --gym: #0b7285; --free: #2b8a3e; --paid: #c92a2a; --parkunk: #495057;
   --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --nature: #51cf66; --bagel: #f0b429; --library: #74c0fc; --transit: #3bc9db; --trail: #38d9a9; --bike: #63e6be; --hike: #d9a066; --vote: #b197fc; --night: #f783ac; --gym: #3bc9db; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
+    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --nature: #51cf66; --bagel: #f0b429; --library: #74c0fc; --transit: #3bc9db; --trail: #38d9a9; --bike: #63e6be; --hike: #d9a066; --rep: #b197fc; --dem: #5c9dff; --gop: #ff6b6b; --vote: #b197fc; --night: #f783ac; --gym: #3bc9db; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --nature: #51cf66; --bagel: #f0b429; --library: #74c0fc; --transit: #3bc9db; --trail: #38d9a9; --bike: #63e6be; --hike: #d9a066; --vote: #b197fc; --night: #f783ac; --gym: #3bc9db; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
+  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --nature: #51cf66; --bagel: #f0b429; --library: #74c0fc; --transit: #3bc9db; --trail: #38d9a9; --bike: #63e6be; --hike: #d9a066; --rep: #b197fc; --dem: #5c9dff; --gop: #ff6b6b; --vote: #b197fc; --night: #f783ac; --gym: #3bc9db; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -45,6 +45,9 @@ h1 { font: 700 30px/1 var(--display); letter-spacing: .02em; text-transform: upp
   font: 600 12px var(--body); letter-spacing: .04em; background: var(--chip); color: var(--ink);
   border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; cursor: pointer;
 }
+.reps-pop h4 { margin: 8px 0 2px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted, #666); }
+.reps-pop .who { line-height: 1.35; }
+.party { font-weight: 700; }
 .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
 .district-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; flex: 1 1 100%; }
 .district-row-label { font: 600 11px var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
@@ -209,6 +212,12 @@ tr:last-child td { border-bottom: 0; }
       </table>
     </div>
     <p class="note" id="bagelNote">Every bagel shop OpenStreetMap lists across the map area, local spots first and chains marked. Tap a row to see it on the map with its typical crowd times. Brand-new places may be missing.</p>
+  </section>
+
+  <section>
+    <h2 id="repsHead">Who represents this area</h2>
+    <p class="note">Tap <b>🏛️ Who represents here?</b> above the map, then tap any spot to see its U.S. senators, U.S. House member, Florida senator and Florida House member, plus its county and city. <span id="repsUpdated"></span></p>
+    <div class="panel" id="repsTables"><p class="note" style="padding:10px 14px">Loading districts…</p></div>
   </section>
 
   <section>
@@ -496,6 +505,7 @@ tr:last-child td { border-bottom: 0; }
     transit: { label: "Bus & rail routes",     letter: "🚌", v: "--transit" },
     stations: { label: "Transit stations",     letter: "🚉", v: "--transit" },
     trails:  { label: "Trails",                letter: "🚲", v: "--trail" },
+    reps:    { label: "Congressional districts", letter: "🏛️", v: "--rep" },
     bikelanes: { label: "Protected bike lanes", letter: "", v: "--bike" },
     school: { label: "School zones",           letter: "S", v: "--school" },
     lanechg: { label: "Lane drops & adds",     letter: "",  v: "--expand" },
@@ -1722,6 +1732,108 @@ tr:last-child td { border-bottom: 0; }
   zoneStatus.className = "zone-status"; zoneStatus.setAttribute("aria-live", "polite");
   toggles.appendChild(zoneStatus);
   toggles.appendChild(reportBtn);
+  // --- Who represents here: district shapes + current members (nightly from Census TIGER, congress-legislators, Open States) ---
+  var CHAMBERS = { us: "U.S. House", fls: "Florida Senate", flh: "Florida House" };
+  var COUNTY_SITES = { Hillsborough: "https://www.hillsboroughcounty.org/", Pinellas: "https://pinellas.gov/", Pasco: "https://www.pascocountyfl.net/",
+    Manatee: "https://www.mymanatee.org/", Sarasota: "https://www.scgov.net/", Charlotte: "https://www.charlottecountyfl.gov/", Hernando: "https://www.hernandocounty.us/",
+    Polk: "https://www.polk-county.net/", Orange: "https://www.ocfl.net/", Seminole: "https://www.seminolecountyfl.gov/", Osceola: "https://www.osceola.org/",
+    Lake: "https://www.lakecountyfl.gov/" };
+  var repsData = null, repsLines = L.layerGroup().addTo(layers.reps);
+  function inPolys(lat, lon, polys) {
+    return (polys || []).some(function (rings) {
+      var inside = false;
+      rings.forEach(function (r) {
+        for (var i = 0, j = r.length - 1; i < r.length; j = i++) {
+          if ((r[i][0] > lat) !== (r[j][0] > lat) && lon < (r[j][1] - r[i][1]) * (lat - r[i][0]) / (r[j][0] - r[i][0]) + r[i][1]) inside = !inside;
+        }
+      });
+      return inside;
+    });
+  }
+  function partyHtml(p) {
+    var k = /^dem/i.test(p || "") ? "D" : /^rep/i.test(p || "") ? "R" : (p || "").charAt(0) || "?";
+    return '<span class="party" style="color:' + color(k === "D" ? "--dem" : k === "R" ? "--gop" : "--muted") + '">(' + k + ")</span>";
+  }
+  function memberHtml(m) {
+    if (!m) return "<i>Vacant or not yet listed</i>";
+    return (m.url ? '<a href="' + esc(m.url) + '" target="_blank" rel="noopener">' + esc(m.n) + "</a>" : esc(m.n)) + " " + partyHtml(m.party) +
+      (m.phone ? ' · <a href="tel:' + esc(m.phone.replace(/[^0-9+]/g, "")) + '">' + esc(m.phone) + "</a>" : "");
+  }
+  function repsAt(lat, lon) {
+    var d = repsData, out = '<div class="reps-pop"><div class="tag" style="color:' + color("--rep") + '">Who represents here</div>';
+    var county = d.counties.filter(function (c) { return inPolys(lat, lon, c.p); })[0], city = d.places.filter(function (c) { return inPolys(lat, lon, c.p); })[0];
+    out += "<h3>" + (city ? esc(city.n) : county ? "Unincorporated " + esc(county.n) + " County" : "This spot") + "</h3>";
+    out += "<h4>U.S. Senate</h4><div class='who'>" + d.senators.map(memberHtml).join("<br>") + "</div>";
+    ["us", "fls", "flh"].forEach(function (c) {
+      var dist = d.districts.filter(function (x) { return x.c === c && inPolys(lat, lon, x.p); })[0];
+      out += "<h4>" + CHAMBERS[c] + (dist ? " · District " + esc(dist.d) : "") + "</h4><div class='who'>" + (dist ? memberHtml(dist.m) : "<i>Outside the mapped districts</i>") + "</div>";
+    });
+    if (county) out += "<h4>County</h4><div class='who'>" + esc(county.n) + " County Commission" +
+      (COUNTY_SITES[county.n] ? ' · <a href="' + COUNTY_SITES[county.n] + '" target="_blank" rel="noopener">County site ↗</a>' : "") + "</div>";
+    out += "<h4>City</h4><div class='who'>" + (city ? esc(city.n) + " city council and mayor" : "Not in a city; the county commission handles local issues") + "</div>";
+    return out + "<p class='note' style='margin-top:8px'>Data as of " + esc(d.updated) + ". After an election, new members can take a few weeks to show up.</p></div>";
+  }
+  function drawRepsTables() {
+    var d = repsData, html = "";
+    html += "<details open><summary><b>U.S. Senate</b> (all of Florida)</summary><table><tbody>" +
+      d.senators.map(function (m) { return "<tr><td>Statewide</td><td>" + memberHtml(m) + "</td><td class='note'>All of Florida</td></tr>"; }).join("") + "</tbody></table></details>";
+    ["us", "fls", "flh"].forEach(function (c) {
+      var rows = d.districts.filter(function (x) { return x.c === c; }).sort(function (a, b) { return a.d - b.d; });
+      html += "<details" + (c === "us" ? " open" : "") + "><summary><b>" + CHAMBERS[c] + "</b> (" + rows.length + " districts in this area)</summary>" +
+        "<div class='table-wrap'><table><thead><tr><th>District</th><th>Representative</th><th>Covers</th></tr></thead><tbody>" +
+        rows.map(function (x) {
+          return "<tr><td>" + esc(x.d) + "</td><td>" + memberHtml(x.m) + "</td><td class='note'>" +
+            esc((x.covers.length ? x.covers.slice(0, 8).join(", ") + (x.covers.length > 8 ? " and " + (x.covers.length - 8) + " more" : "") : "Unincorporated areas") +
+              (x.counties.length ? " (" + x.counties.join(", ") + (x.counties.length > 1 ? " counties" : " County") + ")" : "")) +
+            "</td></tr>";
+        }).join("") + "</tbody></table></div></details>";
+    });
+    document.getElementById("repsTables").innerHTML = html;
+    document.getElementById("repsUpdated").textContent = "Updated " + d.updated + " from the U.S. Census, the congress-legislators project and Open States; new members can take a few weeks to show up after an election.";
+  }
+  function drawRepsLines() {
+    repsData.districts.filter(function (x) { return x.c === "us"; }).forEach(function (x) {
+      var col = color(x.m && /^dem/i.test(x.m.party) ? "--dem" : x.m && /^rep/i.test(x.m.party) ? "--gop" : "--rep");
+      L.polygon(x.p, { color: col, weight: 2, opacity: 0.8, dashArray: "8 6", fill: false, interactive: false }).addTo(repsLines);
+      var b = L.polygon(x.p).getBounds();
+      L.marker(b.getCenter(), { interactive: false, keyboard: false, icon: L.divIcon({ className: "", iconSize: null,
+        html: '<div class="pin-label" style="color:' + col + ';font-weight:700;white-space:nowrap;text-shadow:0 0 3px var(--card),0 0 3px var(--card)">FL-' + esc(x.d) + (x.m ? " · " + esc(x.m.n.split(" ").slice(-1)[0]) : "") + "</div>" }) }).addTo(repsLines);
+    });
+  }
+  dataReady.then(function (ok) { if (!ok) throw new Error("no data"); return timedFetchJSON(DATA_BASE + "reps.json", 30000); }).then(function (d) {
+    if (!d || !d.districts) throw new Error("no reps data");
+    repsData = d; drawRepsTables(); drawRepsLines();
+  }).catch(function () {
+    document.getElementById("repsTables").innerHTML = '<p class="note" style="padding:10px 14px">District data isn\'t available yet. It\'s built nightly; check back tomorrow.</p>';
+  });
+  var repsBtn = document.createElement("button"), pickingReps = false;
+  // While picking, a clear layer over the map takes the tap, so roads, precincts and pins underneath don't open instead.
+  var pickLayer = document.createElement("div");
+  pickLayer.style.cssText = "position:absolute;inset:0;z-index:1000;cursor:crosshair;display:none";
+  pickLayer.setAttribute("aria-hidden", "true");
+  map.getContainer().appendChild(pickLayer);
+  L.DomEvent.disableClickPropagation(pickLayer);
+  pickLayer.addEventListener("click", function (ev) {
+    var ll = map.mouseEventToLatLng(ev);
+    setPickingReps(false);
+    L.popup({ maxWidth: 320 }).setLatLng(ll).setContent(repsAt(ll.lat, ll.lng)).openOn(map);
+  });
+  repsBtn.type = "button"; repsBtn.className = "report-btn"; repsBtn.setAttribute("aria-pressed", "false");
+  repsBtn.textContent = "🏛️ Who represents here?";
+  function setPickingReps(on) {
+    pickingReps = on && !!repsData;
+    repsBtn.setAttribute("aria-pressed", String(pickingReps));
+    repsBtn.textContent = pickingReps ? "Tap any spot on the map… (cancel)" : "🏛️ Who represents here?";
+    document.getElementById("guide").classList.toggle("reporting", pickingReps);
+    pickLayer.style.display = pickingReps ? "block" : "none";
+  }
+  repsBtn.addEventListener("click", function () {
+    if (!repsData) { repsBtn.textContent = "District data is still loading…"; setTimeout(function () { setPickingReps(false); }, 2000); return; }
+    if (reporting) setReporting(false);
+    setPickingReps(!pickingReps);
+  });
+  toggles.appendChild(repsBtn);
+
   syncSchools();
   syncLaneChanges();
   syncVote();

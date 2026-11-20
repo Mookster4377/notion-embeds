@@ -33,7 +33,7 @@ jobs:
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q osmium-tool
-          pip install -q osmium
+          pip install -q osmium pyshp shapely pyyaml
 
       - name: Download the Florida map (Geofabrik, with a mirror as backup)
         run: |
@@ -52,6 +52,9 @@ jobs:
 
       - name: Build Tampa Bay and Orlando tiles
         run: python scripts/build_map_data.py florida.osm.pbf out
+
+      - name: Build representatives (districts and current members)
+        run: python scripts/build_reps.py out   # keeps yesterday's file if a source is down
 
       - name: Publish to the map-data branch
         working-directory: out
