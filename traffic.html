@@ -125,6 +125,8 @@ section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); 
 .report-form button { font: 600 12px var(--body); border: 0; border-radius: 6px; padding: 6px; cursor: pointer; background: var(--police); color: #fff; }
 .pin.report { width: 26px; height: 26px; font-size: 13px; animation: pulse 1.6s infinite; }
 .pin.report.old { animation: none; opacity: .65; }
+.pin.report.older { opacity: .45; transform: scale(.85); }
+.report-range { font: 600 13px var(--body); padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--chip); color: var(--ink); }
 #guide.reporting { cursor: crosshair; }
 .stopsign { width: 18px; height: 18px; display: grid; place-items: center; color: #fff; font: 800 6px var(--body); letter-spacing: -.02em;
   clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%); box-shadow: 0 0 0 2px #fff; }
@@ -1622,27 +1624,47 @@ tr:last-child td { border-bottom: 0; }
 
 
   // --- Police reports: tap the map to report police activity. ---
-  // Reports are shared through a free ntfy.sh channel (no account). Anyone who opens this page sees reports
-  // from the last 6 hours, and anyone subscribed to the channel in the ntfy app gets a phone alert.
+  // Reports are shared through a free ntfy.sh channel (no account); anyone subscribed in the ntfy app gets a
+  // phone alert. ntfy only holds messages ~12 hours, so .github/workflows/police-archive.yml copies them every
+  // 30 minutes into a permanent archive (police-archive branch). Reports are kept forever.
   var REPORT_TOPIC = ORL ? "orl-police-7c31e58d24" : "tbt-police-a49fdfc3a0";
-  var REPORT_HOURS = 6;
+  var REPORT_ARCHIVE = "https://raw.githubusercontent.com/Mookster4377/notion-embeds/police-archive/police-" + CITY + ".json";
+  var REPORT_RANGES = [["all", "All time", 0], ["6h", "Last 6 hours", 6 * 3600], ["24h", "Last 24 hours", 86400], ["7d", "Last 7 days", 7 * 86400], ["30d", "Last 30 days", 30 * 86400]];
+  var reportRange = "all";
+  try { reportRange = localStorage.getItem("tbt-report-range") || "all"; } catch (e) {}
   var KINDS = { speed: "Speed trap / radar", stop: "Traffic stop", crash: "Police at a crash", checkpoint: "Checkpoint / DUI patrol", other: "Police activity" };
   layers.reports = L.layerGroup().addTo(map);
   var reportSeen = {}, reporting = false, hidden = {};
   try { hidden = JSON.parse(localStorage.getItem("tbt-hidden-reports") || "{}"); } catch (e) {}
-  function ago(t) { var m = Math.round((Date.now() / 1000 - t) / 60); return m < 1 ? "just now" : m < 60 ? m + " min ago" : Math.floor(m / 60) + " h " + (m % 60) + " min ago"; }
+  function ago(t) {
+    var m = Math.round((Date.now() / 1000 - t) / 60);
+    if (m < 1) return "just now";
+    if (m < 60) return m + " min ago";
+    if (m < 24 * 60) return Math.floor(m / 60) + " h " + (m % 60) + " min ago";
+    return new Date(t * 1000).toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", year: m > 300 * 24 * 60 ? "numeric" : undefined, hour: "numeric", minute: "2-digit" });
+  }
+  function reportVisible(r) {
+    var rg = REPORT_RANGES.filter(function (x) { return x[0] === reportRange; })[0];
+    return !rg || !rg[2] || Date.now() / 1000 - r.time <= rg[2];
+  }
+  function syncReportRange() {
+    Object.keys(reportSeen).forEach(function (id) {
+      var r = reportSeen[id]; if (!r.marker) return;
+      if (reportVisible(r)) layers.reports.addLayer(r.marker); else layers.reports.removeLayer(r.marker);
+    });
+  }
   function drawReport(r) {
     if (reportSeen[r.id] || hidden[r.id]) return;
     reportSeen[r.id] = r;
-    var old = Date.now() / 1000 - r.time > 2 * 3600;
-    var icon = L.divIcon({ className: "", iconSize: [26, 26], iconAnchor: [13, 13], html: '<div class="pin report' + (old ? " old" : "") + '" style="background:' + color(TYPES.police.v) + '"><span>🚨</span></div>' });
+    var age = Date.now() / 1000 - r.time, old = age > 2 * 3600;
+    var icon = L.divIcon({ className: "", iconSize: [26, 26], iconAnchor: [13, 13], html: '<div class="pin report' + (old ? " old" : "") + (age > 7 * 86400 ? " older" : "") + '" style="background:' + color(TYPES.police.v) + '"><span>🚨</span></div>' });
     r.marker = L.marker([r.lat, r.lon], { icon: icon, title: (KINDS[r.kind] || "Police activity") + " reported", keyboard: true, zIndexOffset: 1000 })
       .bindPopup(function () {
         return '<div class="tag" style="color:' + color(TYPES.police.v) + '">Reported by a driver · ' + ago(r.time) + "</div><h3>" + esc(KINDS[r.kind] || "Police activity") + "</h3>" +
           (r.note ? esc(r.note) + "<br>" : "") + '<button type="button" class="chip" data-hide="' + esc(r.id) + '" style="margin-top:6px">Hide on this device</button>' +
-          "<div class='note' style='margin-top:6px'>Reports disappear after " + REPORT_HOURS + " hours.</div>";
-      })
-      .addTo(layers.reports);
+          "<div class='note' style='margin-top:6px'>Reports are kept on the map permanently.</div>";
+      });
+    if (reportVisible(r)) r.marker.addTo(layers.reports);
   }
   map.on("popupopen", function (e) {
     var b = e.popup.getElement().querySelector("[data-hide]");
@@ -1654,8 +1676,14 @@ tr:last-child td { border-bottom: 0; }
     });
   });
   function tagVal(tags, k) { var t = (tags || []).filter(function (x) { return x.indexOf(k + ":") === 0; })[0]; return t ? t.slice(k.length + 1) : null; }
+  // Everything ever reported (the archive), once per visit.
+  fetch(REPORT_ARCHIVE + "?v=" + Math.floor(Date.now() / 600000))
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (d) { (d.reports || []).forEach(drawReport); })
+    .catch(function () {});
+  // The last 12 hours straight from the live channel (covers reports not yet copied to the archive).
   function loadReports() {
-    fetch("https://ntfy.sh/" + REPORT_TOPIC + "/json?poll=1&since=" + REPORT_HOURS + "h")
+    fetch("https://ntfy.sh/" + REPORT_TOPIC + "/json?poll=1&since=12h")
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
       .then(function (txt) {
         txt.split("\n").forEach(function (line) {
@@ -1665,11 +1693,6 @@ tr:last-child td { border-bottom: 0; }
           var lat = parseFloat(tagVal(m.tags, "lat")), lon = parseFloat(tagVal(m.tags, "lon"));
           if (!isFinite(lat) || !isFinite(lon)) return;
           drawReport({ id: m.id, time: m.time, lat: lat, lon: lon, kind: tagVal(m.tags, "kind") || "other", note: (m.message || "").replace(/^[^:]*: ?/, "").slice(0, 140) });
-        });
-        // Drop reports that have aged out.
-        Object.keys(reportSeen).forEach(function (id) {
-          var r = reportSeen[id];
-          if (r.marker && Date.now() / 1000 - r.time > REPORT_HOURS * 3600) { layers.reports.removeLayer(r.marker); }
         });
       })
       .catch(function () {});
@@ -1694,7 +1717,7 @@ tr:last-child td { border-bottom: 0; }
     var form = '<form class="report-form"><b>Report police here</b><select name="kind">' +
       Object.keys(KINDS).map(function (k) { return '<option value="' + k + '">' + KINDS[k] + "</option>"; }).join("") +
       '</select><input name="note" maxlength="140" placeholder="Note (optional), e.g. northbound shoulder"><button type="submit">Send report</button>' +
-      "<span class='note'>Shared with everyone who uses this map for " + REPORT_HOURS + " hours. Don't include personal details.</span></form>";
+      "<span class='note'>Shared with everyone who uses this map and kept permanently. Don't include personal details.</span></form>";
     var pop = L.popup().setLatLng(ll).setContent(form).openOn(map);
     var f = pop.getElement().querySelector("form");
     f.addEventListener("submit", function (ev) {
@@ -1802,6 +1825,15 @@ tr:last-child td { border-bottom: 0; }
   var zoneStatus = document.createElement("span");
   zoneStatus.className = "zone-status"; zoneStatus.setAttribute("aria-live", "polite");
   toggles.appendChild(zoneStatus);
+  var rangeSel = document.createElement("select");
+  rangeSel.className = "report-range"; rangeSel.setAttribute("aria-label", "Show police reports from");
+  rangeSel.innerHTML = REPORT_RANGES.map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === reportRange ? " selected" : "") + ">🚨 " + x[1] + "</option>"; }).join("");
+  rangeSel.addEventListener("change", function () {
+    reportRange = rangeSel.value;
+    try { localStorage.setItem("tbt-report-range", reportRange); } catch (e) {}
+    syncReportRange();
+  });
+  toggles.appendChild(rangeSel);
   toggles.appendChild(reportBtn);
   // --- Who represents here: district shapes + current members (nightly from Census TIGER, congress-legislators, Open States) ---
   var CHAMBERS = { us: "U.S. House", fls: "Florida Senate", flh: "Florida House" };
