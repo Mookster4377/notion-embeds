@@ -551,7 +551,7 @@ tr:last-child td { border-bottom: 0; }
     places: { label: "My places (Orlando list)", letter: "📍", v: "--L-places", group: "food" },
     bagels: { label: "Bagels", letter: "🥯", v: "--L-bagels", group: "food" },
     nightclubs: { label: "Nightclubs", letter: "🪩", v: "--L-nightclubs", group: "night" },
-    bars: { label: "College & 20s bars", letter: "🍻", v: "--L-bars", group: "night" },
+    bars: { label: "Bars", letter: "🍻", v: "--L-bars", group: "night" },
     gyms: { label: "Gyms", letter: "🏋️", v: "--L-gyms", group: "night" },
     airports: { label: "Airports", letter: "✈️", v: "--L-airports", group: "go" },
     museums: { label: "Museums", letter: "🏛️", v: "--L-museums", group: "go" },
@@ -1330,7 +1330,7 @@ tr:last-child td { border-bottom: 0; }
             .addTo(layers.stops);
         });
       } },
-    // Bars, pubs and nightclubs: nightclubs, plus one "College & 20s bars" layer (near a campus 🍺, or in a nightlife district 🍸).
+    // Bars, pubs and nightclubs: nightclubs, plus one "Bars" layer (near a campus 🍺, or in a nightlife district 🍸).
     nightlife: { prio: 3, on: true, minZoom: 12, boxes: [], busy: false, seen: {},
       match: function (e) { return /^(bar|pub|nightclub)$/.test(tg(e).amenity || "") && !!tg(e).name; },
       query: function (bb) { return '[out:json][timeout:25];nwr["amenity"~"^(bar|pub|nightclub)$"]["name"](' + bb + ');out center tags;'; },
