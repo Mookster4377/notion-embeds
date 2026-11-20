@@ -1,0 +1,53 @@
+{
+  "asOf": "2026-11-20",
+  "note": "Names are listed only where the official roster was confirmed current (after the Nov 17, 2026 swearing-in). Other bodies link to their official member page. Update this file when rosters change.",
+  "schoolBoards": {
+    "Hillsborough": { "name": "Hillsborough County School Board", "url": "https://www.hillsboroughschools.org/Page/8833" },
+    "Pinellas": { "name": "Pinellas County School Board", "url": "https://www.pcsb.org/school-board" },
+    "Pasco": { "name": "Pasco County School Board", "url": "https://www.pasco.k12.fl.us/" },
+    "Manatee": { "name": "School Board of Manatee County", "url": "https://www.manateeschools.net/Page/11879" },
+    "Sarasota": { "name": "Sarasota County School Board", "url": "https://www.sarasotacountyschools.net/page/school-board/" },
+    "Charlotte": { "name": "Charlotte County School Board", "url": "https://mco.yourcharlotteschools.net/board-members" },
+    "Orange": { "name": "Orange County School Board (OCPS)", "url": "https://ocps.net/134072_2", "members": [
+      { "seat": "Chair (countywide)", "name": "Angie Gallo" },
+      { "seat": "District 1", "name": "Melissa Lopez Marantes" },
+      { "seat": "District 2", "name": "Gloria Reina O’Neal" },
+      { "seat": "District 3", "name": "Susanne Peña" },
+      { "seat": "District 4", "name": "Anne Douglas" },
+      { "seat": "District 5", "name": "Vicki-Elaine Felder" },
+      { "seat": "District 6", "name": "Stephanie Vanos" },
+      { "seat": "District 7", "name": "Melissa Byrd" } ] },
+    "Seminole": { "name": "Seminole County School Board", "url": "https://www.scps.k12.fl.us/82600_3", "members": [
+      { "seat": "Chair", "name": "Robin Dehlinger, Ed.D." },
+      { "seat": "Vice Chair", "name": "Kristine Kraus" },
+      { "seat": "Member", "name": "Holton Mills" },
+      { "seat": "Member", "name": "Abby Sanchez" },
+      { "seat": "Member", "name": "Autumn Garick" } ] },
+    "Osceola": { "name": "Osceola County School Board", "url": "https://osceolaschools.net/70852_3" }
+  },
+  "cities": {
+    "Tampa": { "name": "Tampa City Council", "url": "https://www.tampa.gov/city-council", "mayor": "Jane Castor", "members": [
+      { "seat": "District 1 (at-large), Chair", "name": "Alan Clendenin" },
+      { "seat": "District 2 (at-large)", "name": "Guido Maniscalco" },
+      { "seat": "District 3 (at-large)", "name": "Lynn Hurtak" },
+      { "seat": "District 4", "name": "Bill Carlson" },
+      { "seat": "District 5", "name": "Naya Young" },
+      { "seat": "District 6", "name": "Charlie Miranda" },
+      { "seat": "District 7", "name": "Robin Lockett" } ] },
+    "Orlando": { "name": "Orlando City Council", "url": "https://www.orlando.gov/Our-Government/Mayor-City-Council", "mayor": "Buddy Dyer", "members": [
+      { "seat": "District 1", "name": "Tom Keen" },
+      { "seat": "District 2", "name": "Tony Ortiz" },
+      { "seat": "District 3", "name": "Roger Chapin" },
+      { "seat": "District 4", "name": "Patty Sheehan" },
+      { "seat": "District 5", "name": "Shan Rose" },
+      { "seat": "District 6", "name": "Bakari F. Burns" } ] },
+    "St. Petersburg": { "name": "St. Petersburg City Council", "url": "https://www.stpete.org/government/city_council.php" },
+    "Clearwater": { "name": "Clearwater City Council", "url": "https://www.myclearwater.com/Government/City-Council" },
+    "Sarasota": { "name": "Sarasota City Commission", "url": "https://www.sarasotafl.gov/government/city-commission" },
+    "Bradenton": { "name": "Bradenton City Council", "url": "https://www.cityofbradenton.com/" },
+    "North Port": { "name": "North Port City Commission", "url": "https://www.northportfl.gov/Government/City-Commission" },
+    "Venice": { "name": "Venice City Council", "url": "https://www.venicegov.com/government/city-council" },
+    "Kissimmee": { "name": "Kissimmee City Commission", "url": "https://www.kissimmee.gov/government/city-commission" },
+    "Winter Park": { "name": "Winter Park City Commission", "url": "https://cityofwinterpark.org/government/city-commission/" }
+  }
+}
