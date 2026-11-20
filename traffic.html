@@ -1947,6 +1947,7 @@ tr:last-child td { border-bottom: 0; }
       (d.elements || []).forEach(function (e) {
         var t = e.tags || {}, lat = e.lat || (e.center && e.center.lat), lon = e.lon || (e.center && e.center.lon);
         if (!t.name || !lat || t.disused || t["disused:shop"]) return;
+        if (/starbucks|dunkin|mcdonald|panera|7-eleven|wawa/i.test(t.name) && !/bagel/i.test(t.name)) return; // sells bagels, but not a bagel place
         var k = t.name.toLowerCase() + Math.round(lat * 200) + Math.round(lon * 200);
         if (seen[k]) return; seen[k] = 1;
         var chain = !!(t.brand || t["brand:wikidata"] || BAGEL_CHAINS.test(t.name));
