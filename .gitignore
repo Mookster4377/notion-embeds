@@ -13,9 +13,11 @@
 !scripts/
 !scripts/build_map_data.py
 !scripts/build_reps.py
+!scripts/archive_reports.py
 !.github/
 !.github/workflows/
 !.github/workflows/map-data.yml
+!.github/workflows/police-archive.yml
 !orlando-places.json
 !precincts-tampa.json
 !precincts-orlando.json
