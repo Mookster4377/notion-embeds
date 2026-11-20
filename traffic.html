@@ -190,14 +190,14 @@ tr:last-child td { border-bottom: 0; }
   </section>
 
   <section>
-    <h2 id="coffeeHead">Local coffee in Sarasota</h2>
+    <h2 id="coffeeHead">Coffee in Sarasota</h2>
     <div class="panel table-wrap">
       <table>
         <thead><tr><th>Coffee shop</th><th>Address</th><th>Hours</th><th></th></tr></thead>
         <tbody id="localCoffeeRows"><tr><td colspan="4" class="note">Loading local coffee shops…</td></tr></tbody>
       </table>
     </div>
-    <p class="note" id="coffeeNote">Every café OpenStreetMap lists from Lakewood Ranch and Sarasota down to Osprey, minus national chains. ☕ marks the ones already in your Sarasota Coffee list. New places may be missing.</p>
+    <p class="note" id="coffeeNote">Your Sarasota Coffee list plus every other local café OpenStreetMap lists from Lakewood Ranch and Sarasota down to Osprey (national chains left out). ☕ marks the ones in your list. Brand-new places may be missing.</p>
   </section>
 
   <section>
@@ -445,7 +445,8 @@ tr:last-child td { border-bottom: 0; }
     police: { label: "Police / enforcement",   letter: "🚓", v: "--police" },
     merge:  { label: "Merges & lane drops",    letter: "M", v: "--merge" },
     lanes:  { label: "Lane counts",            letter: "",  v: "--lane" },
-    coffee: { label: ORL ? "My places" : "Coffee spots", letter: "☕", v: "--coffee" },
+    coffee: { label: "Coffee (your list + local)", letter: "☕", v: "--coffee" },
+    places: { label: "My places (Orlando list)", letter: "📍", v: "--coffee" },
     school: { label: "School zones",           letter: "S", v: "--school" },
     lanechg: { label: "Lane drops & adds",     letter: "",  v: "--expand" },
     ramps:   { label: "Highway exits & entrances", letter: "", v: "--exit" },
@@ -461,7 +462,6 @@ tr:last-child td { border-bottom: 0; }
     malls:   { label: "Shopping centers",      letter: "🛍️", v: "--poi" },
     parking: { label: "Parking (free / paid / private)", letter: "P", v: "--free" },
     stops:   { label: "Stop signs",            letter: "", v: "--crash" },
-    localcoffee: { label: ORL ? "Local coffee (Orlando)" : "Local coffee (Sarasota)", letter: "☕", v: "--coffee" },
     districts: { label: "Nightlife districts",   letter: "", v: "--night" },
     nightclubs: { label: "Nightclubs",           letter: "🪩", v: "--night" },
     collegebars: { label: "College bars",        letter: "🍺", v: "--night" },
@@ -469,6 +469,7 @@ tr:last-child td { border-bottom: 0; }
     gyms:    { label: "Gyms",                  letter: "🏋️", v: "--gym" },
     vote:    { label: "2024 vote by precinct (D / R)", letter: "", v: "--vote" }
   };
+  if (!ORL) delete TYPES.places;
 
   var css = getComputedStyle(document.documentElement);
   function color(v) { return css.getPropertyValue(v).trim(); }
@@ -571,9 +572,10 @@ tr:last-child td { border-bottom: 0; }
         '<br><a href="https://maps.apple.com/?daddr=' + p.lat + "," + p.lon + '" target="_blank" rel="noopener">Directions ↗</a>' +
         ' · <a href="https://app.notion.com/p/' + p.id + '" target="_blank" rel="noopener">Notion entry ↗</a>' +
         ' · <a href="' + COFFEE_DB + '" target="_blank" rel="noopener">All places ↗</a>');
-    marker.addTo(layers.coffee);
+    var isCoffee = p.cat.indexOf("Coffee") >= 0;
+    marker.addTo(isCoffee ? layers.coffee : layers.places);
     coffeeMarkers[p.id] = { m: marker, c: p };
-    if (p.cat.indexOf("Coffee") >= 0) COFFEE.push(p);
+    if (isCoffee) COFFEE.push(p);
   }
   var placesReady = ORL ? fetch("orlando-places.json").then(function (r) { return r.json(); })
     .then(function (list) { list.forEach(addPlace); }).catch(function () {}) : Promise.resolve();
@@ -1622,35 +1624,52 @@ tr:last-child td { border-bottom: 0; }
   var SARASOTA_BOX = ORL ? "28.35,-81.60,28.82,-81.15" : "27.17,-82.62,27.47,-82.33";
   var COFFEE_AREA = ORL ? "Orlando" : "Sarasota";
   if (ORL) {
-    document.getElementById("coffeeHead").firstChild.textContent = "Local coffee in Orlando";
-    document.getElementById("coffeeNote").textContent = "Every café OpenStreetMap lists from Apopka and Lake Mary down to Kissimmee and east to UCF, minus national chains. ☕ marks the ones already in your Orlando list. New places may be missing.";
+    document.getElementById("coffeeHead").firstChild.textContent = "Coffee in Orlando";
+    document.getElementById("coffeeNote").textContent = "Your Orlando list's coffee spots plus every other local café OpenStreetMap lists from Apopka and Lake Mary down to Kissimmee and east to UCF (national chains left out). ☕ marks the ones in your list. Brand-new places may be missing.";
   }
   function addrOf(t) {
     var a = [t["addr:housenumber"], t["addr:street"]].filter(Boolean).join(" ");
     return a ? a + (t["addr:city"] ? ", " + t["addr:city"] : "") : (t["addr:city"] || "");
   }
   // Shops in the Notion database that have no map location yet (matched to OpenStreetMap by name).
-  var MY_LIST_EXTRA = ORL ? [] : ["Breaking Wave Coffee", "The Clever Cup", "Mama G's Coffee", "Yoder's", "Captain Curt's", "O & A Coffee", "Buddy Brew", "Cedar Fox",
-    "Pastry Art", "The Overton", "Perq", "Raining Berries", "Cafe Divan", "Kahwa", "Atria", "Sunsoaked"];
+  var MY_LIST_EXTRA = ORL ? [] : [
+    { n: "Breaking Wave Coffee", id: "41dbb5242e5c8169be2dec919074c7f5" }, { n: "The Clever Cup", id: "41dbb5242e5c8168942cc5d7b45e7148" },
+    { n: "Mama G's Coffee", id: "41dbb5242e5c81d4a6f4e958af31fdcc" }, { n: "Yoder's", id: "41dbb5242e5c81b3a478c77ecd3e9bf8" },
+    { n: "Captain Curt's", id: "41dbb5242e5c810cafcee243db49581f" }, { n: "O & A Coffee", id: "41dbb5242e5c8199a154d1eee7b1a3d1" },
+    { n: "Buddy Brew", id: "41dbb5242e5c819cacbbd6f641f217a5" }, { n: "Cedar Fox", id: "41dbb5242e5c81e6b68bde09f4f96c1a" },
+    { n: "Pastry Art", id: "41dbb5242e5c816e97f2e439bb42436c" }, { n: "The Overton", id: "41dbb5242e5c81f1839bc5d9779ea645" },
+    { n: "Perq", id: "41dbb5242e5c818a89e6f265808446cc" }, { n: "Raining Berries", id: "41dbb5242e5c81e68ea1fef022a3405a" },
+    { n: "Cafe Divan", id: "41dbb5242e5c8128b4d5e8ffce480b77" },
+    { n: "Kahwa", id: "41dbb5242e5c81fa89a3f16ba00a3580", near: [27.336, -82.540] },
+    { n: "Kahwa", id: "41dbb5242e5c811e9bc8c5ec98836701", near: [27.400, -82.450] },
+    { n: "Atria", id: "41dbb5242e5c81c39fa7ea290048d65a" }, { n: "Sunsoaked", id: "397bb5242e5c821f80ad81fb1fb3ff40" }];
   function norm(x) { return x.toLowerCase().replace(/\(.*?\)/g, "").replace(/&/g, "and").replace(/[^a-z0-9]/g, "").replace(/^the/, ""); }
-  function sameShop(a, b) { a = norm(a); b = norm(b); return a && b && (a.indexOf(b) >= 0 || b.indexOf(a) >= 0); }
-  function inMyList(name) {
-    return COFFEE.some(function (c) { return sameShop(name, c.name); }) || MY_LIST_EXTRA.some(function (n) { return sameShop(name, n); });
+  // Same shop if the names match, or one contains the other and the shorter isn't just a generic word ("cafe", "coffee").
+  var GENERIC = /^(cafe|caf|coffee|coffeeshop|coffeehouse|coffeebar|bakery|espresso|tea|bar|kitchen)$/;
+  function sameShop(a, b) {
+    a = norm(a); b = norm(b);
+    if (!a || !b) return false;
+    if (a === b) return true;
+    var shortN = a.length < b.length ? a : b, longN = shortN === a ? b : a;
+    return shortN.length >= 4 && !GENERIC.test(shortN) && longN.indexOf(shortN) >= 0;
   }
-  var localShops = [];
+  function inMyList(name) {
+    return COFFEE.some(function (c) { return sameShop(name, c.name); }) || MY_LIST_EXTRA.some(function (e) { return sameShop(name, e.n); });
+  }
+  var localShops = [], coffeeOpened = false;
   // From a Notion "Map" link (?coffee=<id>&name=<shop>) for a shop without a saved location.
   function openNamedCoffee() {
     var want = (params.get("name") || "").replace(/\+/g, " ");
-    if (!want || coffeeMarkers[(params.get("coffee") || "").replace(/-/g, "").toLowerCase()]) return;
+    if (!want || coffeeOpened || coffeeMarkers[(params.get("coffee") || "").replace(/-/g, "").toLowerCase()]) return;
     var hit = localShops.filter(function (s) { return sameShop(s.x.name, want); })[0];
     if (hit) {
-      map.addLayer(layers.localcoffee);
+      map.addLayer(layers.coffee);
       map.setView([hit.x.lat, hit.x.lon], 17); hit.m.openPopup();
     } else {
-      var c = [27.33, -82.53];
+      var c = ORL ? [28.54, -81.38] : [27.33, -82.53];
       map.setView(c, 12);
       L.popup().setLatLng(c).setContent('<div class="tag" style="color:' + color("--coffee") + '">Coffee</div><h3>' + esc(want) + "</h3>Not on OpenStreetMap yet, so it can't be pinned here." +
-        '<br><a href="https://maps.apple.com/?q=' + encodeURIComponent(want + ", Sarasota, FL") + '" target="_blank" rel="noopener">Find it in Apple Maps ↗</a>').openOn(map);
+        '<br><a href="https://maps.apple.com/?q=' + encodeURIComponent(want + (ORL ? ", Orlando, FL" : ", Sarasota, FL")) + '" target="_blank" rel="noopener">Find it in Apple Maps ↗</a>').openOn(map);
     }
   }
   var sbox = SARASOTA_BOX.split(",").map(Number);
@@ -1666,32 +1685,72 @@ tr:last-child td { border-bottom: 0; }
         var k = x.name.toLowerCase() + Math.round(x.lat * 200) + Math.round(x.lon * 200);
         if (seenName[k]) return false; seenName[k] = 1; return true;
       }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+      var inArea = function (lat, lon) { return lat >= sbox[0] && lat <= sbox[2] && lon >= sbox[1] && lon <= sbox[3]; };
+      var siteOf = function (t) { var w = t.website || t["contact:website"]; return w && /^https?:/.test(w) ? w : ""; };
+      var items = [], usedDb = {};
+      shops.forEach(function (x) {
+        // Already in your list with a saved location: use your pin (no duplicate).
+        var db = COFFEE.filter(function (c) { return c.lat && sameShop(x.name, c.name) && L.latLng(c.lat, c.lon).distanceTo([x.lat, x.lon]) < 500; })[0];
+        if (db && coffeeMarkers[db.id]) {
+          if (usedDb[db.id]) return; // the same shop mapped twice in OpenStreetMap
+          usedDb[db.id] = 1;
+          items.push({ name: db.name, lat: db.lat, lon: db.lon, addr: addrOf(x.t) || db.addr || "", hours: x.t.opening_hours || "", site: siteOf(x.t) || db.url || "", mine: true, m: coffeeMarkers[db.id].m });
+          return;
+        }
+        // In your list but without a saved location: pin it here and link it to its Notion entry.
+        var ex = MY_LIST_EXTRA.filter(function (e) { return sameShop(x.name, e.n); })
+          .sort(function (p1, p2) { return (p1.near ? L.latLng(p1.near).distanceTo([x.lat, x.lon]) : 0) - (p2.near ? L.latLng(p2.near).distanceTo([x.lat, x.lon]) : 0); })[0];
+        var mine = !!ex, site = siteOf(x.t); // other branches of a chain you saved aren't marked as yours
+        var title = site ? '<a href="' + esc(site) + '" target="_blank" rel="noopener">' + esc(x.name) + "</a>" : esc(x.name);
+        var icon = L.divIcon({ className: "", iconSize: mine ? [24, 24] : [20, 20], iconAnchor: mine ? [12, 12] : [10, 10],
+          html: '<div class="pin ' + (mine ? "coffee" : "local") + '" style="background:' + color("--coffee") + '"><span>☕</span></div>' });
+        var m = L.marker([x.lat, x.lon], { icon: icon, title: x.name, keyboard: true, zIndexOffset: mine ? 500 : 0 })
+          .bindPopup('<div class="tag" style="color:' + color("--coffee") + '">' + (mine ? "Coffee · in your list" : "Local coffee") + "</div><h3>" + title + "</h3>" +
+            esc(addrOf(x.t) || "") + (x.t.opening_hours ? "<br>Hours: " + esc(x.t.opening_hours) : "") +
+            '<br><a href="https://maps.apple.com/?daddr=' + x.lat + "," + x.lon + '" target="_blank" rel="noopener">Directions ↗</a>' +
+            (ex ? ' · <a href="https://app.notion.com/p/' + ex.id + '" target="_blank" rel="noopener">Notion entry ↗</a>' : "") +
+            ' · <a href="' + COFFEE_DB + '" target="_blank" rel="noopener">' + (ORL ? "All places" : "All coffee") + " ↗</a>")
+          .addTo(layers.coffee);
+        if (ex && !coffeeMarkers[ex.id]) coffeeMarkers[ex.id] = { m: m, c: { lat: x.lat, lon: x.lon, name: x.name } };
+        items.push({ name: x.name, lat: x.lat, lon: x.lon, addr: addrOf(x.t) || "", hours: x.t.opening_hours || "", site: site, mine: mine, m: m });
+        localShops.push({ x: x, m: m });
+      });
+      // Your saved shops without a location that OpenStreetMap doesn't have either: list them with an Apple Maps search.
+      MY_LIST_EXTRA.forEach(function (e) {
+        if (coffeeMarkers[e.id]) return;
+        items.push({ name: e.n, addr: "Not on the map yet", hours: "", site: "", mine: true, search: e.n + (ORL ? ", Orlando, FL" : ", Sarasota, FL") });
+      });
+      // Your saved shops in this area that OpenStreetMap doesn't have.
+      COFFEE.forEach(function (c) {
+        if (usedDb[c.id] || !c.lat || !inArea(c.lat, c.lon) || !coffeeMarkers[c.id]) return;
+        items.push({ name: c.name, lat: c.lat, lon: c.lon, addr: c.addr || "", hours: "", site: c.url || "", mine: true, m: coffeeMarkers[c.id].m });
+      });
+      items.sort(function (p1, p2) { return p1.name.localeCompare(p2.name); });
       var rows = document.getElementById("localCoffeeRows");
       rows.innerHTML = "";
-      if (!shops.length) { rows.innerHTML = '<tr><td colspan="4" class="note">No local coffee shops found.</td></tr>'; return; }
-      shops.forEach(function (x) {
-        var mine = inMyList(x.name), site = x.t.website || x.t["contact:website"];
-        var title = (mine ? "☕ " : "") + (site && /^https?:/.test(site) ? '<a href="' + esc(site) + '" target="_blank" rel="noopener">' + esc(x.name) + "</a>" : esc(x.name));
-        var icon = L.divIcon({ className: "", iconSize: [20, 20], iconAnchor: [10, 10], html: '<div class="pin local" style="background:' + color("--coffee") + '"><span>☕</span></div>' });
-        var m = L.marker([x.lat, x.lon], { icon: icon, title: x.name, keyboard: true })
-          .bindPopup('<div class="tag" style="color:' + color("--coffee") + '">Local coffee' + (mine ? " · in your list" : "") + "</div><h3>" + title + "</h3>" +
-            esc(addrOf(x.t) || "") + (x.t.opening_hours ? "<br>Hours: " + esc(x.t.opening_hours) : "") +
-            '<br><a href="https://maps.apple.com/?daddr=' + x.lat + "," + x.lon + '" target="_blank" rel="noopener">Directions ↗</a>')
-          .addTo(layers.localcoffee);
+      if (!items.length) { rows.innerHTML = '<tr><td colspan="4" class="note">No coffee shops found.</td></tr>'; }
+      items.forEach(function (it) {
+        var title = (it.mine ? "☕ " : "") + (it.site ? '<a href="' + esc(it.site) + '" target="_blank" rel="noopener">' + esc(it.name) + "</a>" : esc(it.name));
         var tr = document.createElement("tr");
-        tr.innerHTML = '<td class="road">' + title + "</td><td>" + esc(addrOf(x.t) || "—") + "</td><td class='note'>" + esc(x.t.opening_hours || "—") +
+        if (it.search) {
+          tr.innerHTML = '<td class="road">' + title + "</td><td class='note'>" + esc(it.addr) + "</td><td class='note'>—</td>" +
+            '<td><a class="chip" href="https://maps.apple.com/?q=' + encodeURIComponent(it.search) + '" target="_blank" rel="noopener">Apple Maps ↗</a></td>';
+          rows.appendChild(tr);
+          return;
+        }
+        tr.innerHTML = '<td class="road">' + title + "</td><td>" + esc(it.addr || "—") + "</td><td class='note'>" + esc(it.hours || "—") +
           '</td><td><button type="button" class="chip">Show on map</button></td>';
         tr.querySelector("button").addEventListener("click", function () {
           showTab(false);
-          if (!map.hasLayer(layers.localcoffee)) map.addLayer(layers.localcoffee);
+          if (!map.hasLayer(layers.coffee)) map.addLayer(layers.coffee);
           document.getElementById("guide").scrollIntoView({ behavior: "smooth", block: "center" });
-          map.setView([x.lat, x.lon], 17); m.openPopup();
+          map.setView([it.lat, it.lon], 17); it.m.openPopup();
         });
         rows.appendChild(tr);
-        localShops.push({ x: x, m: m });
       });
+      openCoffeeLink();
       openNamedCoffee();
-      document.querySelector("#localCoffeeRows").closest("section").querySelector("h2").firstChild.textContent = "Local coffee in " + COFFEE_AREA + " (" + shops.length + ")";
+      document.getElementById("coffeeHead").firstChild.textContent = "Coffee in " + COFFEE_AREA + " (" + items.length + ")";
     })
     .catch(function () {
       openNamedCoffee();
@@ -1838,17 +1897,20 @@ tr:last-child td { border-bottom: 0; }
   if (at.length === 2 && isFinite(at[0]) && isFinite(at[1])) map.setView(at, 16);
 
   // Deep link from the Notion database: ?coffee=<page id> zooms to that spot and opens it.
-  placesReady.then(function () {
+  placesReady.then(openCoffeeLink);
+  function openCoffeeLink() {
     var want = (params.get("coffee") || "").replace(/-/g, "").toLowerCase();
-    if (!coffeeMarkers[want]) return;
+    if (coffeeOpened || !coffeeMarkers[want]) return;
+    coffeeOpened = true;
     var hit = coffeeMarkers[want];
     if (hit.c.r) {
       chips.querySelectorAll(".chip").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.r === hit.c.r ? "true" : "false"); });
       current = hit.c.r; setLive(current); renderTable(current);
     }
+    if (!map.hasLayer(layers.coffee) && !map.hasLayer(layers.places || {})) map.addLayer(layers.coffee);
     map.setView([hit.c.lat, hit.c.lon], 16);
     hit.m.openPopup();
-  });
+  }
 })();
 </script>
 </body>
