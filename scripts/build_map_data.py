@@ -15,6 +15,7 @@ Florida file with osmium-tool, keeps only the tags the map uses, and writes the 
   <out>/[orlando/]bagels.json              bagel shops (the bagel list)
   <out>/[orlando/]libraries.json           libraries (the library list)
   <out>/[orlando/]transit.json             bus, streetcar and rail routes: {"routes": [{id, tags, ways}], "ways": {id: [[lat, lon], ...]}}
+  <out>/[orlando/]bikes.json               trails and protected bike lanes: {"ways": [{k, n, g, ...}], "trails": {name: tags}}
   <out>/[orlando/]stations.json            bus stations, train stations and streetcar stops
   <out>/[orlando/]nature.json              preserves, state parks, wetlands, beaches, springs (zoomed-out views)
   <out>/[orlando/]counties.json            county boundaries
@@ -46,7 +47,7 @@ FILTERS = [
     "nwr/shop=mall", "nwr/landuse=retail,residential", "n/place=city,town,suburb,village,hamlet,neighbourhood,quarter",
     "n/barrier=gate,lift_gate,swing_gate", "nwr/gated=yes", "nwr/aeroway=aerodrome", "r/boundary=administrative",
     "nwr/leisure=park,nature_reserve,garden", "nwr/amenity=fast_food,restaurant,library,bus_station",
-    "r/route=bus,trolleybus,tram,train,light_rail", "nwr/public_transport=station", "n/railway=station,halt,tram_stop", "nwr/shop=bakery,deli", "nwr/cuisine", "nwr/boundary=protected_area,national_park", "nwr/natural=wetland,beach,spring",
+    "r/route=bus,trolleybus,tram,train,light_rail,bicycle,hiking,foot", "nwr/public_transport=station", "n/railway=station,halt,tram_stop", "nwr/shop=bakery,deli", "nwr/cuisine", "nwr/boundary=protected_area,national_park", "nwr/natural=wetland,beach,spring",
 ]
 DROP_PREFIXES = ("tiger:", "source", "gnis:", "NHD:", "note", "fixme", "FIXME", "created_by", "check_date", "survey", "attribution",
                  "import", "wikimedia", "name:", "old_name", "alt_name:", "is_in", "ref:", "nhd", "building:levels", "roof:",
@@ -137,6 +138,33 @@ def is_station(t):
             t.get("railway") in ("station", "halt", "tram_stop"))
 
 
+TRAIL_ROUTES = ("bicycle", "hiking", "foot")
+PATHS = ("cycleway", "path", "footway", "track", "bridleway", "pedestrian")
+TRAIL_NAME = re.compile(r"trail|greenway|trailway|riverwalk|bayway|bayshore|rail.?trail|multi.?use|recreation path|linear park", re.I)
+CYCLEWAY_KEYS = ("cycleway", "cycleway:both", "cycleway:left", "cycleway:right")
+
+
+def bike_kind(t, on_trail):
+    """'trail' (named or signed multi-use trail), 'hike' (named hiking trail), 'path' (separated bike path),
+    'lane' (on-road bike lane with a physical barrier) or None."""
+    hw = t.get("highway", "")
+    if not hw or t.get("access") in ("private", "no") or hw in ("construction", "proposed") or t.get("area") == "yes":
+        return None
+    bike_ok = t.get("bicycle") in ("designated", "yes", "permissive")
+    if hw in PATHS:
+        named = TRAIL_NAME.search(t.get("name", "")) is not None
+        if on_trail or (named and (hw in ("cycleway", "path") or bike_ok)):
+            return "trail" if hw == "cycleway" or bike_ok or t.get("surface") in ("asphalt", "concrete", "paved") else "hike"
+        if named and hw in ("path", "footway", "track"):
+            return "hike"
+        if hw == "cycleway" or (hw in ("path", "footway") and t.get("bicycle") == "designated"):
+            return "path"
+        return None
+    if any(t.get(k) == "track" for k in CYCLEWAY_KEYS) or any(k.startswith("cycleway") and k.endswith(":separation") and t[k] not in ("no", "none") for k in t):
+        return "lane"
+    return None
+
+
 def is_airport(t):
     return t.get("aeroway") == "aerodrome" and t.get("name") and not re.search(r"private|military", t.get("aerodrome:type", ""))
 
@@ -151,6 +179,7 @@ class Pass1(osmium.SimpleHandler):
     def __init__(self):
         super().__init__()
         self.stops, self.member_ways = set(), set()
+        self.trail_of, self.trails = {}, {}
 
     def node(self, n):
         if n.tags.get("highway") == "stop":
@@ -158,6 +187,11 @@ class Pass1(osmium.SimpleHandler):
 
     def relation(self, r):
         t = tags_of(r)
+        if t.get("type") == "route" and t.get("route") in TRAIL_ROUTES and t.get("name"):
+            self.trails[t["name"]] = {k: t[k] for k in ("route", "network", "website", "distance", "operator", "description") if k in t}
+            for m in r.members:
+                if m.type == "w":
+                    self.trail_of.setdefault(m.ref, t["name"])
         if is_county(t) or is_poi(t, "r") or is_airport(t) or is_point_of_region(t, "r") or is_nature(t) or is_bagel(t) or is_library(t) or is_transit_route(t):
             for m in r.members:
                 if m.type == "w":
@@ -170,6 +204,7 @@ class Pass2(osmium.SimpleHandler):
         self.p1 = p1
         self.lines, self.pois, self.region_pts, self.airports, self.highways, self.counties = [], [], [], [], [], []
         self.nature, self.bagels, self.libraries, self.stations, self.routes = [], [], [], [], []
+        self.bikes = []
         self.way_geom = {}
 
     def node(self, n):
@@ -203,6 +238,23 @@ class Pass2(osmium.SimpleHandler):
         if w.id in self.p1.member_ways:
             self.way_geom[w.id] = geom
         t = tags_of(w)
+        trail = self.p1.trail_of.get(w.id)
+        bk = bike_kind(t, bool(trail))
+        if bk:
+            pts = []
+            for g in geom:
+                pt = [round(g["lat"], 4), round(g["lon"], 4)]
+                if not pts or pts[-1] != pt:
+                    pts.append(pt)
+            if len(pts) > 1:
+                b = {"k": bk, "g": pts}
+                name = trail if bk in ("trail", "hike") and trail else t.get("name")
+                if name:
+                    b["n"] = name
+                for key, short in (("surface", "s"), ("lit", "l"), ("width", "w")):
+                    if key in t:
+                        b[short] = t[key]
+                self.bikes.append(b)
         hw = t.get("highway", "")
         named_extra = hw in ("residential", "unclassified") and t.get("name", "").startswith("Bahia Vista")
         has_stop = hw and any(i in self.p1.stops for i in ids)
@@ -297,6 +349,11 @@ def build_city(pbf, out, city, work):
     write(os.path.join(out_dir, "bagels.json"), [x for x in p2.bagels if in_box(*point_of(x), region)])
     write(os.path.join(out_dir, "stations.json"), [x for x in p2.stations if in_box(*point_of(x), region)])
     write_transit(os.path.join(out_dir, "transit.json"), p2, region)
+    bikes = [b for b in p2.bikes if any(in_box(p[0], p[1], region) for p in b["g"][::4])]
+    names = {b.get("n") for b in bikes}
+    with open(os.path.join(out_dir, "bikes.json"), "w") as f:
+        json.dump({"ways": bikes, "trails": {n: v for n, v in p1.trails.items() if n in names}}, f, separators=(",", ":"))
+    print(f"  bikes: {len(bikes)} ways, {os.path.getsize(os.path.join(out_dir, 'bikes.json')) // 1024} KB", flush=True)
     write(os.path.join(out_dir, "libraries.json"), [x for x in p2.libraries if in_box(*point_of(x), region)])
     write(os.path.join(out_dir, "nature.json"), [x for x in p2.nature if in_box(*point_of(x), region)])
     write(os.path.join(out_dir, "counties.json"), p2.counties)
