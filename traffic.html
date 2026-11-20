@@ -12,14 +12,14 @@
 /* Layout: region chips → big live Waze map → road guide map (hotspots, lanes, merges) → lane table. */
 :root {
   --bg: #eef1f4; --card: #ffffff; --ink: #141a21; --muted: #5b6672; --line: #d8dee5; --chip: #e5eaef;
-  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057; --interstate: #364fc7; --ushwy: #c2255c; --staterd: #e0a800; --countyrd: #1098ad; --poi: #5f3dc4; --vote: #7b5ea7; --night: #d6336c; --gym: #0b7285; --free: #2b8a3e; --paid: #c92a2a; --parkunk: #495057;
+  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057; --interstate: #364fc7; --ushwy: #c2255c; --staterd: #e0a800; --countyrd: #1098ad; --poi: #5f3dc4; --nature: #2f9e44; --vote: #7b5ea7; --night: #d6336c; --gym: #0b7285; --free: #2b8a3e; --paid: #c92a2a; --parkunk: #495057;
   --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --vote: #b197fc; --night: #f783ac; --gym: #3bc9db; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
+    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --nature: #51cf66; --vote: #b197fc; --night: #f783ac; --gym: #3bc9db; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
     color-scheme: dark;
   }
 }
@@ -467,6 +467,7 @@ tr:last-child td { border-bottom: 0; }
     collegebars: { label: "College bars",        letter: "🍺", v: "--night" },
     twentybars: { label: "20s bars",             letter: "🍸", v: "--night" },
     gyms:    { label: "Gyms",                  letter: "🏋️", v: "--gym" },
+    nature:  { label: "Parks & nature",        letter: "🌳", v: "--nature" },
     vote:    { label: "2024 vote by precinct (D / R)", letter: "", v: "--vote" }
   };
   if (!ORL) delete TYPES.places;
@@ -1135,6 +1136,15 @@ tr:last-child td { border-bottom: 0; }
         poiMarker("airports", e, "✈️", t.iata ? "Airport · " + t.iata : "Airport",
           (t.iata ? "Commercial airport (" + esc(t.iata) + "). " : "Airport. ") + "Expect heavy pickup and drop-off traffic around flight times.");
       }); } },
+    // Parks & nature: preserves, state parks, wetlands, beaches and springs from zoom 11; neighborhood parks from zoom 13.
+    naturebig: { prio: 4, on: true, minZoom: 11, boxes: [], busy: false, seen: {}, regionFile: "nature.json",
+      match: function (e) { return natureKind(tg(e)) && natureKind(tg(e)).big; },
+      query: function (bb) { return '[out:json][timeout:25];(nwr["leisure"="nature_reserve"]["name"](' + bb + ');nwr["boundary"~"^(protected_area|national_park)$"]["name"](' + bb + ');nwr["natural"~"^(wetland|beach|spring)$"]["name"](' + bb + ');nwr["leisure"="park"]["name"~"State Park|Preserve|Wildlife"](' + bb + '););out center tags;'; },
+      draw: drawNature },
+    parks: { prio: 5, on: true, minZoom: 13, boxes: [], busy: false, seen: {},
+      match: function (e) { return !!natureKind(tg(e)); },
+      query: function (bb) { return '[out:json][timeout:25];nwr["leisure"~"^(park|garden)$"]["name"](' + bb + ');out center tags;'; },
+      draw: drawNature },
     // Museums, colleges, sports venues and shopping centers in one request.
     places: { prio: 3, on: true, minZoom: 11, boxes: [], busy: false, seen: {}, regionFile: "points.json",
       match: function (e) {
@@ -1284,8 +1294,29 @@ tr:last-child td { border-bottom: 0; }
         });
       } }
   };
+
+  // What kind of natural place an OpenStreetMap feature is (or null).
+  function natureKind(t) {
+    if (!t.name) return null;
+    var n = t.name;
+    if (t.boundary === "national_park" || /State Park/i.test(n)) return { e: "🏞️", k: "State park", big: true, note: "Check hours and entry fees before you go; lots fill up on weekends." };
+    if (t.natural === "spring") return { e: "💧", k: "Spring", big: true, note: "Springs often hit capacity on summer weekends; arrive early." };
+    if (t.natural === "beach") return { e: "🏖️", k: "Beach", big: true, note: "Parking fills by late morning on weekends and holidays." };
+    if (t.natural === "wetland") return { e: "🦆", k: "Wetland", big: true, note: "Good for birding and wildlife; bring bug spray." };
+    if (t.leisure === "nature_reserve" || t.boundary === "protected_area" || /Preserve|Wildlife/i.test(n)) return { e: "🌿", k: "Nature preserve", big: true, note: "Trails and wildlife; some preserves close at sunset." };
+    if (t.leisure === "garden") return /botanic|garden/i.test(n) ? { e: "🌺", k: "Garden", big: false, note: "" } : null;
+    if (t.leisure === "park") return { e: "🌳", k: "Park", big: false, note: "" };
+    return null;
+  }
+  function drawNature(els) {
+    els.forEach(function (e) {
+      var k = natureKind(tg(e));
+      if (k) poiMarker("nature", e, k.e, k.k, k.note, "--nature");
+    });
+  }
   var poiSeen = {};
-  function poiMarker(layer, e, emoji, kind, note) {
+  function poiMarker(layer, e, emoji, kind, note, colorVar) {
+    var pc = color(colorVar || "--poi");
     var reg = poiSeen[layer] = poiSeen[layer] || { seen: {} };
     var key = e.type + e.id; if (reg.seen[key]) return; reg.seen[key] = 1;
     var t = e.tags || {}, lat = e.lat || (e.center && e.center.lat), lon = e.lon || (e.center && e.center.lon);
@@ -1295,9 +1326,9 @@ tr:last-child td { border-bottom: 0; }
     if (near.some(function (x) { return x.name === t.name && x.ll.distanceTo([lat, lon]) < 600; })) return;
     near.push({ name: t.name, ll: L.latLng(lat, lon) });
     var site = t.website || t["contact:website"];
-    var icon = L.divIcon({ className: "", iconSize: [24, 24], iconAnchor: [12, 12], html: '<div class="pin poi" style="background:' + color("--poi") + '"><span>' + emoji + "</span></div>" });
+    var icon = L.divIcon({ className: "", iconSize: [24, 24], iconAnchor: [12, 12], html: '<div class="pin poi" style="background:' + pc + '"><span>' + emoji + "</span></div>" });
     L.marker([lat, lon], { icon: icon, title: t.name, keyboard: true })
-      .bindPopup('<div class="tag" style="color:' + color("--poi") + '">' + esc(kind) + "</div><h3>" + (site && /^https?:/.test(site) ? '<a href="' + esc(site) + '" target="_blank" rel="noopener">' + esc(t.name) + "</a>" : esc(t.name)) + "</h3>" +
+      .bindPopup('<div class="tag" style="color:' + pc + '">' + esc(kind) + "</div><h3>" + (site && /^https?:/.test(site) ? '<a href="' + esc(site) + '" target="_blank" rel="noopener">' + esc(t.name) + "</a>" : esc(t.name)) + "</h3>" +
         (note ? note + "<br>" : "") + '<a href="https://maps.apple.com/?daddr=' + lat + "," + lon + '" target="_blank" rel="noopener">Directions ↗</a>')
       .addTo(layers[layer]);
   }
@@ -1499,6 +1530,7 @@ tr:last-child td { border-bottom: 0; }
       if (k === "vote") { voteOn = e.target.checked; syncVote(); return; }
       if (k === "ramps") { rampsOn = e.target.checked; syncLaneChanges(); return; }
       if (k === "roads") { roadsOn = e.target.checked; syncLaneChanges(); return; }
+      if (k === "nature") { live.naturebig.on = live.parks.on = e.target.checked; }
       if (live[k]) { live[k].on = e.target.checked; syncLive(); return; }
       if (e.target.checked) map.addLayer(layers[k]); else map.removeLayer(layers[k]);
     });

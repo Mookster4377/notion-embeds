@@ -12,6 +12,7 @@ Florida file with osmium-tool, keeps only the tags the map uses, and writes the 
   <out>/[orlando/]highways.json            interstates, U.S. and main state routes (zoomed-out views)
   <out>/[orlando/]points.json              place names, museums, colleges, venues, malls (zoomed-out views)
   <out>/[orlando/]airports.json            public airports
+  <out>/[orlando/]nature.json              preserves, state parks, wetlands, beaches, springs (zoomed-out views)
   <out>/[orlando/]counties.json            county boundaries
   <out>/[orlando/]meta.json                build time, tile grid, tiles with no data
 
@@ -40,6 +41,7 @@ FILTERS = [
     "nwr/tourism=museum", "nwr/leisure=stadium,sports_centre,fitness_centre", "nwr/building=stadium",
     "nwr/shop=mall", "nwr/landuse=retail,residential", "n/place=city,town,suburb,village,hamlet,neighbourhood,quarter",
     "n/barrier=gate,lift_gate,swing_gate", "nwr/gated=yes", "nwr/aeroway=aerodrome", "r/boundary=administrative",
+    "nwr/leisure=park,nature_reserve,garden", "nwr/boundary=protected_area,national_park", "nwr/natural=wetland,beach,spring",
 ]
 DROP_PREFIXES = ("tiger:", "source", "gnis:", "NHD:", "note", "fixme", "FIXME", "created_by", "check_date", "survey", "attribution",
                  "import", "wikimedia", "name:", "old_name", "alt_name:", "is_in", "ref:", "nhd", "building:levels", "roof:",
@@ -75,7 +77,21 @@ def is_poi(t, kind):
         return True
     if t.get("gated") == "yes" or (kind == "w" and t.get("landuse") == "residential" and t.get("access") == "private"):
         return True
-    return False
+    return is_nature(t)
+
+
+def is_nature(t):
+    """Named parks, preserves, state parks, wetlands, beaches, springs and botanical gardens."""
+    if not t.get("name"):
+        return False
+    return (t.get("leisure") in ("park", "nature_reserve", "garden") or t.get("boundary") in ("protected_area", "national_park") or
+            t.get("natural") in ("wetland", "beach", "spring"))
+
+
+def is_big_nature(t):
+    """nature.json: the larger natural areas shown when zoomed out (not neighborhood parks)."""
+    return is_nature(t) and (t.get("leisure") == "nature_reserve" or t.get("boundary") in ("protected_area", "national_park") or
+                             t.get("natural") in ("wetland", "beach", "spring") or re.search(r"State Park|Preserve|Wildlife", t.get("name", "")))
 
 
 def is_point_of_region(t, kind):
@@ -110,7 +126,7 @@ class Pass1(osmium.SimpleHandler):
 
     def relation(self, r):
         t = tags_of(r)
-        if is_county(t) or is_poi(t, "r") or is_airport(t) or is_point_of_region(t, "r"):
+        if is_county(t) or is_poi(t, "r") or is_airport(t) or is_point_of_region(t, "r") or is_nature(t):
             for m in r.members:
                 if m.type == "w":
                     self.member_ways.add(m.ref)
@@ -121,6 +137,7 @@ class Pass2(osmium.SimpleHandler):
         super().__init__()
         self.p1 = p1
         self.lines, self.pois, self.region_pts, self.airports, self.highways, self.counties = [], [], [], [], [], []
+        self.nature = []
         self.way_geom = {}
 
     def node(self, n):
@@ -134,6 +151,8 @@ class Pass2(osmium.SimpleHandler):
             self.region_pts.append(el)
         if is_airport(t):
             self.airports.append(el)
+        if is_big_nature(t):
+            self.nature.append(el)
 
     def way(self, w):
         geom, ids = [], []
@@ -154,7 +173,8 @@ class Pass2(osmium.SimpleHandler):
         if hw in ("motorway", "trunk", "primary") and REF_ROUTE.match(t.get("ref", "")):
             self.highways.append({"type": "way", "id": w.id, "geometry": geom, "tags": t})
         center = None
-        for test, bucket in ((is_poi(t, "w"), self.pois), (is_point_of_region(t, "w"), self.region_pts), (is_airport(t), self.airports)):
+        for test, bucket in ((is_poi(t, "w"), self.pois), (is_point_of_region(t, "w"), self.region_pts), (is_airport(t), self.airports),
+                             (is_big_nature(t), self.nature)):
             if test:
                 center = center or bbox_center(geom)
                 bucket.append({"type": "way", "id": w.id, "center": center, "tags": t})
@@ -169,7 +189,8 @@ class Pass2(osmium.SimpleHandler):
                                   "members": [{"type": "way", "role": role, "geometry": self.way_geom[ref]} for ref, role in members]})
         pts = [g for ref, _ in members for g in self.way_geom[ref]]
         center = None
-        for test, bucket in ((is_poi(t, "r"), self.pois), (is_point_of_region(t, "r"), self.region_pts), (is_airport(t), self.airports)):
+        for test, bucket in ((is_poi(t, "r"), self.pois), (is_point_of_region(t, "r"), self.region_pts), (is_airport(t), self.airports),
+                             (is_big_nature(t), self.nature)):
             if test:
                 center = center or bbox_center(pts)
                 bucket.append({"type": "relation", "id": r.id, "center": center, "tags": t})
@@ -210,6 +231,7 @@ def build_city(pbf, out, city, work):
     write(os.path.join(out_dir, "highways.json"), p2.highways)
     write(os.path.join(out_dir, "points.json"), [x for x in p2.region_pts if in_box(*point_of(x), region)])
     write(os.path.join(out_dir, "airports.json"), [x for x in p2.airports if in_box(*point_of(x), region)])
+    write(os.path.join(out_dir, "nature.json"), [x for x in p2.nature if in_box(*point_of(x), region)])
     write(os.path.join(out_dir, "counties.json"), p2.counties)
 
     # Tiles: points by location, roads by every tile their bounding box touches.
