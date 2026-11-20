@@ -12,20 +12,20 @@
 /* Layout: region chips → big live Waze map → road guide map (hotspots, lanes, merges) → lane table. */
 :root {
   --bg: #eef1f4; --card: #ffffff; --ink: #141a21; --muted: #5b6672; --line: #d8dee5; --chip: #e5eaef;
-  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057; --interstate: #364fc7; --ushwy: #c2255c; --staterd: #e0a800; --countyrd: #1098ad; --poi: #5f3dc4; --nature: #2f9e44; --bagel: #b8860b; --library: #1864ab; --transit: #0c8599; --trail: #087f5b; --bike: #12b886; --hike: #8c5a2b; --rep: #5c3d99; --dem: #1c64c8; --gop: #c92a2a; --vote: #7b5ea7; --night: #d6336c; --gym: #0b7285; --free: #2b8a3e; --paid: #c92a2a; --parkunk: #495057;
+  --accent: #1f6fb8; --jam: #e07b00; --crash: #d6312b; --police: #2856d8; --merge: #8a3fc7; --lane: #1d7a4c; --coffee: #7a4a1f; --school: #c99a00; --expand: #0f8a8a; --exit: #0b6b3a; --arterial: #2f6bd1; --stroad: #e8590c; --county: #f08c00; --urban: #7048e8; --suburban: #2b8a3e; --rural: #a0682b; --gate: #495057; --interstate: #364fc7; --ushwy: #c2255c; --staterd: #e0a800; --countyrd: #1098ad; --poi: #5f3dc4; --nature: #2f9e44; --bagel: #b8860b; --library: #1864ab; --transit: #0c8599; --campus: #d9480f; --trail: #087f5b; --bike: #12b886; --hike: #8c5a2b; --rep: #5c3d99; --dem: #1c64c8; --gop: #c92a2a; --vote: #7b5ea7; --night: #d6336c; --gym: #0b7285; --free: #2b8a3e; --paid: #c92a2a; --parkunk: #495057;
   --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --nature: #51cf66; --bagel: #f0b429; --library: #74c0fc; --transit: #3bc9db; --trail: #38d9a9; --bike: #63e6be; --hike: #d9a066; --rep: #b197fc; --dem: #5c9dff; --gop: #ff6b6b; --vote: #b197fc; --night: #f783ac; --gym: #3bc9db; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
+    --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --nature: #51cf66; --bagel: #f0b429; --library: #74c0fc; --transit: #3bc9db; --campus: #ff922b; --trail: #38d9a9; --bike: #63e6be; --hike: #d9a066; --rep: #b197fc; --dem: #5c9dff; --gop: #ff6b6b; --vote: #b197fc; --night: #f783ac; --gym: #3bc9db; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0e1318; --card: #171e25; --ink: #e8edf2; --muted: #93a0ad; --line: #26303a; --chip: #202932;
-  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --nature: #51cf66; --bagel: #f0b429; --library: #74c0fc; --transit: #3bc9db; --trail: #38d9a9; --bike: #63e6be; --hike: #d9a066; --rep: #b197fc; --dem: #5c9dff; --gop: #ff6b6b; --vote: #b197fc; --night: #f783ac; --gym: #3bc9db; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
+  --accent: #5aa8f0; --jam: #ff9d2e; --crash: #ff5a4f; --police: #6b93ff; --merge: #c085f5; --lane: #4cc98a; --coffee: #c58a4e; --school: #f2c230; --expand: #3fd0c9; --exit: #2fa866; --arterial: #6aa3ff; --stroad: #ff8a3d; --county: #ffd43b; --urban: #b197fc; --suburban: #69db7c; --rural: #e0a96d; --gate: #ced4da; --interstate: #748ffc; --ushwy: #f06595; --staterd: #ffd43b; --countyrd: #3bc9db; --poi: #9775fa; --nature: #51cf66; --bagel: #f0b429; --library: #74c0fc; --transit: #3bc9db; --campus: #ff922b; --trail: #38d9a9; --bike: #63e6be; --hike: #d9a066; --rep: #b197fc; --dem: #5c9dff; --gop: #ff6b6b; --vote: #b197fc; --night: #f783ac; --gym: #3bc9db; --free: #51cf66; --paid: #ff6b6b; --parkunk: #adb5bd;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -229,6 +229,17 @@ tr:last-child td { border-bottom: 0; }
       </table>
     </div>
     <p class="note">Named trails over half a mile, longest first. <b>Trails</b> on the map: paved multi-use trails (solid) and hiking trails (dashed). <b>Protected bike lanes</b>: bike paths separated from traffic and on-road lanes with a physical barrier (painted-only lanes left out); they show once you zoom in. From OpenStreetMap, so newer segments may be missing.</p>
+  </section>
+
+  <section>
+    <h2 id="campusHead">Campus buses &amp; shuttles</h2>
+    <div class="panel table-wrap">
+      <table>
+        <thead><tr><th>Route</th><th>Serves</th><th>Runs</th><th></th></tr></thead>
+        <tbody id="campusRows"><tr><td colspan="4" class="note">Loading campus routes…</td></tr></tbody>
+      </table>
+    </div>
+    <p class="note" id="campusNote"></p>
   </section>
 
   <section>
@@ -504,6 +515,7 @@ tr:last-child td { border-bottom: 0; }
     libraries: { label: "Libraries",           letter: "📚", v: "--library" },
     transit: { label: "Bus & rail routes",     letter: "🚌", v: "--transit" },
     stations: { label: "Transit stations",     letter: "🚉", v: "--transit" },
+    shuttles: { label: "Campus buses & shuttles", letter: "🎓", v: "--campus" },
     trails:  { label: "Trails",                letter: "🚲", v: "--trail" },
     reps:    { label: "Congressional districts", letter: "🏛️", v: "--rep" },
     bikelanes: { label: "Protected bike lanes", letter: "", v: "--bike" },
@@ -2227,29 +2239,95 @@ tr:last-child td { border-bottom: 0; }
     if (/^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(t.colour || "")) return t.colour;
     return RAIL[t.route] ? (t.route === "tram" ? "#c92a2a" : "#5f3dc4") : color("--transit");
   }
+  // --- Campus buses & shuttles (USF Bull Runner from OpenStreetMap; UCF shuttles from UCF Parking's published route list) ---
+  var CAMPUS_OP = /bull ?runner|university of south florida|\bUSF\b|\bUCF\b|university of central florida|knights express|pegasus express/i;
+  function isCampusRoute(t) { return CAMPUS_OP.test([t.operator, t.network].join(" ")) || /^bull ?runner/i.test(t.name || ""); }
+  var BR_COLORS = { green: "#2b8a3e", blue: "#1c7ed6", purple: "#7048e8", red: "#e03131", gold: "#f59f00", brown: "#8d5524", orange: "#f76707", plum: "#9c36b5" };
+  // USF Parking & Transportation Services, Bull Runner hours of operation (fall semester).
+  var BR_HOURS = { blue: "Mon–Thu 7 am–9:30 pm · Fri 7 am–6 pm", brown: "Mon–Thu 7 am–midnight · Fri 7 am–6 pm · Sat–Sun 11 am–6 pm",
+    green: "Mon–Thu 7 am–midnight · Fri 7 am–6 pm", orange: "Mon–Thu 7 am–midnight · Fri 7 am–6 pm · Sat–Sun 11 am–6 pm",
+    purple: "Mon–Thu 7 am–midnight · Fri 7 am–6 pm", red: "Mon–Thu 7 am–midnight · Fri 7 am–6 pm · Sat–Sun 11 am–6 pm", plum: "Sat–Sun 11 am–6 pm" };
+  var BR_SITE = "https://www.usf.edu/parking/bull-runner/hours-of-operation.aspx";
+  function brColorWord(t) { var m = /(green|blue|purple|red|gold|brown|orange|plum)/i.exec(t.name || ""); return m ? m[1].toLowerCase() : ""; }
+  var campusRoutes = [];
+  function campusRows() {
+    var rows = document.getElementById("campusRows"), html = "";
+    if (!ORL) {
+      var seen = {};
+      campusRoutes.sort(function (a, b) { return a.name.localeCompare(b.name); }).forEach(function (r, i) {
+        var w = brColorWord(r.tags); if (seen[r.name]) return; seen[r.name] = 1;
+        html += '<tr><td class="road"><span class="sw" style="background:' + r.color + '"></span> ' + esc(r.name) + "</td><td class='note'>" +
+          (r.tags.from && r.tags.to ? esc(r.tags.from) + " → " + esc(r.tags.to) : "USF Tampa campus") + "</td><td class='note'>" +
+          esc(BR_HOURS[w] || (w === "gold" ? "Not on USF's current schedule" : "See USF's schedule")) + '</td><td><button type="button" class="chip" data-i="' + i + '">Show on map</button></td></tr>';
+      });
+      ["orange", "plum"].forEach(function (w) {
+        if (campusRoutes.some(function (r) { return brColorWord(r.tags) === w; })) return;
+        html += '<tr><td class="road"><span class="sw" style="background:' + BR_COLORS[w] + '"></span> Bull Runner ' + w.charAt(0).toUpperCase() + w.slice(1) +
+          "</td><td class='note'>Route line not mapped yet</td><td class='note'>" + esc(BR_HOURS[w]) + '</td><td><a class="chip" href="' + BR_SITE + '" target="_blank" rel="noopener">USF ↗</a></td></tr>';
+      });
+      document.getElementById("campusNote").innerHTML = "USF's Bull Runner campus shuttle. Hours are USF's published fall schedule; no service on USF holidays. " +
+        '<a href="' + BR_SITE + '" target="_blank" rel="noopener">Hours &amp; holidays ↗</a> · <a href="https://www.usf.edu/parking/bull-runner/" target="_blank" rel="noopener">Bull Runner &amp; live BullTracker ↗</a>';
+    } else {
+      var UCF = [["Pegasus Express", "On-campus loop, clockwise: LYNX Transit Center, Student Union, Lake Claire, Greek Park, Addition Arena, Engineering/Research 1, Nike & Neptune, Rec & Wellness, Ferrell Commons, VPI", "Mon–Fri when classes are in session; no UCF ID needed"],
+        ["Knights Express", "On-campus loop, counter-clockwise: same stops plus the Celeste Hotel", "Mon–Fri when classes are in session"],
+        ["Route 1", "Knights Circle / Vibe ↔ Student Union, Bay A", ""], ["Route 2", "College Station / Boardwalk ↔ Transit Center, Bay A", ""],
+        ["Route 3", "The Verge / Aves at Twelve100 ↔ Transit Center, Bay E", ""], ["Route 4", "Lark Central Florida / Mercury 3100 / Campus Crossings / The Rook ↔ Transit Center, Bay F", ""],
+        ["Route 5", "Nine at Central / Village at Science Drive / Knights Landing / Verve ↔ Research 1 Loop, Bay A", ""], ["Route 6", "Northgate Lakes / Tivoli / NorthView ↔ Research 1 Loop, Bay B", ""],
+        ["Route 7", "The Pointe at Central ↔ Transit Center, Bay G", ""], ["Route 8", "Riverwind at Alafaya / The Station ↔ Research 1 Loop, Bay C", ""],
+        ["Route 9", "Plaza on University / Accolade East & West / Arden Villas ↔ Student Union, Bay B", ""], ["Route 10", "The Lofts / Orion on Orpington ↔ Transit Center, Bay H", ""]];
+      UCF.forEach(function (r) {
+        html += '<tr><td class="road">🎓 ' + esc(r[0]) + "</td><td class='note'>" + esc(r[1]) + "</td><td class='note'>" +
+          esc(r[2] || "Mon–Thu 6:30 am–10 pm · Fri 6:30 am–8 pm (class days; UCF ID)") + '</td><td><a class="chip" href="https://ucf.transloc.com/routes" target="_blank" rel="noopener">Live map ↗</a></td></tr>';
+      });
+      campusRoutes.forEach(function (r, i) {
+        html += '<tr><td class="road"><span class="sw" style="background:' + r.color + '"></span> ' + esc(r.name) + "</td><td class='note'>Mapped campus route</td><td class='note'>—</td>" +
+          '<td><button type="button" class="chip" data-i="' + i + '">Show on map</button></td></tr>';
+      });
+      document.getElementById("campusNote").innerHTML = "UCF's free shuttles, from UCF Parking &amp; Transportation's published route list (route lines aren't published as open data, so tap <b>Live map</b> for paths and arrival times). Off-campus routes make no stops in between. LYNX route 13 (University Blvd) also runs to the UCF SuperStop; turn on <b>Bus &amp; rail routes</b> to see it. " +
+        '<a href="https://parking.ucf.edu/transportation/off-campus/" target="_blank" rel="noopener">Off-campus shuttles ↗</a> · <a href="https://parking.ucf.edu/transportation/on-campus/" target="_blank" rel="noopener">On-campus shuttles ↗</a> · <a href="https://ucf.transloc.com/routes" target="_blank" rel="noopener">Live shuttle tracker ↗</a>';
+    }
+    rows.innerHTML = html || '<tr><td colspan="4" class="note">No campus routes mapped.</td></tr>';
+    [].forEach.call(rows.querySelectorAll("button[data-i]"), function (b) {
+      b.addEventListener("click", function () {
+        var r = campusRoutes[+b.getAttribute("data-i")];
+        showTab(false);
+        if (!map.hasLayer(layers.shuttles)) map.addLayer(layers.shuttles);
+        var box = document.querySelector('#toggles input[data-k="shuttles"]'); if (box) box.checked = true;
+        document.getElementById("guide").scrollIntoView({ behavior: "smooth", block: "center" });
+        map.fitBounds(r.line.getBounds(), { padding: [30, 30], maxZoom: 16 });
+        setTimeout(function () { r.line.openPopup(r.line.getCenter()); }, 400);
+      });
+    });
+    document.getElementById("campusHead").textContent = ORL ? "UCF shuttles" : "USF Bull Runner";
+  }
   function drawRoutes(routes) {
     routes.forEach(function (r) {
       var t = r.tags || {}, rail = !!RAIL[t.route];
       if (!r.lines.length) return;
       var kind = { bus: "Bus", trolleybus: "Trolley", tram: "Streetcar", train: "Train", light_rail: "Light rail" }[t.route] || "Transit";
       var name = (t.ref ? kind + " " + t.ref : "") + (t.name && t.name !== t.ref ? (t.ref ? " · " : "") + t.name : "") || kind + " route";
-      var site = transitSite(t), base = { color: routeColor(t), weight: rail ? 4 : 2.5, opacity: rail ? 0.9 : 0.75, dashArray: rail ? null : "6 4" };
+      var campus = isCampusRoute(t), w = campus ? brColorWord(t) : "";
+      if (campus) { kind = "Campus shuttle"; name = t.name || name; }
+      var site = campus ? (/UCF|central florida|knights|pegasus/i.test([t.operator, t.network, t.name].join(" ")) ? "https://ucf.transloc.com/routes" : BR_SITE) : transitSite(t);
+      var base = campus ? { color: /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(t.colour || "") ? t.colour : BR_COLORS[w] || color("--campus"), weight: 4.5, opacity: 0.9, dashArray: null }
+        : { color: routeColor(t), weight: rail ? 4 : 2.5, opacity: rail ? 0.9 : 0.75, dashArray: rail ? null : "6 4" };
       var line = L.polyline(r.lines, base)
         .bindTooltip(esc(name), { sticky: true })
         .bindPopup('<div class="tag" style="color:' + base.color + '">' + esc(kind + (t.network || t.operator ? " · " + (t.network || t.operator) : "")) + "</div><h3>" + esc(name) + "</h3>" +
           (t.from && t.to ? esc(t.from) + " → " + esc(t.to) + "<br>" : "") + (t.interval ? "Every " + esc(t.interval) + (/^\d+$/.test(t.interval) ? " min" : "") + "<br>" : "") +
-          (t.opening_hours ? "Runs: " + esc(t.opening_hours) + "<br>" : "") +
+          (t.opening_hours ? "Runs: " + esc(t.opening_hours) + "<br>" : "") + (campus && BR_HOURS[w] ? "Runs: " + esc(BR_HOURS[w]) + "<br>" : campus && w === "gold" ? "<span class='note'>Not on USF's current schedule.</span><br>" : "") +
           (site ? '<a href="' + esc(site) + '" target="_blank" rel="noopener">Schedule &amp; fares ↗</a>' : "<span class='note'>Check the operator for schedules.</span>"));
       line.on("popupopen", function () { line.setStyle({ weight: base.weight + 3, opacity: 1 }); line.bringToFront(); });
       line.on("popupclose", function () { line.setStyle(base); });
-      line.addTo(rail ? railLines : busLines);
+      if (campus) { line.addTo(layers.shuttles); campusRoutes.push({ name: name, tags: t, color: base.color, line: line }); }
+      else line.addTo(rail ? railLines : busLines);
     });
   }
   function syncBusLines() {
     if (map.getZoom() >= 11) busLines.addTo(layers.transit); else layers.transit.removeLayer(busLines);
   }
   function loadTransit() {
-    if (transitLoaded || !map.hasLayer(layers.transit) || map.getZoom() < 9) return;
+    if (transitLoaded) return;
     transitLoaded = true;
     osmFile("transit.json", '[out:json][timeout:120];relation["type"="route"]["route"~"^(bus|trolleybus|tram|train|light_rail)$"](' + AREA_BOX + ');out geom;', 7, 120000)
       .then(function (d) {
@@ -2262,9 +2340,10 @@ tr:last-child td { border-bottom: 0; }
         // Rail on top of buses; shorter (local) bus routes on top of long ones.
         routes.sort(function (a, b) { return (!!RAIL[a.tags.route] - !!RAIL[b.tags.route]) || b.lines.length - a.lines.length; });
         drawRoutes(routes);
+        campusRows();
         syncBusLines();
       })
-      .catch(function () { transitLoaded = false; });
+      .catch(function () { transitLoaded = false; campusRows(); });
   }
   map.on("zoomend", syncBusLines);
   map.on("moveend", loadTransit);
