@@ -51,8 +51,8 @@ h1 { font: 700 30px/1 var(--display); letter-spacing: .02em; text-transform: upp
 .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
 .district-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; flex: 1 1 100%; }
 .district-row-label { font: 600 11px var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
-.district-row .chip { font-size: 11px; padding: 4px 10px; border-color: var(--night); }
-.district-row .chip:hover { background: var(--night); color: #fff; }
+.district-row .chip { font-size: 11px; padding: 4px 10px; border-color: var(--L-districts); }
+.district-row .chip:hover { background: var(--L-districts); color: #fff; }
 .chip:focus-visible, a:focus-visible, label:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 section h2 {
   font: 600 12px var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
@@ -102,10 +102,21 @@ section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); 
 .pin.poi { width: 24px; height: 24px; font-size: 13px; }
 .pin.park.street { border-radius: 10px; width: 24px; }
 .pin.park { width: 20px; height: 20px; font: 800 11px var(--body); border-radius: 4px; }
-.layer-box { flex: 1 1 100%; }
-.layer-box summary { cursor: pointer; font: 600 13px var(--body); padding: 2px 0; }
+.layer-box { position: relative; }
+.layer-box summary { cursor: pointer; font: 600 13px var(--body); padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--chip); list-style: none; display: inline-flex; gap: 8px; align-items: center; }
+.layer-box summary::-webkit-details-marker { display: none; }
+.layer-box summary::after { content: "▾"; font-size: 11px; }
+.layer-box[open] summary::after { content: "▴"; }
 .layer-box summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.layer-list { display: flex; flex-wrap: wrap; gap: 6px 14px; padding-top: 8px; }
+.layer-count { font-weight: 400; color: var(--muted); }
+.layer-menu { position: absolute; z-index: 1200; top: calc(100% + 6px); left: 0; width: min(760px, calc(100vw - 32px)); max-height: min(70vh, 620px); overflow: auto;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.22); padding: 12px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px 18px; }
+.layer-group { min-width: 0; }
+.group-head { display: flex; align-items: center; gap: 6px; padding-bottom: 4px; margin-bottom: 4px; border-bottom: 1px solid var(--line); cursor: pointer; font-size: 13px; }
+.group-head .group-count { margin-left: auto; }
+.group-items { display: flex; flex-direction: column; gap: 3px; }
+.group-items label { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; padding: 2px 0; }
 .report-btn { font: 600 12px var(--body); background: var(--police); color: #fff; border: 0; border-radius: 999px; padding: 5px 12px; cursor: pointer; }
 .report-btn[aria-pressed="true"] { background: var(--ink); }
 .report-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -119,7 +130,7 @@ section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); 
   clip-path: polygon(30% 0, 70% 0, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0 70%, 0 30%); box-shadow: 0 0 0 2px #fff; }
 .stopsign.busy { width: 24px; height: 24px; font-size: 7px; }
 .pin.local { width: 20px; height: 20px; font-size: 10px; opacity: .9; }
-.district-label { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; font: 700 12px var(--display); letter-spacing: .08em; text-transform: uppercase; color: #fff; background: var(--night); padding: 2px 8px; border-radius: 999px; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+.district-label { display: inline-block; transform: translate(-50%, -50%); white-space: nowrap; font: 700 12px var(--display); letter-spacing: .08em; text-transform: uppercase; color: #fff; background: var(--L-districts); padding: 2px 8px; border-radius: 999px; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
 .pin.gate { width: 20px; height: 20px; font-size: 10px; }
 .pin.school { color: #1a1400; width: 20px; height: 20px; font-size: 11px; }
 .zone-status { color: var(--muted); font-size: 12px; margin-left: auto; }
@@ -130,10 +141,10 @@ section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); 
 .tiles-dark { filter: invert(1) hue-rotate(180deg) brightness(.9) contrast(.9); }
 .lanebadge {
   white-space: nowrap; font: 600 11px var(--body); background: var(--card); color: var(--ink);
-  border: 1.5px solid var(--lane); border-radius: 999px; padding: 2px 8px; box-shadow: 0 1px 3px rgba(0,0,0,.25);
+  border: 1.5px solid var(--L-lanes); border-radius: 999px; padding: 2px 8px; box-shadow: 0 1px 3px rgba(0,0,0,.25);
   display: inline-block; transform: translate(-50%, -50%);
 }
-.lanebadge b { color: var(--lane); }
+.lanebadge b { color: var(--L-lanes); }
 .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--card); color: var(--ink); }
 .leaflet-popup-content { font: 13px/1.45 var(--body); margin: 10px 12px; }
 .leaflet-popup-content h3 { margin: 0 0 4px; font: 700 16px var(--display); letter-spacing: .02em; }
@@ -144,7 +155,7 @@ section h2::after { content: ""; flex: 1; height: 1px; background: var(--line); 
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { font: 600 11px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); background: var(--chip); }
-td.n { font: 700 18px var(--display); color: var(--lane); white-space: nowrap; font-variant-numeric: tabular-nums; }
+td.n { font: 700 18px var(--display); color: var(--L-lanes); white-space: nowrap; font-variant-numeric: tabular-nums; }
 td.road { font-weight: 600; white-space: nowrap; }
 tr:last-child td { border-bottom: 0; }
 .note { color: var(--muted); font-size: 12px; }
@@ -503,48 +514,64 @@ tr:last-child td { border-bottom: 0; }
     {"id": "435bb5242e5c831685e701541fdd00c9", "name": "Buttermilk Handcrafted Food", "url": "https://www.yelp.com/biz/buttermilk-handcrafted-food-sarasota", "r": "sarasota", "lat": 27.32642, "lon": -82.45852, "addr": "5520 Palmer Blvd, Sarasota", "rank": "Great", "cat": "Coffee, Bakery, Sandwiches"}
   ];
 
+  // Every layer has its own color (--L-<layer>, light and dark), checked so no two layers look alike.
+  var LAYER_COLORS = {"jam": ["#f08c00", "#ffa94d"], "crash": ["#e03131", "#ff5c5c"], "police": ["#1c2d80", "#4263eb"], "stops": ["#7d1d1d", "#c0504d"], "school": ["#fcc419", "#ffe066"], "lanes": ["#1b4d2e", "#8ce99a"], "merge": ["#ae3ec9", "#da77f2"], "lanechg": ["#20c997", "#63e6be"], "ramps": ["#74b816", "#a9e34b"], "highways": ["#4263eb", "#a5b4fc"], "roads": ["#ff8787", "#ff8787"], "counties": ["#c9b458", "#d29479"], "reps": ["#5f3dc4", "#a125f4"], "districts": ["#e64980", "#f06595"], "gates": ["#495057", "#868e96"], "vote": ["#b197fc", "#b197fc"], "transit": ["#1098ad", "#bee3f4"], "stations": ["#0b4f5c", "#3d8f9e"], "shuttles": ["#c2410c", "#ff7a3d"], "trails": ["#0b6e4f", "#0ca678"], "bikelanes": ["#7efce2", "#b4fff0"], "parking": ["#4dabf7", "#74c0fc"], "coffee": ["#6f4518", "#b07a45"], "places": ["#ffc078", "#ffd8a8"], "bagels": ["#8f6b00", "#c9a227"], "nightclubs": ["#a3164e", "#c2255c"], "bars": ["#ffa8c5", "#ffcfe0"], "gyms": ["#98dce1", "#66d9e8"], "airports": ["#a5b4fc", "#3c8cdd"], "museums": ["#a1887f", "#c4ada5"], "colleges": ["#ced4da", "#e9ecef"], "venues": ["#abf910", "#d8f5a2"], "malls": ["#eebefa", "#eebefa"], "libraries": ["#557e25", "#94b84a"], "nature": ["#2f9e44", "#37b24d"]};
+  (function () {
+    var light = [], dark = [];
+    Object.keys(LAYER_COLORS).forEach(function (k) { light.push('--L-' + k + ':' + LAYER_COLORS[k][0]); dark.push('--L-' + k + ':' + LAYER_COLORS[k][1]); });
+    var st = document.createElement('style');
+    st.textContent = ':root{' + light.join(';') + '}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){' + dark.join(';') + '}}:root[data-theme="dark"]{' + dark.join(';') + '}';
+    document.head.appendChild(st);
+  })();
+  var LAYER_GROUPS = [{"id": "traffic", "label": "Traffic & safety", "keys": ["jam", "crash", "police", "stops", "school"]}, {"id": "lanes", "label": "Lanes & highway layout", "keys": ["lanes", "merge", "lanechg", "ramps"]}, {"id": "roads", "label": "Roads & boundaries", "keys": ["highways", "roads", "counties", "reps"]}, {"id": "areas", "label": "Neighborhoods", "keys": ["districts", "gates", "vote"]}, {"id": "move", "label": "Getting around", "keys": ["transit", "stations", "shuttles", "trails", "bikelanes", "parking"]}, {"id": "food", "label": "Food & coffee", "keys": ["coffee", "places", "bagels"]}, {"id": "night", "label": "Nightlife & fitness", "keys": ["nightclubs", "bars", "gyms"]}, {"id": "go", "label": "Places to go", "keys": ["airports", "museums", "colleges", "venues", "malls", "libraries", "nature"]}];
   var TYPES = {
-    jam:    { label: "Frequent jams",          letter: "J", v: "--jam" },
-    crash:  { label: "Crash-prone",            letter: "!", v: "--crash" },
-    police: { label: "Police / enforcement",   letter: "🚓", v: "--police" },
-    merge:  { label: "Merges & lane drops",    letter: "M", v: "--merge" },
-    lanes:  { label: "Lane counts",            letter: "",  v: "--lane" },
-    coffee: { label: "Coffee (your list + local)", letter: "☕", v: "--coffee" },
-    places: { label: "My places (Orlando list)", letter: "📍", v: "--coffee" },
-    bagels: { label: "Bagels",                 letter: "🥯", v: "--bagel" },
-    libraries: { label: "Libraries",           letter: "📚", v: "--library" },
-    transit: { label: "Bus & rail routes",     letter: "🚌", v: "--transit" },
-    stations: { label: "Transit stations",     letter: "🚉", v: "--transit" },
-    shuttles: { label: "Campus buses & shuttles", letter: "🎓", v: "--campus" },
-    trails:  { label: "Trails",                letter: "🚲", v: "--trail" },
-    reps:    { label: "Congressional districts", letter: "🏛️", v: "--rep" },
-    bikelanes: { label: "Protected bike lanes", letter: "", v: "--bike" },
-    school: { label: "School zones",           letter: "S", v: "--school" },
-    lanechg: { label: "Lane drops & adds",     letter: "",  v: "--expand" },
-    ramps:   { label: "Highway exits & entrances", letter: "", v: "--exit" },
-    roads:   { label: "Arterials & stroads",   letter: "", v: "--stroad" },
-    highways: { label: "Highways, state & county roads", letter: "", v: "--interstate" },
-    counties: { label: "County lines",         letter: "", v: "--county" },
-    areas:   { label: "Urban / suburban / rural", letter: "", v: "--suburban" },
-    gates:   { label: "Gated communities",     letter: "🔒", v: "--gate" },
-    airports: { label: "Airports",             letter: "✈️", v: "--poi" },
-    museums: { label: "Museums",               letter: "🏛️", v: "--poi" },
-    colleges: { label: "Colleges",             letter: "🎓", v: "--poi" },
-    venues:  { label: "Sports venues",         letter: "🏟️", v: "--poi" },
-    malls:   { label: "Shopping centers",      letter: "🛍️", v: "--poi" },
-    parking: { label: "Parking (free / paid / private)", letter: "P", v: "--free" },
-    stops:   { label: "Stop signs",            letter: "", v: "--crash" },
-    districts: { label: "Nightlife districts",   letter: "", v: "--night" },
-    nightclubs: { label: "Nightclubs",           letter: "🪩", v: "--night" },
-    bars:    { label: "College & 20s bars",    letter: "🍻", v: "--night" },
-    gyms:    { label: "Gyms",                  letter: "🏋️", v: "--gym" },
-    nature:  { label: "Parks & nature",        letter: "🌳", v: "--nature" },
-    vote:    { label: "2024 vote by precinct (D / R)", letter: "", v: "--vote" }
+    jam: { label: "Frequent jams", letter: "J", v: "--L-jam", group: "traffic" },
+    crash: { label: "Crash-prone", letter: "!", v: "--L-crash", group: "traffic" },
+    police: { label: "Police / enforcement", letter: "🚓", v: "--L-police", group: "traffic" },
+    stops: { label: "Stop signs", letter: "", v: "--L-stops", group: "traffic" },
+    school: { label: "School zones", letter: "S", v: "--L-school", group: "traffic" },
+    lanes: { label: "Lane counts", letter: "", v: "--L-lanes", group: "lanes" },
+    merge: { label: "Merges & lane drops", letter: "M", v: "--L-merge", group: "lanes" },
+    lanechg: { label: "Lane drops & adds", letter: "", v: "--L-lanechg", group: "lanes" },
+    ramps: { label: "Highway exits & entrances", letter: "", v: "--L-ramps", group: "lanes" },
+    highways: { label: "Highways, state & county roads", letter: "", v: "--L-highways", group: "roads" },
+    roads: { label: "Arterials & stroads", letter: "", v: "--L-roads", group: "roads" },
+    counties: { label: "County lines", letter: "", v: "--L-counties", group: "roads" },
+    reps: { label: "Congressional districts", letter: "🏛️", v: "--L-reps", group: "roads" },
+    districts: { label: "Neighborhoods & districts", letter: "", v: "--L-districts", group: "areas" },
+    gates: { label: "Gated communities", letter: "🔒", v: "--L-gates", group: "areas" },
+    vote: { label: "2024 vote by precinct (D / R)", letter: "", v: "--L-vote", group: "areas" },
+    transit: { label: "Bus & rail routes", letter: "🚌", v: "--L-transit", group: "move" },
+    stations: { label: "Transit stations", letter: "🚉", v: "--L-stations", group: "move" },
+    shuttles: { label: "Campus buses & shuttles", letter: "🎓", v: "--L-shuttles", group: "move" },
+    trails: { label: "Trails", letter: "🚲", v: "--L-trails", group: "move" },
+    bikelanes: { label: "Protected bike lanes", letter: "", v: "--L-bikelanes", group: "move" },
+    parking: { label: "Parking (free / paid / private)", letter: "P", v: "--L-parking", group: "move" },
+    coffee: { label: "Coffee (your list + local)", letter: "☕", v: "--L-coffee", group: "food" },
+    places: { label: "My places (Orlando list)", letter: "📍", v: "--L-places", group: "food" },
+    bagels: { label: "Bagels", letter: "🥯", v: "--L-bagels", group: "food" },
+    nightclubs: { label: "Nightclubs", letter: "🪩", v: "--L-nightclubs", group: "night" },
+    bars: { label: "College & 20s bars", letter: "🍻", v: "--L-bars", group: "night" },
+    gyms: { label: "Gyms", letter: "🏋️", v: "--L-gyms", group: "night" },
+    airports: { label: "Airports", letter: "✈️", v: "--L-airports", group: "go" },
+    museums: { label: "Museums", letter: "🏛️", v: "--L-museums", group: "go" },
+    colleges: { label: "Colleges", letter: "🎓", v: "--L-colleges", group: "go" },
+    venues: { label: "Sports venues", letter: "🏟️", v: "--L-venues", group: "go" },
+    malls: { label: "Shopping centers", letter: "🛍️", v: "--L-malls", group: "go" },
+    libraries: { label: "Libraries", letter: "📚", v: "--L-libraries", group: "go" },
+    nature: { label: "Parks & nature", letter: "🌳", v: "--L-nature", group: "go" }
   };
+
   if (!ORL) delete TYPES.places;
 
   var css = getComputedStyle(document.documentElement);
   function color(v) { return css.getPropertyValue(v).trim(); }
+  // Lighter (t > 0) or darker (t < 0) version of a hex color, for sub-types inside one layer.
+  function shade(hex, t) {
+    var m = /^#?([0-9a-f]{6})$/i.exec(hex || ""); if (!m) return hex;
+    var n = parseInt(m[1], 16), c = [n >> 16, (n >> 8) & 255, n & 255].map(function (x) { return Math.round(t > 0 ? x + (255 - x) * t : x * (1 + t)); });
+    return "#" + c.map(function (x) { return ("0" + x.toString(16)).slice(-2); }).join("");
+  }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
 
   var params = new URLSearchParams(location.search);
@@ -590,6 +617,10 @@ tr:last-child td { border-bottom: 0; }
 
   var layers = {};
   Object.keys(TYPES).forEach(function (k) { layers[k] = L.layerGroup().addTo(map); });
+  // Urban / suburban / rural place labels are part of "Neighborhoods & districts", shown from zoom 11.
+  var areaLabels = L.layerGroup();
+  function syncAreaLabels() { if (map.getZoom() >= 11) areaLabels.addTo(layers.districts); else layers.districts.removeLayer(areaLabels); }
+  map.on("zoomend", syncAreaLabels); syncAreaLabels();
 
   SPOTS.forEach(function (s) {
     var T = TYPES[s.t], c = color(T.v);
@@ -606,7 +637,7 @@ tr:last-child td { border-bottom: 0; }
 
   var coffeeMarkers = {};
   function addMine(c) {
-    var col = color("--coffee");
+    var col = color(TYPES.coffee.v);
     var icon = L.divIcon({ className: "", iconSize: [24, 24], iconAnchor: [12, 12],
       html: '<div class="pin coffee" style="background:' + col + '"><span>☕</span></div>' });
     var title = c.url ? '<a href="' + esc(c.url) + '" target="_blank" rel="noopener">' + esc(c.name) + "</a>" : esc(c.name);
@@ -639,7 +670,7 @@ tr:last-child td { border-bottom: 0; }
   ];
   function addPlace(p) {
     var st = PLACE_STYLE.filter(function (x) { return x[0](p); })[0];
-    var col = color("--coffee");
+    var col = color(TYPES.coffee.v);
     var icon = L.divIcon({ className: "", iconSize: [24, 24], iconAnchor: [12, 12], html: '<div class="pin coffee" style="background:' + col + '"><span>' + st[1] + "</span></div>" });
     var details = [p.cat.concat(p.type).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(", "), (p.cuisine || []).join(", "), p.price].filter(Boolean).join(" · ");
     var marker = L.marker([p.lat, p.lon], { icon: icon, title: p.name, keyboard: true, zIndexOffset: 500 })
@@ -659,7 +690,7 @@ tr:last-child td { border-bottom: 0; }
   ROADS.forEach(function (rd) {
     var icon = L.divIcon({ className: "", iconSize: [0, 0], html: '<span class="lanebadge">' + esc(rd.road) + " · <b>" + esc(rd.lanes) + "</b></span>" });
     L.marker([rd.lat, rd.lon], { icon: icon, title: rd.road + " " + rd.lanes + " lanes each way", keyboard: true })
-      .bindPopup('<div class="tag" style="color:' + color("--lane") + '">Lanes each way: ' + esc(rd.lanes) + "</div><h3>" + esc(rd.road) + "</h3>" + esc(rd.stretch) + "<br><br><b>Merges:</b> " + esc(rd.merge))
+      .bindPopup('<div class="tag" style="color:' + color(TYPES.lanes.v) + '">Lanes each way: ' + esc(rd.lanes) + "</div><h3>" + esc(rd.road) + "</h3>" + esc(rd.stretch) + "<br><br><b>Merges:</b> " + esc(rd.merge))
       .addTo(layers.lanes);
   });
 
@@ -710,7 +741,7 @@ tr:last-child td { border-bottom: 0; }
   var SCHOOL_MIN_ZOOM = 13;
   function schoolPopup(name, lat, lon) {
     var dist = districtOf(lat, lon), level = levelOf(name), rows = dist && level ? zoneHours(dist, level) : null;
-    var html = '<div class="tag" style="color:' + color("--school") + '">School zone · 15–20 mph</div><h3>' + esc(name) + "</h3>";
+    var html = '<div class="tag" style="color:' + color(TYPES.school.v) + '">School zone · 15–20 mph</div><h3>' + esc(name) + "</h3>";
     if (rows) {
       html += "On school days, roughly:<table class='hours'>" + rows.map(function (r) { return "<tr><td><b>" + r[0] + "</b></td><td>" + r[1] + "</td><td class='note'>" + r[2] + "</td></tr>"; }).join("") + "</table>" +
         "<div class='note' style='margin-top:6px'>Based on " + BELLS[dist].name + " " + level + " bell times (" + BELLS[dist].year + "). Individual schools can differ.</div>";
@@ -723,7 +754,7 @@ tr:last-child td { border-bottom: 0; }
     var lat = el.lat || (el.center && el.center.lat), lon = el.lon || (el.center && el.center.lon), name = el.tags && el.tags.name;
     if (!lat || !name) return;
     var key = el.type + el.id; if (schoolSeen[key]) return; schoolSeen[key] = 1;
-    var icon = L.divIcon({ className: "", iconSize: [20, 20], iconAnchor: [10, 10], html: '<div class="pin school" style="background:' + color("--school") + '"><span>S</span></div>' });
+    var icon = L.divIcon({ className: "", iconSize: [20, 20], iconAnchor: [10, 10], html: '<div class="pin school" style="background:' + color(TYPES.school.v) + '"><span>S</span></div>' });
     L.marker([lat, lon], { icon: icon, title: name, keyboard: true }).bindPopup(function () { return schoolPopup(name, lat, lon); }).addTo(layers.school);
   }
   function covered(b) {
@@ -838,7 +869,7 @@ tr:last-child td { border-bottom: 0; }
     if (laneSeen[c.id]) return; laneSeen[c.id] = 1;
     var hasDrop = c.notes.some(function (n) { return n.kind === "drop" || n.kind === "exitonly"; });
     var exitOnly = c.notes.some(function (n) { return n.kind === "exitonly"; });
-    var col = color(hasDrop ? "--merge" : "--expand");
+    var col = hasDrop ? shade(color(TYPES.lanechg.v), -0.45) : color(TYPES.lanechg.v);
     // Arrow points the way traffic is heading where the lanes merge (or, for added lanes, where they're added).
     var main = c.notes.filter(function (n) { return n.kind === "drop" || n.kind === "exitonly"; })[0] || c.notes[0];
     var icon = L.divIcon({ className: "", iconSize: [22, 22], iconAnchor: [11, 11],
@@ -877,7 +908,7 @@ tr:last-child td { border-bottom: 0; }
   function laneDiagram(lanes, pick) {
     return '<span style="display:inline-flex;gap:2px;margin-left:4px;vertical-align:middle">' + lanes.map(function (l, i) {
       var on = pick.indexOf(i) >= 0, a = l.split(";").map(function (x) { return ARROW[x] || "↑"; }).join("");
-      return '<span style="min-width:20px;text-align:center;padding:1px 3px;border-radius:3px;border:1px solid ' + (on ? color("--exit") : "var(--line)") + ";background:" + (on ? color("--exit") : "transparent") + ";color:" + (on ? "#fff" : "var(--muted)") + '">' + a + "</span>";
+      return '<span style="min-width:20px;text-align:center;padding:1px 3px;border-radius:3px;border:1px solid ' + (on ? color(TYPES.ramps.v) : "var(--line)") + ";background:" + (on ? color(TYPES.ramps.v) : "transparent") + ";color:" + (on ? "#fff" : "var(--muted)") + '">' + a + "</span>";
     }).join("") + "</span>";
   }
   function ordinal(i, n) {
@@ -960,7 +991,7 @@ tr:last-child td { border-bottom: 0; }
       : "On-ramp" + (r.road ? " onto " + esc(r.road) : "") + (r.to ? " toward <b>" + esc(r.to) + "</b>" : "") + ". Merge with highway traffic." +
         (r.lanes && r.lanes.length ? "<div style='margin-top:6px'><b>Which lane to be in:</b>" + r.lanes.map(function (x) { return "<div style='margin-top:4px'>" + x + "</div>"; }).join("") + "</div>" : "");
     L.marker([r.lat, r.lon], { icon: icon, title: title, keyboard: true })
-      .bindPopup('<div class="tag" style="color:' + color("--exit") + '">' + (r.kind === "exit" ? "Highway exit" : "Highway entrance") + "</div><h3>" + esc(title) + "</h3>" + body)
+      .bindPopup('<div class="tag" style="color:' + color(TYPES.ramps.v) + '">' + (r.kind === "exit" ? "Highway exit" : "Highway entrance") + "</div><h3>" + esc(title) + "</h3>" + body)
       .addTo(layers.ramps);
   }
 
@@ -982,7 +1013,7 @@ tr:last-child td { border-bottom: 0; }
     var oneway = t.oneway === "yes" || t.oneway === "-1";
     var wide = lanes && (oneway ? lanes >= 2 : lanes >= 4);
     var stroad = wide && t.bridge !== "yes" && (sp ? sp >= 35 && sp <= 55 : /^(trunk|primary)$/.test(t.highway));
-    var col = color(stroad ? "--stroad" : "--arterial");
+    var col = stroad ? color(TYPES.roads.v) : shade(color(TYPES.roads.v), 0.35);
     var name = t.name || t.ref || "Unnamed road";
     var facts = [(lanes ? lanes + " lanes" + (oneway ? " (one way)" : " total") : "lane count not mapped"), (sp ? sp + " mph" : "speed limit not mapped")];
     var why = stroad
@@ -1182,7 +1213,7 @@ tr:last-child td { border-bottom: 0; }
           var num = ref.replace(/^(I|US|SR|FL|CR) ?/, "");
           var label = cls === "interstate" ? "I-" + num : cls === "ushwy" ? "US " + num : cls === "countyrd" ? "CR " + num : "SR " + num;
           var kind = { interstate: "Interstate", ushwy: "U.S. highway", staterd: "State road", countyrd: "County road" }[cls];
-          var col = color("--" + cls), pts = e.geometry.map(function (g) { return [g.lat, g.lon]; });
+          var col = color(TYPES.highways.v), pts = e.geometry.map(function (g) { return [g.lat, g.lon]; });
           var popup = '<div class="tag" style="color:' + col + '">' + kind + "</div><h3>" + esc(label) + (e.tags.name && e.tags.name !== label ? " · " + esc(e.tags.name) : "") + "</h3>" +
             (refs.length > 1 ? "Also signed as " + esc(refs.filter(function (r) { return r !== ref; }).join(", ")) + ". " : "") +
             (e.tags.lanes ? e.tags.lanes + " lanes" + (e.tags.oneway === "yes" ? " (one way)" : " total") + ". " : "") +
@@ -1249,12 +1280,12 @@ tr:last-child td { border-bottom: 0; }
         var garage = /^(multi-storey|underground|rooftop)$/.test(t.parking || "");
         var kindName = garage ? "Parking garage" : street ? "Street parking" : "Parking lot";
         var fee = t.fee === "yes" || !!t.charge ? "paid" : t.fee === "no" ? "free" : "unknown";
-        var col = priv ? color("--gate") : color(fee === "paid" ? "--paid" : fee === "free" ? "--free" : "--parkunk");
+        var col = color(TYPES.parking.v);
         var feeText = { paid: "Paid" + (t.charge ? ": " + esc(t.charge) : ""), free: "Free", unknown: "Free or paid: not listed. Check the signs." }[fee];
         var who = priv ? "<b>Private:</b> " + ({ permit: "permit holders only", residents: "residents only" }[t.access] || "not open to the public") + "."
           : t.access === "customers" ? "Customers only." : t.access === "permissive" || t.access === "yes" || !t.access ? "" : "Access: " + esc(t.access) + ".";
         if (street && t.maxstay) who += (who ? " " : "") + "Time limit: " + esc(t.maxstay) + ".";
-        var icon = L.divIcon({ className: "", iconSize: [20, 20], iconAnchor: [10, 10], html: '<div class="pin park' + (street ? " street" : "") + '" style="background:' + col + '"><span>' + (priv ? "🔒" : garage ? "P▲" : street ? "P═" : "P") + "</span></div>" });
+        var icon = L.divIcon({ className: "", iconSize: [20, 20], iconAnchor: [10, 10], html: '<div class="pin park' + (street ? " street" : "") + '" style="background:' + col + '"><span>' + (priv ? "🔒" : (fee === "paid" ? "$" : "") + (garage ? "P▲" : street ? "P═" : "P") + (fee === "unknown" ? "?" : "")) + "</span></div>" });
         L.marker([lat, lon], { icon: icon, title: (t.name || kindName) + " (" + (priv ? "private" : fee) + ")", keyboard: true })
           .bindPopup('<div class="tag" style="color:' + col + '">' + kindName + " · " + (priv ? "private" : fee === "unknown" ? "fee unknown" : fee) + "</div><h3>" + esc(t.name || kindName) + "</h3>" +
             (priv ? who : feeText + (who ? "<br>" + who : "")) + (t.capacity ? "<br>About " + esc(t.capacity) + " spaces." : "") + (t.opening_hours ? "<br>Hours: " + esc(t.opening_hours) : "") + (t.operator ? "<br>Run by " + esc(t.operator) + "." : "") +
@@ -1293,9 +1324,9 @@ tr:last-child td { border-bottom: 0; }
             : ownIsBig ? "<b>Stop sign on a through road.</b> Traffic queues here at busy times."
             : "Stop sign.";
           var icon = L.divIcon({ className: "", iconSize: busy ? [24, 24] : [18, 18], iconAnchor: busy ? [12, 12] : [9, 9],
-            html: '<div class="stopsign' + (busy ? " busy" : "") + '" style="background:' + color("--crash") + '">' + (allWay ? "ALL" : "STOP") + "</div>" });
+            html: '<div class="stopsign' + (busy ? " busy" : "") + '" style="background:' + color(TYPES.stops.v) + '">' + (allWay ? "ALL" : "STOP") + "</div>" });
           L.marker([n.lat, n.lon], { icon: icon, title: (allWay ? "All-way stop" : "Stop sign") + (road.name ? " on " + road.name : "") + (busy ? " (can back up)" : ""), keyboard: true })
-            .bindPopup('<div class="tag" style="color:' + color("--crash") + '">' + (busy ? "Stop sign · can back up" : "Stop sign") + "</div><h3>" + esc(road.name || "Stop sign") + "</h3>" + why)
+            .bindPopup('<div class="tag" style="color:' + color(TYPES.stops.v) + '">' + (busy ? "Stop sign · can back up" : "Stop sign") + "</div><h3>" + esc(road.name || "Stop sign") + "</h3>" + why)
             .addTo(layers.stops);
         });
       } },
@@ -1338,11 +1369,12 @@ tr:last-child td { border-bottom: 0; }
           var kind = t.place === "city" || ((t.place === "suburb" || t.place === "quarter" || t.place === "neighbourhood") && nearCity) ? "urban"
             : /^(village|hamlet)$/.test(t.place) ? "rural" : "suburban";
           var label = { urban: "Urban", suburban: "Suburban", rural: "Rural" }[kind];
-          var icon = L.divIcon({ className: "", iconSize: [0, 0], html: '<span class="area"><i style="background:' + color("--" + kind) + '"></i>' + esc(t.name) + "</span>" });
+          var areaCol = kind === "urban" ? shade(color(TYPES.districts.v), -0.35) : kind === "suburban" ? color(TYPES.districts.v) : shade(color(TYPES.districts.v), 0.45);
+          var icon = L.divIcon({ className: "", iconSize: [0, 0], html: '<span class="area"><i style="background:' + areaCol + '"></i>' + esc(t.name) + "</span>" });
           var tips = { urban: "Dense streets, frequent signals, pedestrians and transit. Expect stop-and-go traffic.", suburban: "Neighborhoods feeding a few busy arterials. Rush-hour backups at the main intersections.", rural: "Two-lane roads, higher speeds, few lights and long distances between gas stations. Watch for farm equipment and wildlife." };
           L.marker([e.lat, e.lon], { icon: icon, title: t.name + " (" + label + ")", keyboard: true })
-            .bindPopup('<div class="tag" style="color:' + color("--" + kind) + '">' + label + " area</div><h3>" + esc(t.name) + "</h3>" + tips[kind] + "<div class='note' style='margin-top:6px'>Based on how OpenStreetMap classifies the place (" + esc(t.place) + ").</div>")
-            .addTo(layers.areas);
+            .bindPopup('<div class="tag" style="color:' + areaCol + '">' + label + " area</div><h3>" + esc(t.name) + "</h3>" + tips[kind] + "<div class='note' style='margin-top:6px'>Based on how OpenStreetMap classifies the place (" + esc(t.place) + ").</div>")
+            .addTo(areaLabels);
         });
       } },
     // Gated communities: private residential gates and areas tagged as gated.
@@ -1358,9 +1390,9 @@ tr:last-child td { border-bottom: 0; }
           var key = e.type + e.id; if (live.gates.seen[key]) return; live.gates.seen[key] = 1;
           var lat = e.lat || (e.center && e.center.lat), lon = e.lon || (e.center && e.center.lon); if (!lat) return;
           var t = e.tags || {}, isGate = !!t.barrier;
-          var icon = L.divIcon({ className: "", iconSize: [20, 20], iconAnchor: [10, 10], html: '<div class="pin gate" style="background:' + color("--gate") + '"><span>🔒</span></div>' });
+          var icon = L.divIcon({ className: "", iconSize: [20, 20], iconAnchor: [10, 10], html: '<div class="pin gate" style="background:' + color(TYPES.gates.v) + '"><span>🔒</span></div>' });
           L.marker([lat, lon], { icon: icon, title: (t.name || "Gated community") + (isGate ? " gate" : ""), keyboard: true })
-            .bindPopup('<div class="tag" style="color:' + color("--gate") + '">' + (isGate ? "Gated entrance" : "Gated community") + "</div><h3>" + esc(t.name || "Gated community") + "</h3>" +
+            .bindPopup('<div class="tag" style="color:' + color(TYPES.gates.v) + '">' + (isGate ? "Gated entrance" : "Gated community") + "</div><h3>" + esc(t.name || "Gated community") + "</h3>" +
               (isGate ? "Private gate: residents and guests only. Expect a guard or call box; " : "Private streets behind a gate; ") +
               "navigation apps may route you here, but it isn't a through road.")
             .addTo(layers.gates);
@@ -1511,12 +1543,12 @@ tr:last-child td { border-bottom: 0; }
   function drawNature(els) {
     els.forEach(function (e) {
       var k = natureKind(tg(e));
-      if (k) poiMarker("nature", e, k.e, k.k, function () { return hoursHtml(tg(e), k) + crowdHtml(k.k, tg(e)) + (k.note ? "<br><span class='note'>" + esc(k.note) + "</span>" : ""); }, "--nature");
+      if (k) poiMarker("nature", e, k.e, k.k, function () { return hoursHtml(tg(e), k) + crowdHtml(k.k, tg(e)) + (k.note ? "<br><span class='note'>" + esc(k.note) + "</span>" : ""); });
     });
   }
   var poiSeen = {};
   function poiMarker(layer, e, emoji, kind, note, colorVar) {
-    var pc = color(colorVar || "--poi");
+    var pc = color(colorVar || (TYPES[layer] ? TYPES[layer].v : "--poi"));
     var reg = poiSeen[layer] = poiSeen[layer] || { seen: {} };
     var key = e.type + e.id; if (reg.seen[key]) return; reg.seen[key] = 1;
     var t = e.tags || {}, lat = e.lat || (e.center && e.center.lat), lon = e.lon || (e.center && e.center.lon);
@@ -1572,7 +1604,7 @@ tr:last-child td { border-bottom: 0; }
             if (m.type !== "way" || !m.geometry || m.role === "inner") return;
             var pts = m.geometry.map(function (g) { return [g.lat, g.lon]; });
             pts.forEach(function (p) { bounds.extend(p); });
-            L.polyline(pts, { color: color("--county"), weight: 2.5, opacity: 0.9, dashArray: "10 6", interactive: false }).addTo(layers.counties);
+            L.polyline(pts, { color: color(TYPES.counties.v), weight: 2.5, opacity: 0.9, dashArray: "10 6", interactive: false }).addTo(layers.counties);
           });
           if (bounds.isValid()) {
             var c = rel.center || bounds.getCenter();
@@ -1603,10 +1635,10 @@ tr:last-child td { border-bottom: 0; }
     if (reportSeen[r.id] || hidden[r.id]) return;
     reportSeen[r.id] = r;
     var old = Date.now() / 1000 - r.time > 2 * 3600;
-    var icon = L.divIcon({ className: "", iconSize: [26, 26], iconAnchor: [13, 13], html: '<div class="pin report' + (old ? " old" : "") + '" style="background:' + color("--police") + '"><span>🚨</span></div>' });
+    var icon = L.divIcon({ className: "", iconSize: [26, 26], iconAnchor: [13, 13], html: '<div class="pin report' + (old ? " old" : "") + '" style="background:' + color(TYPES.police.v) + '"><span>🚨</span></div>' });
     r.marker = L.marker([r.lat, r.lon], { icon: icon, title: (KINDS[r.kind] || "Police activity") + " reported", keyboard: true, zIndexOffset: 1000 })
       .bindPopup(function () {
-        return '<div class="tag" style="color:' + color("--police") + '">Reported by a driver · ' + ago(r.time) + "</div><h3>" + esc(KINDS[r.kind] || "Police activity") + "</h3>" +
+        return '<div class="tag" style="color:' + color(TYPES.police.v) + '">Reported by a driver · ' + ago(r.time) + "</div><h3>" + esc(KINDS[r.kind] || "Police activity") + "</h3>" +
           (r.note ? esc(r.note) + "<br>" : "") + '<button type="button" class="chip" data-hide="' + esc(r.id) + '" style="margin-top:6px">Hide on this device</button>' +
           "<div class='note' style='margin-top:6px'>Reports disappear after " + REPORT_HOURS + " hours.</div>";
       })
@@ -1715,30 +1747,58 @@ tr:last-child td { border-bottom: 0; }
   map.on("zoomend", syncVote);
 
   var toggles = document.getElementById("toggles");
-  // Layer checkboxes live in a collapsible "Map layers" list: open on wide screens, closed on phones.
+  // Layer checkboxes live in a "Map layers" dropdown, grouped by kind. Each group has an all on / all off switch.
   var layerBox = document.createElement("details");
   layerBox.className = "layer-box";
-  layerBox.innerHTML = "<summary>Map layers</summary><div class='layer-list'></div>";
-  if (window.innerWidth > 900) layerBox.open = true;
+  layerBox.innerHTML = "<summary><span>Map layers</span> <span class='layer-count'></span></summary><div class='layer-menu' role='group' aria-label='Map layers'></div>";
   toggles.appendChild(layerBox);
-  var layerList = layerBox.querySelector(".layer-list");
-  Object.keys(TYPES).forEach(function (k) {
-    var T = TYPES[k];
-    var lab = document.createElement("label");
-    lab.innerHTML = '<input type="checkbox" data-k="' + k + '" checked> <span class="sw' + (k === "lanes" ? " lane" : "") + '" style="background:' + color(T.v) + '"></span>' + T.label;
-    lab.querySelector("input").addEventListener("change", function (e) {
-      if (k === "lanes") { lanesOn = e.target.checked; syncLanes(); return; }
-      if (k === "school") { schoolsOn = e.target.checked; syncSchools(); return; }
-      if (k === "lanechg") { laneChgOn = e.target.checked; syncLaneChanges(); return; }
-      if (k === "vote") { voteOn = e.target.checked; syncVote(); return; }
-      if (k === "ramps") { rampsOn = e.target.checked; syncLaneChanges(); return; }
-      if (k === "roads") { roadsOn = e.target.checked; syncLaneChanges(); return; }
-      if (k === "nature") { live.naturebig.on = live.parks.on = e.target.checked; }
-      if (live[k]) { live[k].on = e.target.checked; syncLive(); return; }
-      if (e.target.checked) map.addLayer(layers[k]); else map.removeLayer(layers[k]);
+  var layerMenu = layerBox.querySelector(".layer-menu");
+  function setLayer(k, on) {
+    if (k === "lanes") { lanesOn = on; syncLanes(); return; }
+    if (k === "school") { schoolsOn = on; syncSchools(); return; }
+    if (k === "lanechg") { laneChgOn = on; syncLaneChanges(); return; }
+    if (k === "vote") { voteOn = on; syncVote(); return; }
+    if (k === "ramps") { rampsOn = on; syncLaneChanges(); return; }
+    if (k === "roads") { roadsOn = on; syncLaneChanges(); return; }
+    if (k === "nature") { live.naturebig.on = live.parks.on = on; }
+    if (k === "districts") { live.areas.on = on; }
+    if (live[k]) { live[k].on = on; syncLive(); if (k !== "districts") return; }
+    if (on) map.addLayer(layers[k]); else map.removeLayer(layers[k]);
+  }
+  function updateLayerCounts() {
+    var all = layerMenu.querySelectorAll("input[data-k]"), on = [].filter.call(all, function (x) { return x.checked; }).length;
+    layerBox.querySelector(".layer-count").textContent = on + " of " + all.length + " on";
+    [].forEach.call(layerMenu.querySelectorAll(".layer-group"), function (g) {
+      var boxes = g.querySelectorAll("input[data-k]"), n = [].filter.call(boxes, function (x) { return x.checked; }).length, gb = g.querySelector("input[data-group]");
+      gb.checked = n === boxes.length; gb.indeterminate = n > 0 && n < boxes.length;
+      g.querySelector(".group-count").textContent = n + "/" + boxes.length;
     });
-    layerList.appendChild(lab);
+  }
+  LAYER_GROUPS.forEach(function (G) {
+    var keys = G.keys.filter(function (k) { return TYPES[k]; });
+    if (!keys.length) return;
+    var box = document.createElement("div");
+    box.className = "layer-group";
+    box.innerHTML = '<label class="group-head"><input type="checkbox" data-group="' + G.id + '" checked> <b>' + esc(G.label) + '</b> <span class="group-count note"></span></label><div class="group-items"></div>';
+    var items = box.querySelector(".group-items");
+    keys.forEach(function (k) {
+      var T = TYPES[k], lab = document.createElement("label");
+      lab.innerHTML = '<input type="checkbox" data-k="' + k + '" checked> <span class="sw' + (k === "lanes" ? " lane" : "") + '" style="background:' + color(T.v) + '"></span>' + esc(T.label);
+      lab.querySelector("input").addEventListener("change", function (e) { setLayer(k, e.target.checked); updateLayerCounts(); });
+      items.appendChild(lab);
+    });
+    box.querySelector("input[data-group]").addEventListener("change", function (e) {
+      [].forEach.call(items.querySelectorAll("input[data-k]"), function (x) {
+        if (x.checked !== e.target.checked) { x.checked = e.target.checked; setLayer(x.getAttribute("data-k"), x.checked); }
+      });
+      updateLayerCounts();
+    });
+    layerMenu.appendChild(box);
   });
+  updateLayerCounts();
+  // Close the dropdown when tapping elsewhere or pressing Escape.
+  document.addEventListener("click", function (e) { if (layerBox.open && !layerBox.contains(e.target)) layerBox.open = false; });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && layerBox.open) { layerBox.open = false; layerBox.querySelector("summary").focus(); } });
   var zoneStatus = document.createElement("span");
   zoneStatus.className = "zone-status"; zoneStatus.setAttribute("aria-live", "polite");
   toggles.appendChild(zoneStatus);
@@ -1781,7 +1841,7 @@ tr:last-child td { border-bottom: 0; }
       (b.members.length > max ? "<br><span class='note'>and " + (b.members.length - max) + " more</span>" : "");
   }
   function repsAt(lat, lon) {
-    var d = repsData, out = '<div class="reps-pop"><div class="tag" style="color:' + color("--rep") + '">Who represents here</div>';
+    var d = repsData, out = '<div class="reps-pop"><div class="tag" style="color:' + color(TYPES.reps.v) + '">Who represents here</div>';
     var county = d.counties.filter(function (c) { return inPolys(lat, lon, c.p); })[0], city = d.places.filter(function (c) { return inPolys(lat, lon, c.p); })[0];
     out += "<h3>" + (city ? esc(city.n) : county ? "Unincorporated " + esc(county.n) + " County" : "This spot") + "</h3>";
     out += "<h4>U.S. Senate</h4><div class='who'>" + d.senators.map(memberHtml).join("<br>") + "</div>";
@@ -1829,11 +1889,11 @@ tr:last-child td { border-bottom: 0; }
   }
   function drawRepsLines() {
     repsData.districts.filter(function (x) { return x.c === "us"; }).forEach(function (x) {
-      var col = color(x.m && /^dem/i.test(x.m.party) ? "--dem" : x.m && /^rep/i.test(x.m.party) ? "--gop" : "--rep");
+      var col = color(TYPES.reps.v);
       L.polygon(x.p, { color: col, weight: 2, opacity: 0.8, dashArray: "8 6", fill: false, interactive: false }).addTo(repsLines);
       var b = L.polygon(x.p).getBounds();
       L.marker(b.getCenter(), { interactive: false, keyboard: false, icon: L.divIcon({ className: "", iconSize: null,
-        html: '<div class="pin-label" style="color:' + col + ';font-weight:700;white-space:nowrap;text-shadow:0 0 3px var(--card),0 0 3px var(--card)">FL-' + esc(x.d) + (x.m ? " · " + esc(x.m.n.split(" ").slice(-1)[0]) : "") + "</div>" }) }).addTo(repsLines);
+        html: '<div class="pin-label" style="color:' + col + ';font-weight:700;white-space:nowrap;text-shadow:0 0 3px var(--card),0 0 3px var(--card)">FL-' + esc(x.d) + (x.m ? " · " + esc(x.m.n.split(" ").slice(-1)[0]) + " (" + esc((x.m.party || "?").charAt(0)) + ")" : "") + "</div>" }) }).addTo(repsLines);
     });
   }
   dataReady.then(function (ok) { if (!ok) throw new Error("no data"); return timedFetchJSON(DATA_BASE + "reps.json", 30000); }).then(function (d) {
@@ -1891,10 +1951,10 @@ tr:last-child td { border-bottom: 0; }
     return { dir: "Eastbound → Brandon", until: "5 am" };
   }
   var relLine = [[27.9455, -82.4500], [27.9530, -82.4300], [27.9540, -82.4050], [27.9520, -82.3800], [27.9480, -82.3550], [27.9440, -82.3330]];
-  var relLayer = L.polyline(relLine, { color: color("--merge"), weight: 6, opacity: 0.85, dashArray: "8 6" });
+  var relLayer = L.polyline(relLine, { color: color(TYPES.lanes.v), weight: 6, opacity: 0.85, dashArray: "8 6" });
   function relPopup() {
     var n = relNow();
-    return '<div class="tag" style="color:' + color("--merge") + '">Reversible express lanes</div><h3>Selmon Expressway REL</h3>' +
+    return '<div class="tag" style="color:' + color(TYPES.lanes.v) + '">Reversible express lanes</div><h3>Selmon Expressway REL</h3>' +
       "<b>Right now:</b> " + n.dir + " (until " + n.until + ")" +
       "<table class='hours'><tr><td><b>Mon–Fri</b></td><td>5 am – noon</td><td>Westbound → downtown Tampa</td></tr>" +
       "<tr><td><b>Mon–Fri</b></td><td>noon – 5 am</td><td>Eastbound → Brandon</td></tr>" +
@@ -1902,7 +1962,7 @@ tr:last-child td { border-bottom: 0; }
       "<div class='note' style='margin-top:6px'>Elevated toll lanes between downtown Tampa and Brandon (I-75/Brandon Pkwy). Times from the Tampa Hillsborough Expressway Authority (July 2026); holidays and construction can change them. Overhead signs at each entrance show the current direction.</div>";
   }
   relLayer.bindPopup(relPopup).addTo(layers.lanes);
-  var relIcon = L.divIcon({ className: "", iconSize: [0, 0], html: '<span class="lanebadge" style="border-color:' + color("--merge") + '">⇄ Selmon REL</span>' });
+  var relIcon = L.divIcon({ className: "", iconSize: [0, 0], html: '<span class="lanebadge" style="border-color:' + color(TYPES.lanes.v) + '">⇄ Selmon REL</span>' });
   L.marker([27.9545, -82.4150], { icon: relIcon, title: "Selmon reversible lanes schedule", keyboard: true }).bindPopup(relPopup).addTo(layers.lanes);
   }
 
@@ -1952,7 +2012,7 @@ tr:last-child td { border-bottom: 0; }
     document.getElementById("guide").scrollIntoView({ behavior: "smooth", block: "center" });
     if (g.lat) {
       map.setView([g.lat, g.lon], 17);
-      L.popup().setLatLng([g.lat, g.lon]).setContent('<div class="tag" style="color:' + color("--paid") + '">' + esc(CAMPUS[g.c].name) + " · Parking garage</div><h3>" + esc(g.name) + "</h3>" + esc(g.addr) + "<br>" + esc(g.vis) +
+      L.popup().setLatLng([g.lat, g.lon]).setContent('<div class="tag" style="color:' + color(TYPES.parking.v) + '">' + esc(CAMPUS[g.c].name) + " · Parking garage</div><h3>" + esc(g.name) + "</h3>" + esc(g.addr) + "<br>" + esc(g.vis) +
         '<br><a href="https://maps.apple.com/?daddr=' + g.lat + "," + g.lon + '" target="_blank" rel="noopener">Directions ↗</a>').openOn(map);
       return;
     }
@@ -1961,14 +2021,14 @@ tr:last-child td { border-bottom: 0; }
       var hit = els.filter(function (e) { return g.re.test((e.tags && (e.tags.name || e.tags.ref)) || ""); })[0];
       if (!hit) {
         var c = L.latLngBounds(CAMPUS[g.c].bounds).getCenter();
-        L.popup().setLatLng(c).setContent('<div class="tag" style="color:' + color("--paid") + '">' + esc(CAMPUS[g.c].name) + " · Parking garage</div><h3>" + esc(g.name) + "</h3>" + esc(g.addr) + "<br>" + esc(g.vis) +
+        L.popup().setLatLng(c).setContent('<div class="tag" style="color:' + color(TYPES.parking.v) + '">' + esc(CAMPUS[g.c].name) + " · Parking garage</div><h3>" + esc(g.name) + "</h3>" + esc(g.addr) + "<br>" + esc(g.vis) +
           "<div class='note' style='margin-top:4px'>Not pinned on OpenStreetMap, so this shows the campus.</div>" +
           '<a href="https://maps.apple.com/?q=' + encodeURIComponent(g.name + ", " + g.addr + (ORL ? ", Orlando, FL" : ", Tampa, FL")) + '" target="_blank" rel="noopener">Find it in Apple Maps ↗</a>').openOn(map);
         return;
       }
       var lat = hit.lat || hit.center.lat, lon = hit.lon || hit.center.lon;
       map.setView([lat, lon], 17);
-      L.popup().setLatLng([lat, lon]).setContent('<div class="tag" style="color:' + color("--paid") + '">' + esc(CAMPUS[g.c].name) + " · Parking garage</div><h3>" + esc(g.name) + "</h3>" + esc(g.addr) + "<br>" + esc(g.vis) +
+      L.popup().setLatLng([lat, lon]).setContent('<div class="tag" style="color:' + color(TYPES.parking.v) + '">' + esc(CAMPUS[g.c].name) + " · Parking garage</div><h3>" + esc(g.name) + "</h3>" + esc(g.addr) + "<br>" + esc(g.vis) +
         '<br><a href="https://maps.apple.com/?daddr=' + lat + "," + lon + '" target="_blank" rel="noopener">Directions ↗</a>').openOn(map);
     }).catch(function () { zoneStatus.textContent = "Couldn't look up the garage right now."; });
   }
@@ -2032,7 +2092,7 @@ tr:last-child td { border-bottom: 0; }
     } else {
       var c = ORL ? [28.54, -81.38] : [27.33, -82.53];
       map.setView(c, 12);
-      L.popup().setLatLng(c).setContent('<div class="tag" style="color:' + color("--coffee") + '">Coffee</div><h3>' + esc(want) + "</h3>Not on OpenStreetMap yet, so it can't be pinned here." +
+      L.popup().setLatLng(c).setContent('<div class="tag" style="color:' + color(TYPES.coffee.v) + '">Coffee</div><h3>' + esc(want) + "</h3>Not on OpenStreetMap yet, so it can't be pinned here." +
         '<br><a href="https://maps.apple.com/?q=' + encodeURIComponent(want + (ORL ? ", Orlando, FL" : ", Sarasota, FL")) + '" target="_blank" rel="noopener">Find it in Apple Maps ↗</a>').openOn(map);
     }
   }
@@ -2068,9 +2128,9 @@ tr:last-child td { border-bottom: 0; }
         var mine = !!ex, site = siteOf(x.t); // other branches of a chain you saved aren't marked as yours
         var title = site ? '<a href="' + esc(site) + '" target="_blank" rel="noopener">' + esc(x.name) + "</a>" : esc(x.name);
         var icon = L.divIcon({ className: "", iconSize: mine ? [24, 24] : [20, 20], iconAnchor: mine ? [12, 12] : [10, 10],
-          html: '<div class="pin ' + (mine ? "coffee" : "local") + '" style="background:' + color("--coffee") + '"><span>☕</span></div>' });
+          html: '<div class="pin ' + (mine ? "coffee" : "local") + '" style="background:' + color(TYPES.coffee.v) + '"><span>☕</span></div>' });
         var m = L.marker([x.lat, x.lon], { icon: icon, title: x.name, keyboard: true, zIndexOffset: mine ? 500 : 0 })
-          .bindPopup(function () { return '<div class="tag" style="color:' + color("--coffee") + '">' + (mine ? "Coffee · in your list" : "Local coffee") + "</div><h3>" + title + "</h3>" +
+          .bindPopup(function () { return '<div class="tag" style="color:' + color(TYPES.coffee.v) + '">' + (mine ? "Coffee · in your list" : "Local coffee") + "</div><h3>" + title + "</h3>" +
             esc(addrOf(x.t) || "") + coffeeCrowdHtml({ lat: x.lat, lon: x.lon, ohours: x.t.opening_hours }) +
             '<br><a href="https://maps.apple.com/?daddr=' + x.lat + "," + x.lon + '" target="_blank" rel="noopener">Directions ↗</a>' +
             (ex ? ' · <a href="https://app.notion.com/p/' + ex.id + '" target="_blank" rel="noopener">Notion entry ↗</a>' : "") +
@@ -2165,7 +2225,7 @@ tr:last-child td { border-bottom: 0; }
           tr.querySelector("button").addEventListener("click", function () {
             showTab(false);
             if (!map.hasLayer(layers[o.layer])) map.addLayer(layers[o.layer]);
-            var box = document.querySelector('#toggles input[data-k="' + o.layer + '"]'); if (box) box.checked = true;
+            var box = document.querySelector('#toggles input[data-k="' + o.layer + '"]'); if (box) { box.checked = true; updateLayerCounts(); }
             document.getElementById("guide").scrollIntoView({ behavior: "smooth", block: "center" });
             map.setView([it.lat, it.lon], 17); it.m.openPopup();
           });
@@ -2181,7 +2241,7 @@ tr:last-child td { border-bottom: 0; }
   // Bagel places: local shops first, chains marked, with typical crowd times.
   var BAGEL_CHAINS = /einstein|bruegger|big apple bagel|manhattan bagel|new york bagel ?(and|&) deli|panera|dunkin|noah'?s/i;
   function bagelChain(t) { return !!(t.brand || t["brand:wikidata"] || BAGEL_CHAINS.test(t.name)); }
-  areaList({ file: "bagels.json", layer: "bagels", emoji: "🥯", colorVar: "--bagel", rows: "bagelRows", head: "bagelHead", title: "Bagel places",
+  areaList({ file: "bagels.json", layer: "bagels", emoji: "🥯", colorVar: TYPES.bagels.v, rows: "bagelRows", head: "bagelHead", title: "Bagel places",
     query: function (bb) { return 'nwr["name"~"bagel",i](' + bb + ');nwr["cuisine"~"bagel"]["name"](' + bb + ');'; },
     skip: function (t) { return /starbucks|dunkin|mcdonald|panera|7-eleven|wawa/i.test(t.name) && !/bagel/i.test(t.name); }, // sells bagels, but not a bagel place
     tag: function (t) { return bagelChain(t) ? "Bagels · chain" : "Local bagels"; },
@@ -2202,7 +2262,7 @@ tr:last-child td { border-bottom: 0; }
     if (/genealog|histor|archive|research|museum/i.test(n)) return "Research library";
     return "Public library";
   }
-  areaList({ file: "libraries.json", layer: "libraries", emoji: "📚", colorVar: "--library", rows: "libraryRows", head: "libraryHead", title: "Libraries",
+  areaList({ file: "libraries.json", layer: "libraries", emoji: "📚", colorVar: TYPES.libraries.v, rows: "libraryRows", head: "libraryHead", title: "Libraries",
     query: function (bb) { return 'nwr["amenity"="library"]["name"](' + bb + ');'; },
     skip: function (t) { return /^(private|no)$/.test(t.access || ""); },
     tag: libKind,
@@ -2237,7 +2297,7 @@ tr:last-child td { border-bottom: 0; }
   var busLines = L.layerGroup(), railLines = L.layerGroup().addTo(layers.transit), transitLoaded = false;
   function routeColor(t) {
     if (/^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(t.colour || "")) return t.colour;
-    return RAIL[t.route] ? (t.route === "tram" ? "#c92a2a" : "#5f3dc4") : color("--transit");
+    return RAIL[t.route] ? (t.route === "tram" ? "#c92a2a" : "#5f3dc4") : color(TYPES.transit.v);
   }
   // --- Campus buses & shuttles (USF Bull Runner from OpenStreetMap; UCF shuttles from UCF Parking's published route list) ---
   var CAMPUS_OP = /bull ?runner|university of south florida|\bUSF\b|\bUCF\b|university of central florida|knights express|pegasus express/i;
@@ -2292,7 +2352,7 @@ tr:last-child td { border-bottom: 0; }
         var r = campusRoutes[+b.getAttribute("data-i")];
         showTab(false);
         if (!map.hasLayer(layers.shuttles)) map.addLayer(layers.shuttles);
-        var box = document.querySelector('#toggles input[data-k="shuttles"]'); if (box) box.checked = true;
+        var box = document.querySelector('#toggles input[data-k="shuttles"]'); if (box) { box.checked = true; updateLayerCounts(); }
         document.getElementById("guide").scrollIntoView({ behavior: "smooth", block: "center" });
         map.fitBounds(r.line.getBounds(), { padding: [30, 30], maxZoom: 16 });
         setTimeout(function () { r.line.openPopup(r.line.getCenter()); }, 400);
@@ -2309,7 +2369,7 @@ tr:last-child td { border-bottom: 0; }
       var campus = isCampusRoute(t), w = campus ? brColorWord(t) : "";
       if (campus) { kind = "Campus shuttle"; name = t.name || name; }
       var site = campus ? (/UCF|central florida|knights|pegasus/i.test([t.operator, t.network, t.name].join(" ")) ? "https://ucf.transloc.com/routes" : BR_SITE) : transitSite(t);
-      var base = campus ? { color: /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(t.colour || "") ? t.colour : BR_COLORS[w] || color("--campus"), weight: 4.5, opacity: 0.9, dashArray: null }
+      var base = campus ? { color: /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(t.colour || "") ? t.colour : BR_COLORS[w] || color(TYPES.shuttles.v), weight: 4.5, opacity: 0.9, dashArray: null }
         : { color: routeColor(t), weight: rail ? 4 : 2.5, opacity: rail ? 0.9 : 0.75, dashArray: rail ? null : "6 4" };
       var line = L.polyline(r.lines, base)
         .bindTooltip(esc(name), { sticky: true })
@@ -2356,7 +2416,7 @@ tr:last-child td { border-bottom: 0; }
       return { e: "🚆", k: "Train station", rank: 0 };
     return { e: "🚌", k: "Bus station", rank: 1 };
   }
-  areaList({ file: "stations.json", layer: "stations", emoji: function (t) { return stationKind(t).e; }, colorVar: "--transit", rows: "stationRows", head: "stationHead", title: "Transit stations",
+  areaList({ file: "stations.json", layer: "stations", emoji: function (t) { return stationKind(t).e; }, colorVar: TYPES.stations.v, rows: "stationRows", head: "stationHead", title: "Transit stations",
     query: function (bb) { return 'nwr["amenity"="bus_station"]["name"](' + bb + ');nwr["public_transport"="station"]["name"](' + bb + ');node["railway"~"^(station|halt|tram_stop)$"]["name"](' + bb + ');'; },
     tag: function (t) { return stationKind(t).k; },
     popup: function (it) {
@@ -2405,7 +2465,7 @@ tr:last-child td { border-bottom: 0; }
         if (!d.ways) d = bikesFromOverpass(d);
         var byName = {};
         d.ways.forEach(function (w) {
-          var trail = w.k === "trail" || w.k === "hike", col = color(w.k === "hike" ? "--hike" : trail ? "--trail" : "--bike");
+          var trail = w.k === "trail" || w.k === "hike", col = w.k === "hike" ? shade(color(TYPES.trails.v), -0.3) : color(trail ? TYPES.trails.v : TYPES.bikelanes.v);
           var style = { color: col, weight: trail ? 4 : 3, opacity: 0.9, dashArray: w.k === "hike" ? "5 5" : null };
           var line = L.polyline(w.g, style).addTo(trail ? trailLines : bikeDetail);
           if (w.n) {
@@ -2439,7 +2499,7 @@ tr:last-child td { border-bottom: 0; }
           tr.querySelector("button").addEventListener("click", function () {
             showTab(false);
             if (!map.hasLayer(layers.trails)) map.addLayer(layers.trails);
-            var box = document.querySelector('#toggles input[data-k="trails"]'); if (box) box.checked = true;
+            var box = document.querySelector('#toggles input[data-k="trails"]'); if (box) { box.checked = true; updateLayerCounts(); }
             document.getElementById("guide").scrollIntoView({ behavior: "smooth", block: "center" });
             map.fitBounds(g.bounds, { padding: [30, 30], maxZoom: 16 });
             setTimeout(function () { g.lines[Math.floor(g.lines.length / 2)].openPopup(); }, 400);
@@ -2518,12 +2578,12 @@ tr:last-child td { border-bottom: 0; }
     return "Local gym; mixed crowd.";
   }
   DISTRICTS.forEach(function (d) {
-    L.circle([d.lat, d.lon], { radius: d.r, color: color("--night"), weight: 2, dashArray: "6 5", fillOpacity: 0.08 })
-      .bindPopup('<div class="tag" style="color:' + color("--night") + '">Nightlife district</div><h3>' + esc(d.n) + "</h3>" + esc(d.about) + "<br><b>Typical crowd:</b> " + esc(d.crowd) +
+    L.circle([d.lat, d.lon], { radius: d.r, color: color(TYPES.districts.v), weight: 2, dashArray: "6 5", fillOpacity: 0.08 })
+      .bindPopup('<div class="tag" style="color:' + color(TYPES.districts.v) + '">Nightlife district</div><h3>' + esc(d.n) + "</h3>" + esc(d.about) + "<br><b>Typical crowd:</b> " + esc(d.crowd) +
         "<div class='note' style='margin-top:4px'>Crowd is a general estimate.</div>")
       .addTo(layers.districts);
     d.marker = L.marker([d.lat, d.lon], { icon: L.divIcon({ className: "", iconSize: [0, 0], html: '<span class="district-label">' + esc(d.n) + "</span>" }), title: d.n, keyboard: true })
-      .bindPopup(function () { return '<div class="tag" style="color:' + color("--night") + '">Nightlife district</div><h3>' + esc(d.n) + "</h3>" + esc(d.about) + "<br><b>Typical crowd:</b> " + esc(d.crowd); })
+      .bindPopup(function () { return '<div class="tag" style="color:' + color(TYPES.districts.v) + '">Nightlife district</div><h3>' + esc(d.n) + "</h3>" + esc(d.about) + "<br><b>Typical crowd:</b> " + esc(d.crowd); })
       .addTo(layers.districts);
   });
 
