@@ -1295,6 +1295,81 @@ tr:last-child td { border-bottom: 0; }
       } }
   };
 
+
+  // --- Opening hours (OpenStreetMap opening_hours) with "open now" in Florida time ---
+  var DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"], DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  // Approximate sunrise/sunset for Central/West Florida by month (local time, minutes after midnight).
+  var SUN = [[440, 1075], [430, 1100], [455, 1180], [425, 1195], [400, 1210], [395, 1225], [405, 1225], [420, 1205], [435, 1175], [450, 1145], [415, 1060], [435, 1055]];
+  function nowFL() {
+    var parts = {};
+    new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "numeric", month: "numeric", hour12: false })
+      .formatToParts(new Date()).forEach(function (x) { parts[x.type] = x.value; });
+    return { day: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(parts.weekday), min: (+parts.hour % 24) * 60 + (+parts.minute), month: +parts.month - 1 };
+  }
+  function clock(m) { m = ((m % 1440) + 1440) % 1440; var h = Math.floor(m / 60), mm = m % 60; return (h % 12 || 12) + (mm ? ":" + (mm < 10 ? "0" : "") + mm : "") + (h < 12 ? " am" : " pm"); }
+  // Returns a week of [start, end] minute ranges (index 0 = Monday), or null if the format isn't one we understand.
+  function parseHours(str) {
+    var sun = SUN[nowFL().month], week = [[], [], [], [], [], [], []], ok = true;
+    var tm = function (x) {
+      x = x.trim();
+      if (/^(sunrise|dawn)$/.test(x)) return sun[0] - (x === "dawn" ? 30 : 0);
+      if (/^(sunset|dusk)$/.test(x)) return sun[1] + (x === "dusk" ? 30 : 0);
+      var m = /^(\d{1,2}):(\d{2})$/.exec(x); return m ? +m[1] * 60 + +m[2] : NaN;
+    };
+    str.trim().replace(/;\s*$/, "").split(/\s*;\s*/).forEach(function (rule) {
+      if (!ok) return;
+      if (rule === "24/7") { week = week.map(function () { return [[0, 1440]]; }); return; }
+      var m = /^((?:Mo|Tu|We|Th|Fr|Sa|Su|PH)(?:\s*[-,]\s*(?:Mo|Tu|We|Th|Fr|Sa|Su|PH))*)?\s*(.*)$/.exec(rule);
+      var days = [];
+      if (m[1]) m[1].split(/\s*,\s*/).forEach(function (part) {
+        var r = part.split(/\s*-\s*/), a = DAYS.indexOf(r[0]), b = DAYS.indexOf(r[1] || r[0]);
+        if (a < 0 || b < 0) return; // PH (public holidays) ignored
+        for (var d = a; ; d = (d + 1) % 7) { days.push(d); if (d === b) break; }
+      }); else days = [0, 1, 2, 3, 4, 5, 6];
+      var times = (m[2] || "").trim(), ranges = [];
+      if (/^(off|closed)$/i.test(times)) ranges = [];
+      else if (!times) ranges = [[0, 1440]];
+      else times.split(/\s*,\s*/).forEach(function (t) {
+        var r = t.split(/\s*-\s*/), a = tm(r[0] || ""), b = tm(r[1] || "");
+        if (r.length !== 2 || isNaN(a) || isNaN(b)) { ok = false; return; }
+        ranges.push([a, b <= a ? b + 1440 : b]);
+      });
+      days.forEach(function (d) { week[d] = ranges; });
+    });
+    return ok ? week : null;
+  }
+  function describeWeek(week, raw) {
+    var fmt = function (rs) { return rs.length ? rs.map(function (r) { return r[0] === 0 && r[1] === 1440 ? "24 hours" : clock(r[0]) + "–" + clock(r[1]); }).join(", ") : "closed"; };
+    var groups = [];
+    week.forEach(function (rs, d) {
+      var f = fmt(rs), g = groups[groups.length - 1];
+      if (g && g.f === f) g.to = d; else groups.push({ from: d, to: d, f: f });
+    });
+    if (groups.length === 1) return "Every day " + groups[0].f;
+    return groups.map(function (g) { return (g.from === g.to ? DAY_NAMES[g.from] : DAY_NAMES[g.from] + "–" + DAY_NAMES[g.to]) + " " + g.f; }).join(" · ");
+  }
+  function openNow(week) {
+    var n = nowFL(), prev = (n.day + 6) % 7;
+    return week[n.day].some(function (r) { return n.min >= r[0] && n.min < r[1]; }) ||
+      week[prev].some(function (r) { return r[1] > 1440 && n.min < r[1] - 1440; });
+  }
+  function hoursHtml(t, k) {
+    var raw = t.opening_hours, sunWords = raw && /sunrise|sunset|dawn|dusk/.test(raw);
+    if (raw) {
+      var week = parseHours(raw);
+      if (!week) return "<b>Hours:</b> " + esc(raw);
+      var open = openNow(week);
+      return '<b style="color:' + (open ? color("--free") : color("--crash")) + '">' + (open ? "Open now" : "Closed now") + "</b> · " + esc(describeWeek(week)) +
+        (sunWords ? "<br><span class='note'>Sunrise/sunset times are approximate for today.</span>" : "");
+    }
+    if (k && k.k === "State park") {
+      var sun = SUN[nowFL().month], n = nowFL(), open2 = n.min >= 480 && n.min < sun[1];
+      return '<b style="color:' + (open2 ? color("--free") : color("--crash")) + '">' + (open2 ? "Open now" : "Closed now") + "</b> · 8 am to sundown, every day (today about " + clock(sun[1]) + ")" +
+        "<br><span class='note'>Standard Florida State Parks hours; some areas and springs differ.</span>";
+    }
+    return "<b>Hours:</b> not listed. Most parks and preserves are open sunrise to sunset (today about " + clock(SUN[nowFL().month][0]) + "–" + clock(SUN[nowFL().month][1]) + ").";
+  }
+
   // What kind of natural place an OpenStreetMap feature is (or null).
   function natureKind(t) {
     if (!t.name) return null;
@@ -1311,7 +1386,7 @@ tr:last-child td { border-bottom: 0; }
   function drawNature(els) {
     els.forEach(function (e) {
       var k = natureKind(tg(e));
-      if (k) poiMarker("nature", e, k.e, k.k, k.note, "--nature");
+      if (k) poiMarker("nature", e, k.e, k.k, function () { return hoursHtml(tg(e), k) + (k.note ? "<br><span class='note'>" + esc(k.note) + "</span>" : ""); }, "--nature");
     });
   }
   var poiSeen = {};
@@ -1328,8 +1403,11 @@ tr:last-child td { border-bottom: 0; }
     var site = t.website || t["contact:website"];
     var icon = L.divIcon({ className: "", iconSize: [24, 24], iconAnchor: [12, 12], html: '<div class="pin poi" style="background:' + pc + '"><span>' + emoji + "</span></div>" });
     L.marker([lat, lon], { icon: icon, title: t.name, keyboard: true })
-      .bindPopup('<div class="tag" style="color:' + pc + '">' + esc(kind) + "</div><h3>" + (site && /^https?:/.test(site) ? '<a href="' + esc(site) + '" target="_blank" rel="noopener">' + esc(t.name) + "</a>" : esc(t.name)) + "</h3>" +
-        (note ? note + "<br>" : "") + '<a href="https://maps.apple.com/?daddr=' + lat + "," + lon + '" target="_blank" rel="noopener">Directions ↗</a>')
+      .bindPopup(function () {
+        var n = typeof note === "function" ? note() : note;
+        return '<div class="tag" style="color:' + pc + '">' + esc(kind) + "</div><h3>" + (site && /^https?:/.test(site) ? '<a href="' + esc(site) + '" target="_blank" rel="noopener">' + esc(t.name) + "</a>" : esc(t.name)) + "</h3>" +
+          (n ? n + "<br>" : "") + '<a href="https://maps.apple.com/?daddr=' + lat + "," + lon + '" target="_blank" rel="noopener">Directions ↗</a>';
+      })
       .addTo(layers[layer]);
   }
   var liveTimer = null;
