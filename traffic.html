@@ -540,10 +540,11 @@ tr:last-child td { border-bottom: 0; }
       html: '<div class="pin coffee" style="background:' + col + '"><span>☕</span></div>' });
     var title = c.url ? '<a href="' + esc(c.url) + '" target="_blank" rel="noopener">' + esc(c.name) + "</a>" : esc(c.name);
     var marker = L.marker([c.lat, c.lon], { icon: icon, title: c.name, keyboard: true, zIndexOffset: 500 })
-      .bindPopup('<div class="tag" style="color:' + col + '">' + esc(c.cat) + (c.rank ? " · " + esc(c.rank) : "") + "</div><h3>" + title + "</h3>" + esc(c.addr) +
+      .bindPopup(function () { return '<div class="tag" style="color:' + col + '">' + esc(c.cat) + (c.rank ? " · " + esc(c.rank) : "") + "</div><h3>" + title + "</h3>" + esc(c.addr) +
+        coffeeCrowdHtml(c) +
         '<br><a href="https://maps.apple.com/?daddr=' + c.lat + "," + c.lon + '" target="_blank" rel="noopener">Directions ↗</a>' +
         ' · <a href="https://app.notion.com/p/' + c.id + '" target="_blank" rel="noopener">Notion entry ↗</a>' +
-        ' · <a href="' + COFFEE_DB + '" target="_blank" rel="noopener">All coffee ↗</a>');
+        ' · <a href="' + COFFEE_DB + '" target="_blank" rel="noopener">All coffee ↗</a>'; });
     marker.addTo(layers.coffee);
     coffeeMarkers[c.id] = { m: marker, c: c };
   }
@@ -571,10 +572,11 @@ tr:last-child td { border-bottom: 0; }
     var icon = L.divIcon({ className: "", iconSize: [24, 24], iconAnchor: [12, 12], html: '<div class="pin coffee" style="background:' + col + '"><span>' + st[1] + "</span></div>" });
     var details = [p.cat.concat(p.type).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(", "), (p.cuisine || []).join(", "), p.price].filter(Boolean).join(" · ");
     var marker = L.marker([p.lat, p.lon], { icon: icon, title: p.name, keyboard: true, zIndexOffset: 500 })
-      .bindPopup('<div class="tag" style="color:' + col + '">' + esc(st[2]) + (p.rank ? " · " + esc(p.rank) : "") + "</div><h3>" + esc(p.name) + "</h3>" + esc(details) +
+      .bindPopup(function () { return '<div class="tag" style="color:' + col + '">' + esc(st[2]) + (p.rank ? " · " + esc(p.rank) : "") + "</div><h3>" + esc(p.name) + "</h3>" + esc(details) +
+        (p.cat.indexOf("Coffee") >= 0 ? coffeeCrowdHtml(p) : "") +
         '<br><a href="https://maps.apple.com/?daddr=' + p.lat + "," + p.lon + '" target="_blank" rel="noopener">Directions ↗</a>' +
         ' · <a href="https://app.notion.com/p/' + p.id + '" target="_blank" rel="noopener">Notion entry ↗</a>' +
-        ' · <a href="' + COFFEE_DB + '" target="_blank" rel="noopener">All places ↗</a>');
+        ' · <a href="' + COFFEE_DB + '" target="_blank" rel="noopener">All places ↗</a>'; });
     var isCoffee = p.cat.indexOf("Coffee") >= 0;
     marker.addTo(isCoffee ? layers.coffee : layers.places);
     coffeeMarkers[p.id] = { m: marker, c: p };
@@ -1397,6 +1399,31 @@ tr:last-child td { border-bottom: 0; }
       " <span class='note'>(typical pattern, not live data)</span></div>";
   }
 
+
+  // --- Typical coffee shop crowds (an estimate, not live data): depends on whether it's by a campus, in a busy district, or a neighborhood shop ---
+  function coffeeCrowdHtml(c) {
+    var campus = nearest(CAMPUSES, c.lat, c.lon), district = !campus && nearest(DISTRICTS, c.lat, c.lon);
+    var model = campus ? { busy: "weekdays 10 am–6 pm with students studying, packed during midterms and finals (Oct, Apr, Dec)", quiet: "early mornings and Friday evenings",
+                           wk: [[10, 18]], we: [[11, 16]], season: [3, 9, 11] }
+      : district ? { busy: "the weekday morning rush (7:30–9:30 am) and weekend brunch (9 am–1 pm)", quiet: "weekday afternoons 2–4 pm",
+                     wk: [[7.5, 9.5], [12, 13]], we: [[9, 13]], season: [0, 1, 2, 3] }
+      : { busy: "the weekday morning rush (7–9:30 am) and weekend mornings (8:30 am–noon)", quiet: "weekday afternoons 1–4 pm",
+          wk: [[7, 9.5]], we: [[8.5, 12]], season: [] };
+    var n = nowFL(), h = n.min / 60, weekend = n.day >= 5;
+    var week = c.ohours ? parseHours(c.ohours) : null;
+    var open = week ? openNow(week) : (n.min >= 420 && n.min < 1080); // no listed hours: assume about 7 am–6 pm
+    var peaks = weekend ? model.we : model.wk;
+    var inPeak = peaks.some(function (r) { return h >= r[0] && h < r[1]; });
+    var nearPeak = peaks.some(function (r) { return h >= r[0] - 1 && h < r[1] + 1; });
+    var level = !open ? null : inPeak ? "Busy" : nearPeak || (campus && model.season.indexOf(n.month) >= 0 && h >= 9 && h < 21) ? "Moderate" : "Quiet";
+    var col = level === "Busy" ? color("--crash") : level === "Moderate" ? color("--jam") : color("--free");
+    var hours = week ? '<br><b style="color:' + (open ? color("--free") : color("--crash")) + '">' + (open ? "Open now" : "Closed now") + "</b> · " + esc(describeWeek(week))
+      : c.ohours ? "<br><b>Hours:</b> " + esc(c.ohours) : "";
+    return hours + "<div style='margin-top:6px'><b>Crowds:</b> busiest " + esc(model.busy) + ". Quietest: " + esc(model.quiet) + "." +
+      "<br><b>Likely right now:</b> " + (level ? '<b style="color:' + col + '">' + level + "</b>" : week ? "closed" : "probably closed (hours not listed)") +
+      " <span class='note'>(" + (campus ? "near " + esc(campus.n) + "; " : district ? "in " + esc(district.n) + "; " : "") + "typical pattern, not live data)</span></div>";
+  }
+
   // What kind of natural place an OpenStreetMap feature is (or null).
   function natureKind(t) {
     if (!t.name) return null;
@@ -1833,6 +1860,7 @@ tr:last-child td { border-bottom: 0; }
         if (db && coffeeMarkers[db.id]) {
           if (usedDb[db.id]) return; // the same shop mapped twice in OpenStreetMap
           usedDb[db.id] = 1;
+          if (x.t.opening_hours) db.ohours = x.t.opening_hours;
           items.push({ name: db.name, lat: db.lat, lon: db.lon, addr: addrOf(x.t) || db.addr || "", hours: x.t.opening_hours || "", site: siteOf(x.t) || db.url || "", mine: true, m: coffeeMarkers[db.id].m });
           return;
         }
@@ -1844,11 +1872,11 @@ tr:last-child td { border-bottom: 0; }
         var icon = L.divIcon({ className: "", iconSize: mine ? [24, 24] : [20, 20], iconAnchor: mine ? [12, 12] : [10, 10],
           html: '<div class="pin ' + (mine ? "coffee" : "local") + '" style="background:' + color("--coffee") + '"><span>☕</span></div>' });
         var m = L.marker([x.lat, x.lon], { icon: icon, title: x.name, keyboard: true, zIndexOffset: mine ? 500 : 0 })
-          .bindPopup('<div class="tag" style="color:' + color("--coffee") + '">' + (mine ? "Coffee · in your list" : "Local coffee") + "</div><h3>" + title + "</h3>" +
-            esc(addrOf(x.t) || "") + (x.t.opening_hours ? "<br>Hours: " + esc(x.t.opening_hours) : "") +
+          .bindPopup(function () { return '<div class="tag" style="color:' + color("--coffee") + '">' + (mine ? "Coffee · in your list" : "Local coffee") + "</div><h3>" + title + "</h3>" +
+            esc(addrOf(x.t) || "") + coffeeCrowdHtml({ lat: x.lat, lon: x.lon, ohours: x.t.opening_hours }) +
             '<br><a href="https://maps.apple.com/?daddr=' + x.lat + "," + x.lon + '" target="_blank" rel="noopener">Directions ↗</a>' +
             (ex ? ' · <a href="https://app.notion.com/p/' + ex.id + '" target="_blank" rel="noopener">Notion entry ↗</a>' : "") +
-            ' · <a href="' + COFFEE_DB + '" target="_blank" rel="noopener">' + (ORL ? "All places" : "All coffee") + " ↗</a>")
+            ' · <a href="' + COFFEE_DB + '" target="_blank" rel="noopener">' + (ORL ? "All places" : "All coffee") + " ↗</a>"; })
           .addTo(layers.coffee);
         if (ex && !coffeeMarkers[ex.id]) coffeeMarkers[ex.id] = { m: m, c: { lat: x.lat, lon: x.lon, name: x.name } };
         items.push({ name: x.name, lat: x.lat, lon: x.lon, addr: addrOf(x.t) || "", hours: x.t.opening_hours || "", site: site, mine: mine, m: m });
