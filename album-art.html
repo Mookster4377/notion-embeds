@@ -252,6 +252,22 @@
       overflow-x: auto;
       color: var(--muted);
     }
+    .seg {
+      display: inline-flex; align-self: flex-start;
+      background: var(--bg-2); border: 1px solid var(--line-2);
+      border-radius: 10px; padding: 3px; gap: 3px;
+    }
+    .seg label { position: relative; }
+    .seg input { position: absolute; opacity: 0; pointer-events: none; }
+    .seg span { display: block; padding: 6px 14px; border-radius: 7px; cursor: pointer; color: var(--muted); font-size: 14px; }
+    .seg input:checked + span { background: var(--card); color: var(--fg); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); font-weight: 600; }
+    .seg input:focus-visible + span { outline: 2px solid var(--accent-2); }
+    .path-field { display: flex; flex-direction: column; gap: 5px; font-size: 13.5px; }
+    .path-field i { color: var(--muted); font-style: normal; }
+    .path-field input {
+      background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 8px;
+      padding: 7px 10px; font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
     .progress { font-size: 13px; color: var(--accent-2); min-height: 1.4em; }
     .toast {
       position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
@@ -318,10 +334,18 @@
   <dialog id="dlg-export">
     <form method="dialog" class="dlg">
       <h2>Export as a folder</h2>
-      <p>Makes a <b>Music Station</b> folder with one folder per playlist. Each song gets its artwork as a JPG named after the song, plus a list of every song. Song files you attached get the new title, artist and artwork written into them.</p>
+      <div class="seg" role="radiogroup" aria-label="Format">
+        <label><input type="radio" name="fmt" value="folders" checked><span>Playlist folders</span></label>
+        <label><input type="radio" name="fmt" value="plex"><span>Plex library</span></label>
+      </div>
+      <p id="export-intro"></p>
       <label class="opt"><input type="radio" name="scope" value="current" checked> <span id="scope-current">This playlist</span></label>
       <label class="opt"><input type="radio" name="scope" value="all"> <span id="scope-all">Every playlist</span></label>
       <label class="opt"><input type="checkbox" id="only-art"> <span>Leave out songs that have no artwork yet</span></label>
+      <label class="plex-only path-field" hidden>
+        <span>Where this folder will sit on your Plex server <i>(optional, for importing playlists)</i></span>
+        <input type="text" id="plex-path" placeholder="e.g. /Volumes/Media/Plex Music  or  D:\Media\Plex Music" spellcheck="false" autocomplete="off">
+      </label>
       <div class="tree" id="tree"></div>
       <div class="progress" id="progress" aria-live="polite"></div>
       <div class="btns">
@@ -2981,7 +3005,69 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
         return { name: pl, items: items, total: total, nums: nums };
       }).filter(function (p) { return p.items.length; });
     }
+    function fmt() { return document.querySelector('input[name="fmt"]:checked').value; }
+    function exportRoot() { return fmt() === 'plex' ? 'Plex Music' : 'Music Station'; }
+
+    // "Playboi Carti ft Lil Uzi Vert" -> "Playboi Carti", so Plex files the song under one artist.
+    // Only split on ft/feat/featuring/with/x and commas: "&" and "and" are often part of a band name.
+    function primaryArtist(a) {
+      var p = (a || '').split(/\s+(?:ft\.?|feat\.?|featuring|with|x)\s+|\s*,\s*|\s*\(feat\.?\s+/i)[0].trim();
+      return p || 'Unknown Artist';
+    }
+
+    // Every song with a song file, once, laid out as Artist/Album/01 - Title.ext.
+    // Each song is its own one-track album (named after the song), so Plex keeps its own cover.
+    function plexPlan() {
+      var plan = exportPlan();
+      var seen = new Map(), tracks = [], taken = new Set(), skipped = 0;
+      plan.forEach(function (pl) {
+        pl.items.forEach(function (s) {
+          if (seen.has(s.key)) return;
+          if (!audioMeta.has(s.key)) { seen.set(s.key, null); skipped++; return; }
+          var c = cur(s);
+          var albumArtist = primaryArtist(c.artist);
+          var artistDir = safeName(albumArtist, 80);
+          var album = c.title.trim() || 'Untitled';
+          var albumDir = safeName(album, 80);
+          var n = 1;
+          while (taken.has((artistDir + '/' + albumDir).toLowerCase())) {
+            n++;
+            album = (c.title.trim() || 'Untitled') + ' (' + n + ')';
+            albumDir = safeName(album, 80);
+          }
+          taken.add((artistDir + '/' + albumDir).toLowerCase());
+          var name = audioMeta.get(s.key);
+          var ext = (name.match(/\.[a-z0-9]{2,5}$/i) || ['.mp3'])[0].toLowerCase();
+          var t = {
+            s: s, c: c, albumArtist: albumArtist, album: album,
+            dir: [artistDir, albumDir], file: '01 - ' + safeName(c.title, 80) + ext, ext: ext
+          };
+          seen.set(s.key, t);
+          tracks.push(t);
+        });
+      });
+      var lists = plan.map(function (pl) {
+        return { name: pl.name, tracks: pl.items.map(function (s) { return seen.get(s.key); }).filter(Boolean) };
+      }).filter(function (l) { return l.tracks.length; });
+      return { tracks: tracks, lists: lists, skipped: skipped };
+    }
+    function plexM3uPath(t) {
+      var prefix = ($('plex-path').value || '').trim();
+      var parts = t.dir.concat(t.file);
+      if (!prefix) return '../' + parts.join('/');
+      var win = /^[a-z]:|\\/i.test(prefix);
+      var sep = win ? '\\' : '/';
+      return prefix.replace(/[\\/]+$/, '') + sep + parts.join(sep);
+    }
+
     function updateExportPreview() {
+      var plex = fmt() === 'plex';
+      document.querySelectorAll('.plex-only').forEach(function (e) { e.hidden = !plex; });
+      $('export-intro').innerHTML = plex
+        ? 'Makes a <b>Plex Music</b> folder to add to your Plex music library. Every song you attached a song file to becomes its own single, named after the song, with its own cover, so Plex shows a different cover for each song. Your playlists come along as playlist files.'
+        : 'Makes a <b>Music Station</b> folder with one folder per playlist. Each song gets its artwork as a JPG named after the song, plus a list of every song. Song files you attached get the new title, artist and artwork written into them.';
+      $('scope-all').textContent = 'Every playlist' + (plex ? '' : ' (' + playlistNames.length + ' folders)');
+      if (plex) return updatePlexPreview();
       var plan = exportPlan();
       var n = 0, a = 0, f = 0;
       plan.forEach(function (p) {
@@ -3003,11 +3089,43 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
         : 'Nothing to export. Add artwork first, or untick the box above.';
       $('btn-zip').disabled = $('btn-dir').disabled = !plan.length;
     }
+    function updatePlexPreview() {
+      var pp = plexPlan();
+      var artists = new Set(pp.tracks.map(function (t) { return t.dir[0]; }));
+      var other = pp.tracks.filter(function (t) { return t.ext !== '.mp3'; }).length;
+      var noArt = pp.tracks.filter(function (t) { return !artKeys.has(t.s.key); }).length;
+      var ex = pp.tracks.find(function (t) { return artKeys.has(t.s.key); }) || pp.tracks[0];
+      var lines;
+      if (!pp.tracks.length) {
+        lines = 'Nothing to export yet.\n\nPlex needs the actual song files. Attach them with\n"Attach song file" on a song, or "Match song files…" at the top.' +
+          (pp.skipped ? '\n\n' + pp.skipped + ' songs here have no song file.' : '');
+      } else {
+        lines = 'Plex Music/\n' +
+          '├─ README - Plex setup.txt\n' +
+          '├─ ' + ex.dir[0] + '/\n' +
+          '│   └─ ' + ex.dir[1] + '/\n' +
+          '│       ├─ ' + ex.file + '\n' +
+          (artKeys.has(ex.s.key) ? '│       └─ cover.jpg\n' : '') +
+          (artists.size > 1 ? '├─ … ' + (artists.size - 1) + ' more artist folder' + (artists.size > 2 ? 's' : '') + '\n' : '') +
+          '└─ Playlists/\n' +
+          '    └─ ' + safeName(pp.lists[0].name) + '.m3u' + (pp.lists.length > 1 ? '  (+' + (pp.lists.length - 1) + ' more)' : '') + '\n' +
+          '\n' + pp.tracks.length + ' song' + (pp.tracks.length === 1 ? '' : 's') + ' · ' + artists.size + ' artist' + (artists.size === 1 ? '' : 's') +
+          ' · ' + pp.lists.length + ' playlist' + (pp.lists.length === 1 ? '' : 's') +
+          (pp.skipped ? '\nLeft out: ' + pp.skipped + ' song' + (pp.skipped === 1 ? '' : 's') + ' with no song file attached' : '') +
+          (noArt ? '\nNo artwork yet: ' + noArt + ' song' + (noArt === 1 ? '' : 's') + ' (Plex will show a blank cover)' : '') +
+          (other ? '\nNot MP3: ' + other + ' file' + (other === 1 ? '' : 's') + ' copied as-is with cover.jpg beside them. Plex may still\n  file these under the album saved inside the file.' : '');
+      }
+      $('tree').textContent = lines;
+      $('btn-zip').disabled = $('btn-dir').disabled = !pp.tracks.length;
+    }
+    try { $('plex-path').value = localStorage.getItem('album-art-plex-path') || ''; } catch (e) {}
+    $('plex-path').addEventListener('input', function () {
+      try { localStorage.setItem('album-art-plex-path', $('plex-path').value); } catch (e) {}
+    });
     $('btn-export').addEventListener('click', function () {
       $('scope-current').textContent = view.playlist ? 'This playlist: ' + view.playlist : 'This playlist (pick a playlist tab first)';
       document.querySelector('input[value="current"]').disabled = !view.playlist;
       document.querySelector('input[value="' + (view.playlist ? 'current' : 'all') + '"]').checked = true;
-      $('scope-all').textContent = 'Every playlist (' + playlistNames.length + ' folders)';
       $('progress').textContent = '';
       var canDir = 'showDirectoryPicker' in window;
       $('btn-dir').hidden = !canDir;
@@ -3110,13 +3228,97 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       });
     }
 
+    function runPlexExport(writer) {
+      if (exporting) return Promise.resolve();
+      exporting = true;
+      $('btn-zip').disabled = $('btn-dir').disabled = true;
+      var pp = plexPlan();
+      var root = 'Plex Music';
+      var done = 0;
+      var hasPath = !!$('plex-path').value.trim();
+      var readme = [
+        'Plex Music - made with Album Art Studio on ' + new Date().toLocaleString(),
+        '',
+        'WHAT IS IN HERE',
+        '  Artist/Song Title/01 - Song Title.mp3   each song is its own single, named after the song',
+        '  Artist/Song Title/cover.jpg             that song\'s cover (also saved inside the MP3)',
+        '  Playlists/*.m3u                         your Music Station playlists',
+        '',
+        'ADD IT TO PLEX',
+        '  1. Copy this "Plex Music" folder onto the computer or drive that runs Plex Media Server.',
+        '  2. In Plex: Settings > Manage > Libraries. Either edit your Music library and',
+        '     "Add folders" > pick "Plex Music", or "Add Library" > Music and pick it.',
+        '  3. In that library\'s settings, open Advanced and turn on "Prefer local metadata".',
+        '     Otherwise Plex may swap in covers and album names from its online lookup.',
+        '  4. Let Plex scan. If covers are missing, use the library\'s ... menu > "Refresh All Metadata".',
+        '',
+        'PLAYLISTS',
+        '  Plex does not pick up .m3u files when it scans. To bring them in, use the Plex playlist',
+        '  upload command, where SERVER is your Plex address, LIBRARY_ID is the number in the',
+        '  library\'s web address (source=NN) and TOKEN is your Plex token:',
+        '',
+        '    curl -X POST "http://SERVER:32400/playlists/upload?sectionID=LIBRARY_ID&path=FULL_PATH_TO_M3U&X-Plex-Token=TOKEN"',
+        '',
+        hasPath
+          ? '  The playlist files list each song by its full path on your server, so they are ready to upload.'
+          : '  The playlist files list songs relative to this folder ("../Artist/..."). Plex\'s upload needs full\n' +
+            '  paths, so re-export with the server folder filled in first. Plexamp, VLC and most music\n' +
+            '  players can open the relative ones directly.',
+        '  Or rebuild a playlist in Plex by searching for the songs and choosing "Add to Playlist".',
+        ''
+      ].join('\n').replace(/\n/g, '\r\n');
+      var p = writer.file([root, 'README - Plex setup.txt'], utf8(readme));
+      pp.tracks.forEach(function (t) {
+        p = p.then(function () {
+          return Promise.all([idb.get('art', t.s.key), idb.get('audio', t.s.key)]).then(function (r) {
+            var artBlob = r[0], au = r[1];
+            if (!au) return;
+            var steps = Promise.resolve();
+            if (artBlob) steps = steps.then(function () { return writer.file([root].concat(t.dir, 'cover.jpg'), artBlob); });
+            return steps.then(function () {
+              if (t.ext !== '.mp3') return writer.file([root].concat(t.dir, t.file), au.blob);
+              return Promise.all([blobBytes(au.blob), artBlob ? blobBytes(artBlob) : null]).then(function (b) {
+                return writer.file([root].concat(t.dir, t.file), retagMp3(b[0], {
+                  title: t.c.title, artist: t.c.artist || t.albumArtist, album: t.album,
+                  albumArtist: t.albumArtist, track: '1/1', disc: '1/1', image: b[1]
+                }));
+              });
+            });
+          }).then(function () {
+            done++;
+            if (done % 5 === 0 || done === pp.tracks.length) $('progress').textContent = 'Packing ' + done + ' of ' + pp.tracks.length + ' songs…';
+          });
+        });
+      });
+      pp.lists.forEach(function (l) {
+        p = p.then(function () {
+          var lines = ['#EXTM3U', '#PLAYLIST:' + l.name];
+          l.tracks.forEach(function (t) {
+            lines.push('#EXTINF:-1,' + (t.c.artist ? t.c.artist + ' - ' : '') + t.c.title);
+            lines.push(plexM3uPath(t));
+          });
+          return writer.file([root, 'Playlists', safeName(l.name) + '.m3u'], utf8(lines.join('\r\n') + '\r\n'));
+        });
+      });
+      return p.then(function () { return writer.finish(); }).then(function (msg) {
+        $('progress').textContent = msg;
+      }).catch(function (err) {
+        if (err && err.name === 'AbortError') $('progress').textContent = 'Cancelled.';
+        else $('progress').textContent = 'Export stopped: ' + (err && err.message ? err.message : err);
+      }).then(function () {
+        exporting = false;
+        updateExportPreview();
+      });
+    }
+    function startExport(writer) { return (fmt() === 'plex' ? runPlexExport : runExport)(writer); }
+
     $('btn-zip').addEventListener('click', function () {
       var zip = new ZipWriter();
-      runExport({
+      startExport({
         file: function (parts, data) { return zip.add(parts.join('/'), data); },
         finish: function () {
           var blob = zip.blob();
-          var name = 'Music Station' + ((exportPlan().length === 1) ? ' - ' + safeName(exportPlan()[0].name) : '') + '.zip';
+          var name = exportRoot() + ((exportPlan().length === 1) ? ' - ' + safeName(exportPlan()[0].name) : '') + '.zip';
           var a = document.createElement('a');
           a.href = URL.createObjectURL(blob);
           a.download = name;
@@ -3140,7 +3342,7 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
           dirs.set(path, pr);
           return pr;
         }
-        runExport({
+        startExport({
           file: function (parts, data) {
             return dirFor(parts.slice(0, -1)).then(function (d) {
               return d.getFileHandle(parts[parts.length - 1], { create: true });
@@ -3148,7 +3350,7 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
               return w.write(data).then(function () { return w.close(); });
             });
           },
-          finish: function () { return 'Done. Look for the "Music Station" folder inside ' + rootDir.name + '.'; }
+          finish: function () { return 'Done. Look for the "' + exportRoot() + '" folder inside ' + rootDir.name + '.'; }
         });
       }).catch(function (err) {
         if (err && err.name !== 'AbortError') $('progress').textContent = 'Could not open that folder: ' + err.message;
@@ -3282,6 +3484,8 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
         textFrame('TALB', t.album || t.playlist),
         textFrame('TRCK', t.track)
       ];
+      if (t.albumArtist) frames.push(textFrame('TPE2', t.albumArtist));
+      if (t.disc) frames.push(textFrame('TPOS', t.disc));
       if (t.image) {
         var mime = utf8('image/jpeg');
         var head = new Uint8Array(1 + mime.length + 1 + 1 + 1);
