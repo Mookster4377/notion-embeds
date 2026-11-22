@@ -19,6 +19,7 @@ Florida file with osmium-tool, keeps only the tags the map uses, and writes the 
   <out>/[orlando/]stations.json            bus stations, train stations and streetcar stops
   <out>/[orlando/]nature.json              preserves, state parks, wetlands, beaches, springs (zoomed-out views)
   <out>/[orlando/]counties.json            county boundaries
+  <out>/[orlando/]study.json               study spots from STUDY_SPOTS, located by building name
   <out>/[orlando/]meta.json                build time, tile grid, tiles with no data
 
 Requires: osmium-tool (CLI) and pyosmium (pip install osmium). Grids must match TILE in traffic.html.
@@ -115,6 +116,54 @@ def is_bagel(t):
     """bagels.json: anywhere named or tagged as a bagel shop."""
     name = t.get("name", "")
     return bool(name) and (re.search(r"bagel", name, re.I) is not None or "bagel" in t.get("cuisine", "").lower())
+
+
+# Study spots: buildings found by name inside a small box (the box keeps a common name from matching elsewhere).
+# Add more here; each becomes a pin in the "Study spots" layer. box = (south, west, north, east).
+STUDY_SPOTS = [
+    {"city": "tampa", "name": "USF College of Education (EDU)", "match": r"College of Education|^Education( Building)?$|^EDU$",
+     "box": (28.055, -82.420, 28.070, -82.400),
+     "d": "USF Tampa campus, at the end of USF Apple Dr by the Tampa Library.",
+     "url": "https://www.usf.edu/education/about-us/tampa-campus.aspx"},
+]
+
+
+def build_study(pbf, out, work):
+    """study.json per city: [{name, lat, lon, d, url, osm}] for each STUDY_SPOTS entry found in OSM."""
+    found = {c["name"]: [] for c in CITIES}
+    for i, spot in enumerate(STUDY_SPOTS):
+        s, w, n, e = spot["box"]
+        cut, named = os.path.join(work, f"study{i}.osm.pbf"), os.path.join(work, f"study{i}-named.osm.pbf")
+        subprocess.run(["osmium", "extract", "-b", f"{w},{s},{e},{n}", pbf, "-o", cut, "--overwrite"], check=True)
+        subprocess.run(["osmium", "tags-filter", cut, "nwr/name", "-o", named, "--overwrite"], check=True)
+        hits = []
+
+        class Find(osmium.SimpleHandler):
+            def node(self, nd):
+                t = tags_of(nd)
+                if re.search(spot["match"], t.get("name", ""), re.I):
+                    hits.append((0 if t.get("building") else 1, nd.location.lat, nd.location.lon, t["name"], f"node/{nd.id}"))
+
+            def way(self, wy):
+                t = tags_of(wy)
+                pts = [(x.location.lat, x.location.lon) for x in wy.nodes if x.location.valid()]
+                if pts and re.search(spot["match"], t.get("name", ""), re.I):
+                    lats, lons = [p[0] for p in pts], [p[1] for p in pts]
+                    hits.append((0 if t.get("building") else 1, (min(lats) + max(lats)) / 2, (min(lons) + max(lons)) / 2, t["name"], f"way/{wy.id}"))
+
+        Find().apply_file(named, locations=True, idx="flex_mem")
+        if not hits:
+            print(f"::warning::Study spot not found in OSM: {spot['name']}", flush=True)
+            continue
+        hits.sort()
+        _, lat, lon, osm_name, ref = hits[0]
+        print(f"  study: {spot['name']} -> {osm_name} ({ref}) {lat:.5f},{lon:.5f}", flush=True)
+        found[spot["city"]].append({"name": spot["name"], "lat": r5(lat), "lon": r5(lon), "d": spot["d"], "url": spot.get("url", ""), "osm": ref})
+    for city in CITIES:
+        out_dir = os.path.join(out, city["dir"]) if city["dir"] else out
+        os.makedirs(out_dir, exist_ok=True)
+        with open(os.path.join(out_dir, "study.json"), "w") as f:
+            json.dump(found[city["name"]], f, separators=(",", ":"))
 
 
 def is_library(t):
@@ -399,6 +448,10 @@ def main():
     os.makedirs(work, exist_ok=True)
     for city in CITIES:
         build_city(pbf, out, city, work)
+    try:
+        build_study(pbf, out, work)
+    except Exception as e:  # never let study spots break the rest of the map data
+        print(f"::warning::Couldn't build study spots ({e!r})", flush=True)
 
 
 if __name__ == "__main__":
