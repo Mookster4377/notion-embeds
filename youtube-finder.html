@@ -152,6 +152,10 @@
     .vid input:focus { border-style: solid; border-color: var(--accent-2); outline: none; }
     .vid input.bad { border-color: var(--accent); }
     .btns { display: flex; gap: 6px; justify-content: flex-end; }
+    .weak {
+      display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 99px;
+      font-size: 11px; color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 50%, transparent);
+    }
     .alts { grid-column: 3 / -1; display: flex; flex-wrap: wrap; gap: 6px; font-size: 12.5px; }
     .alts button { display: flex; align-items: center; gap: 6px; max-width: 100%; text-align: left; }
     .alts img { width: 40px; height: 22px; object-fit: cover; border-radius: 3px; }
@@ -223,6 +227,7 @@
           <option value="done">Checked</option>
           <option value="novid">No video yet</option>
           <option value="vid">Has a video</option>
+          <option value="weak">Video marked "check this"</option>
         </select>
       </div>
     </div>
@@ -2237,7 +2242,7 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
     function rec(key) { return state.songs[key] || (state.songs[key] = {}); }
     function clean(key) {
       var r = state.songs[key];
-      if (r && !r.v && !r.done && !(r.alts && r.alts.length)) delete state.songs[key];
+      if (r && !r.v && !r.done && !r.cleared && !(r.alts && r.alts.length)) delete state.songs[key];
     }
 
     // ---------------- songs ----------------
@@ -2272,6 +2277,17 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       songs.forEach(function (s) { s.playlists.forEach(function (p) { names.add(p); }); });
       playlistNames = order.filter(function (n) { return names.has(n); })
         .concat(Array.from(names).filter(function (n) { return order.indexOf(n) < 0; }).sort());
+      // Videos found ahead of time by scripts/find_youtube.py fill songs you have not set yourself.
+      var pre = {};
+      try { var vd = document.getElementById('video-data'); if (vd) pre = JSON.parse(vd.textContent); } catch (e) {}
+      songs.forEach(function (s) {
+        var f = pre[s.key];
+        var r0 = state.songs[s.key];
+        if (!f || (r0 && (r0.v || r0.cleared))) return;
+        var r = rec(s.key);
+        r.v = f.v; r.vt = f.t; r.vc = f.c; r.alts = f.alts || [];
+        if (f.w) r.weak = 1;
+      });
       // Some titles already carry a YouTube video id in brackets at the end: use it.
       songs.forEach(function (s) {
         var m = s.title.match(/\(([\w-]{11})\)\s*$/);
@@ -2309,6 +2325,7 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
         if (view.filter === 'done' && !r.done) return false;
         if (view.filter === 'novid' && r.v) return false;
         if (view.filter === 'vid' && !r.v) return false;
+        if (view.filter === 'weak' && !r.weak) return false;
         if (q && norm(s.title + ' ' + s.artist + ' ' + s.album + ' ' + (r.vt || '')).indexOf(q) < 0) return false;
         return true;
       });
@@ -2408,7 +2425,13 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
         link.target = '_blank';
         link.rel = 'noopener';
         vt.appendChild(link);
-        if (r.vc) vt.appendChild(el('small', null, r.vc));
+        var sm = el('small', null, r.vc || '');
+        if (r.weak) {
+          var w = el('span', 'weak', 'check this');
+          w.title = 'The video title does not match the song name well. Play it to make sure, or try Other picks.';
+          sm.prepend(w);
+        }
+        if (r.vc || r.weak) vt.appendChild(sm);
         vid.appendChild(vt);
       } else {
         var inp = document.createElement('input');
@@ -2478,8 +2501,9 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
           r.alts = (r.alts || []).filter(function (x) { return x.id !== r.v; });
           r.alts.unshift({ id: r.v, t: r.vt || '', c: r.vc || '' });
         }
-        delete r.v; delete r.vt; delete r.vc;
-        clean(key); save(); refresh(key);
+        delete r.v; delete r.vt; delete r.vc; delete r.weak;
+        r.cleared = 1;
+        save(); refresh(key);
       } else if (act === 'alts') {
         var open = li.nextElementSibling && li.nextElementSibling.classList.contains('alts-row');
         document.querySelectorAll('.alts-row').forEach(function (x) { x.remove(); });
@@ -2490,7 +2514,7 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
         var prev = r2.v ? { id: r2.v, t: r2.vt || '', c: r2.vc || '' } : null;
         r2.alts = r2.alts.filter(function (x) { return x.id !== chosen.id; });
         if (prev) r2.alts.unshift(prev);
-        r2.v = chosen.id; r2.vt = chosen.t; r2.vc = chosen.c;
+        r2.v = chosen.id; r2.vt = chosen.t; r2.vc = chosen.c; delete r2.weak;
         save();
         var host = t.closest('.alts-row');
         if (host) host.remove();
@@ -2525,7 +2549,7 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       var key = inp.closest('.song').dataset.key;
       inp.dataset.taken = '1';
       var r = rec(key);
-      r.v = id; r.vt = ''; r.vc = '';
+      r.v = id; r.vt = ''; r.vc = ''; delete r.weak;
       save();
       refresh(key);
     }

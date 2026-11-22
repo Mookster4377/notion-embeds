@@ -16,6 +16,7 @@
 !scripts/build_map_data.py
 !scripts/build_reps.py
 !scripts/archive_reports.py
+!scripts/find_youtube.py
 !.github/
 !.github/workflows/
 !.github/workflows/map-data.yml
