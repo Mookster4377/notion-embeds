@@ -470,9 +470,17 @@
         <button type="button" class="primary" id="bk-save">Save backup</button>
       </div>
       <p class="hint">Loading a backup adds what's in it to what's already here. A song that has artwork in both keeps the backup's. Nothing else is removed.</p>
+      <h2 style="font-size:15px;margin-top:6px">Only have an export?</h2>
+      <p>Pick the <b>Music Station</b> export (the .zip, or the folder if you already unzipped it). Covers, renames and song files are put back on the right songs. A <b>Plex Music</b> export works too, matched by artist and title.</p>
+      <div class="btns" style="justify-content:flex-start">
+        <button type="button" id="bk-export-zip">Load an export .zip…</button>
+        <button type="button" id="bk-export-dir">Load an unzipped export folder…</button>
+      </div>
     </form>
   </dialog>
   <input type="file" id="pick-backup" accept=".zip,application/zip" hidden>
+  <input type="file" id="pick-export-zip" accept=".zip,application/zip" hidden>
+  <input type="file" id="pick-export-dir" webkitdirectory multiple hidden>
   <div class="toast" id="toast" role="status"></div>
 
   <!-- Snapshot of Music Station > Music to Listen To (only songs on a playlist).
@@ -3753,6 +3761,7 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
         p += 46 + nameLen + extra + comment;
       }
       return {
+        names: function () { return Array.from(out.keys()); },
         has: function (name) { return out.has(name); },
         blob: async function (name, type) {
           var e = out.get(name);
@@ -3772,7 +3781,7 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       $('bk-save').disabled = $('bk-load').disabled = true;
       try {
         var z = await readZip(f);
-        if (!z.has('manifest.json')) throw new Error('That zip is not an Album Art Studio backup. (An export folder can\'t be loaded back in.)');
+        if (!z.has('manifest.json')) throw new Error('That zip is an export, not a backup. Use "Load an export .zip…" below instead.');
         var man = JSON.parse(await (await z.blob('manifest.json')).text());
         if (man.app !== 'album-art-studio') throw new Error('That zip is not an Album Art Studio backup.');
         var total = man.art.length + man.audio.length + man.tray.length, done = 0;
@@ -3803,6 +3812,149 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
         $('bk-save').disabled = $('bk-load').disabled = false;
       }
     });
+
+    // ---------------- load an export back in ----------------
+    // Rebuilds artwork, renames and song files from a "Music Station" export (.zip or unzipped
+    // folder). Track numbers in each playlist folder are the song's position in that playlist,
+    // which ties every file back to its song. Plex exports are matched by artist and title.
+    $('bk-export-zip').addEventListener('click', function () { $('pick-export-zip').click(); });
+    $('bk-export-dir').addEventListener('click', function () { $('pick-export-dir').click(); });
+    $('pick-export-zip').addEventListener('change', async function () {
+      var f = this.files[0];
+      this.value = '';
+      if (!f) return;
+      try {
+        var z = await readZip(f);
+        var files = new Map();
+        z.names().forEach(function (n) { if (!/\/$/.test(n)) files.set(n, function () { return z.blob(n); }); });
+        await loadExport(files);
+      } catch (e) { $('bk-progress').textContent = e && e.message ? e.message : 'Could not read that file.'; }
+    });
+    $('pick-export-dir').addEventListener('change', async function () {
+      var list = Array.from(this.files);
+      this.value = '';
+      if (!list.length) return;
+      var files = new Map();
+      list.forEach(function (f) { files.set(f.webkitRelativePath || f.name, function () { return Promise.resolve(f); }); });
+      try { await loadExport(files); }
+      catch (e) { $('bk-progress').textContent = e && e.message ? e.message : 'Could not read that folder.'; }
+    });
+
+    function songsIn(pl) { return songs.filter(function (s) { return s.playlists.indexOf(pl) >= 0; }); }
+    function same(a, b) { return norm((a || '').trim()) === norm((b || '').trim()); }
+    async function blobOf(files, path, type) {
+      var get = files.get(path);
+      if (!get) return null;
+      var b = await get();
+      return new Blob([await b.arrayBuffer()], { type: type || b.type || '' });
+    }
+    function dirOf(path) { return path.slice(0, path.lastIndexOf('/') + 1); }
+    function audioType(name) {
+      var ext = (name.match(/\.([a-z0-9]+)$/i) || [])[1] || '';
+      return { mp3: 'audio/mpeg', m4a: 'audio/mp4', aac: 'audio/aac', flac: 'audio/flac', wav: 'audio/wav', ogg: 'audio/ogg' }[ext.toLowerCase()] || '';
+    }
+
+    async function loadExport(files) {
+      $('bk-save').disabled = $('bk-load').disabled = true;
+      $('bk-progress').textContent = 'Reading…';
+      var paths = Array.from(files.keys());
+      var csvs = paths.filter(function (p) { return / - song list\.csv$/.test(p); });
+      var m3us = paths.filter(function (p) { return /(^|\/)Playlists\/[^/]+\.m3u$/i.test(p); });
+      var found = new Map();   // song key -> {art: path, audio: path, edit: {...}}
+      var missed = [];
+      function slot(key) { if (!found.has(key)) found.set(key, {}); return found.get(key); }
+
+      if (csvs.length) {
+        for (var c = 0; c < csvs.length; c++) {
+          var csvPath = csvs[c];
+          var dir = dirOf(csvPath);
+          var dirName = dir.replace(/\/$/, '').split('/').pop();
+          var pl = playlistNames.find(function (n) { return safeName(n) === dirName; });
+          if (!pl) { missed.push('Playlist folder "' + dirName + '" is not in the song list'); continue; }
+          var items = songsIn(pl);
+          var text = (await (await files.get(csvPath)()).text()).replace(/^﻿/, '');
+          var rows = parseCsv(text);
+          var head = (rows.shift() || []).map(function (h) { return h.trim().toLowerCase(); });
+          var col = function (n) { return head.indexOf(n); };
+          var ci = { n: col('track'), t: col('title'), a: col('artist'), al: col('album'), art: col('artwork file'), au: col('song file'), r: col('renamed') };
+          rows.forEach(function (r) {
+            if (!r.length || !r[ci.t]) return;
+            var title = r[ci.t], artist = r[ci.a] || '', album = r[ci.al] || '';
+            var renamed = /yes/i.test(r[ci.r] || '');
+            var s = items[parseInt(r[ci.n], 10) - 1];
+            // Check the position still points at the same song; fall back to matching by name.
+            if (!s || (!renamed && !(same(s.title, title) && same(s.artist, artist)))) {
+              s = items.find(function (x) { return same(x.title, title) && same(x.artist, artist); }) || (renamed ? s : null);
+            }
+            var hasFiles = (r[ci.art] || r[ci.au]);
+            if (!s) { if (hasFiles || renamed) missed.push(pl + ': ' + title); return; }
+            var o = slot(s.key);
+            if (r[ci.art] && files.has(dir + r[ci.art])) o.art = dir + r[ci.art];
+            if (r[ci.au] && files.has(dir + r[ci.au])) o.audio = dir + r[ci.au];
+            if (renamed) {
+              var e = {};
+              if (title !== s.title) e.title = title;
+              if (artist !== s.artist) e.artist = artist;
+              if (album !== s.album) e.album = album;
+              if (Object.keys(e).length) o.edit = e;
+            }
+          });
+        }
+      } else if (m3us.length) {
+        for (var m = 0; m < m3us.length; m++) {
+          var mp = m3us[m];
+          var root = mp.replace(/Playlists\/[^/]+$/i, '');
+          var plName = mp.split('/').pop().replace(/\.m3u$/i, '');
+          var pl2 = playlistNames.find(function (n) { return safeName(n) === plName; });
+          var items2 = pl2 ? songsIn(pl2) : songs;
+          var lines = (await (await files.get(mp)()).text()).replace(/^﻿/, '').split(/\r?\n/);
+          for (var i = 0; i < lines.length; i++) {
+            var mm = lines[i].match(/^#EXTINF:[^,]*,(.*)$/);
+            if (!mm) continue;
+            var target = (lines[i + 1] || '').trim();
+            var parts = target.replace(/\\/g, '/').split('/').filter(Boolean);
+            var rel = parts.slice(-3).join('/');           // Artist/Album/01 - Title.mp3
+            var audioPath = root + rel;
+            if (!files.has(audioPath)) { missed.push(mm[1] + ' (file not found)'); continue; }
+            var label = mm[1];
+            var match = items2.filter(function (x) {
+              var cc = cur(x);
+              return same((cc.artist ? cc.artist + ' - ' : '') + cc.title, label) || same((x.artist ? x.artist + ' - ' : '') + x.title, label);
+            });
+            if (match.length !== 1) { missed.push(label + (match.length ? ' (matches several songs)' : ' (no match)')); continue; }
+            var o2 = slot(match[0].key);
+            o2.audio = audioPath;
+            if (files.has(dirOf(audioPath) + 'cover.jpg')) o2.art = dirOf(audioPath) + 'cover.jpg';
+            var cc2 = cur(match[0]);
+            var t2 = parts[parts.length - 1].replace(/^\d+ - /, '').replace(/\.[^.]+$/, '');
+            if (!same(cc2.title, label.replace(/^.* - /, '')) && t2 !== match[0].title) o2.edit = { title: t2 };
+          }
+        }
+      } else {
+        $('bk-save').disabled = $('bk-load').disabled = false;
+        throw new Error('That is not an export from this app. Pick the "Music Station" (or "Plex Music") .zip, or the folder you unzipped it into.');
+      }
+
+      var keys = Array.from(found.keys());
+      var nArt = 0, nAudio = 0, nEdit = 0;
+      for (var k = 0; k < keys.length; k++) {
+        var key = keys[k], o3 = found.get(key);
+        if (o3.art) { var ab = await blobOf(files, o3.art, 'image/jpeg'); if (ab) { await idb.put('art', key, ab); nArt++; } }
+        if (o3.audio) {
+          var nm = o3.audio.split('/').pop();
+          var bb = await blobOf(files, o3.audio, audioType(nm));
+          if (bb) { await idb.put('audio', key, { name: nm, type: bb.type, blob: bb }); nAudio++; }
+        }
+        if (o3.edit) { await idb.put('edits', key, Object.assign({}, edits.get(key) || {}, o3.edit)); nEdit++; }
+        if (k % 10 === 0) $('bk-progress').textContent = 'Loading ' + (k + 1) + ' of ' + keys.length + ' songs…';
+      }
+      var msg = 'Brought back ' + nArt + ' cover' + (nArt === 1 ? '' : 's') + ', ' + nAudio + ' song file' + (nAudio === 1 ? '' : 's') +
+        ' and ' + nEdit + ' rename' + (nEdit === 1 ? '' : 's') + '.';
+      if (missed.length) msg += ' Could not place ' + missed.length + ': ' + missed.slice(0, 5).join('; ') + (missed.length > 5 ? '…' : '') + '.';
+      $('bk-progress').textContent = msg + (keys.length ? ' Reloading…' : '');
+      if (keys.length) setTimeout(function () { location.reload(); }, missed.length ? 6000 : 1800);
+      else $('bk-save').disabled = $('bk-load').disabled = false;
+    }
 
     // ---------------- image tray ----------------
     // Pictures waiting to be used. Ones added here live in the browser; ones from a connected
