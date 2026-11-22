@@ -149,6 +149,11 @@
     .stats b { color: var(--fg); font-weight: 600; }
 
     main { padding: 18px 0 60px; }
+    .banner {
+      margin: 0 0 14px; padding: 12px 14px; border-radius: 12px;
+      background: color-mix(in srgb, var(--warn) 16%, var(--card)); color: var(--fg);
+      border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent); font-weight: 500;
+    }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
@@ -382,6 +387,7 @@
   </header>
 
   <main class="wrap">
+    <div class="banner" id="banner" role="alert" hidden></div>
     <div class="grid" id="grid"></div>
     <div class="empty" id="empty" hidden>No songs match.</div>
     <div id="more"></div>
@@ -2437,9 +2443,27 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
           if (!d.objectStoreNames.contains(s)) d.createObjectStore(s);
         });
       };
-      req.onsuccess = function () { resolve(req.result); };
+      // An older copy of this page open in another tab holds the old database version and
+      // blocks the upgrade until it closes. Say so instead of sitting there empty.
+      req.onblocked = function () { banner('Close any other tab or window that has Album Art Studio open (an older copy is holding your saved work). This page will carry on by itself once it is closed.'); };
+      req.onsuccess = function () {
+        var d = req.result;
+        // Step aside if a newer version of this page needs to upgrade.
+        d.onversionchange = function () {
+          d.close();
+          banner('A newer copy of Album Art Studio was opened. Close this tab and use the new one.');
+        };
+        banner('');
+        resolve(d);
+      };
       req.onerror = function () { reject(req.error); };
     });
+    function banner(msg) {
+      var b = document.getElementById('banner');
+      if (!b) return;
+      b.textContent = msg;
+      b.hidden = !msg;
+    }
     function tx(store, mode, fn) {
       return dbp.then(function (d) {
         return new Promise(function (resolve, reject) {
@@ -4025,6 +4049,12 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
 
 
     // ---------------- start ----------------
+    // Show the song list right away; saved work is filled in as soon as storage is ready.
+    setSongs(parseSnapshot());
+    sourceLabel = 'Music Station in Notion, as of ' + SNAPSHOT_DATE;
+    showSource();
+    renderTabs();
+    applyFilter();
     Promise.all([
       idb.get('meta', 'songs').catch(function () { return null; }),
       idb.entries('edits').catch(function () { return []; }),
