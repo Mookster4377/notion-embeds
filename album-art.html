@@ -296,6 +296,24 @@
     .tray-head { display: flex; align-items: center; gap: 8px; padding: 14px 14px 8px; }
     .tray-head h2 { font-size: 16px; margin: 0 auto 0 0; }
     .tray-head .x { padding: 2px 9px; font-size: 18px; line-height: 1; }
+    .tray-switcher { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 10px; align-items: center; }
+    .tray-switcher select {
+      flex: 1 1 100%; min-width: 0; background: var(--card); border: 1px solid var(--line-2);
+      border-radius: 8px; padding: 5px 8px; font-size: 13.5px;
+    }
+    .switch { display: flex; align-items: center; gap: 10px; padding: 0 14px 10px; font-size: 13.5px; cursor: pointer; }
+    .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+    .switch .track {
+      position: relative; flex: none; width: 36px; height: 20px; border-radius: 99px;
+      background: var(--line-2); transition: background 0.15s;
+    }
+    .switch .track::after {
+      content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+      background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); transition: transform 0.15s;
+    }
+    .switch input:checked + .track { background: var(--accent); }
+    .switch input:checked + .track::after { transform: translateX(16px); }
+    .switch input:focus-visible + .track { outline: 2px solid var(--accent-2); outline-offset: 2px; }
     .tray-tools { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 8px; }
     .tray-src { padding: 0 14px 6px; font-size: 12px; color: var(--muted); }
     .tray-src b { color: var(--fg); font-weight: 600; }
@@ -364,7 +382,7 @@
           </div>
         </div>
         <div class="actions">
-          <button type="button" id="btn-tray" title="Pictures waiting to be used as album art">Image tray<span class="n" id="btn-tray-n"></span></button>
+          <button type="button" id="btn-tray" title="Pictures waiting to be used as album art">Image trays<span class="n" id="btn-tray-n"></span></button>
           <button type="button" id="btn-backup" title="Save everything to one file, or load it back">Backup…</button>
           <button type="button" id="btn-match" title="Pick MP3s (or a whole folder) and match them to songs by file name">Match song files…</button>
           <button type="button" id="btn-import" title="Load a fresh CSV export of the Music to Listen To database">Update from Notion CSV…</button>
@@ -440,9 +458,20 @@
 
   <aside class="tray" id="tray" aria-label="Image tray" aria-hidden="true">
     <div class="tray-head">
-      <h2>Image tray <span class="n" id="tray-n"></span></h2>
-      <button type="button" class="ghost x" id="tray-close" aria-label="Close the image tray">×</button>
+      <h2>Image trays</h2>
+      <button type="button" class="ghost x" id="tray-close" aria-label="Close the image trays">×</button>
     </div>
+    <div class="tray-switcher">
+      <select id="tray-pick" aria-label="Which tray"></select>
+      <button type="button" class="small" id="tray-new" title="Make a new tray">+ New</button>
+      <button type="button" class="small ghost" id="tray-rename" title="Rename this tray">Rename</button>
+      <button type="button" class="small ghost" id="tray-del-tray" title="Delete this tray">Delete</button>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="tray-remove" role="switch">
+      <span class="track" aria-hidden="true"></span>
+      <span>Remove pictures after use</span>
+    </label>
     <div class="tray-tools">
       <button type="button" class="small" id="tray-add">Add pictures…</button>
       <button type="button" class="small" id="tray-connect" hidden>Connect a folder…</button>
@@ -454,7 +483,7 @@
       <div class="tray-grid" id="tray-grid"></div>
       <div class="tray-empty" id="tray-empty"><span class="big">⇣</span>Drop a load of pictures here<br>(or a whole folder of them)</div>
     </div>
-    <div class="tray-foot">Drag a picture onto a song, or click a picture and then click a song's art square. Once a picture is used it leaves the tray<span id="tray-foot-dir" hidden> and is deleted from the connected folder</span>. Undo puts it back.</div>
+    <div class="tray-foot" id="tray-foot"></div>
   </aside>
   <input type="file" id="pick-tray" accept="image/*" multiple hidden>
   <dialog id="dlg-backup">
@@ -3713,12 +3742,13 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
             $('bk-progress').textContent = 'Packing song files ' + (j + 1) + ' of ' + auds.length + '…';
           }
         }
+        man.trays = await idb.get('meta', 'trays').catch(function () { return null; });
         var trays = await idb.entries('tray');
         for (var k = 0; k < trays.length; k++) {
           var t = trays[k][1];
           var tp = 'tray/' + k + extOf(t.name, t.blob.type);
           await zip.add(tp, t.blob);
-          man.tray.push([trays[k][0], { name: t.name, added: t.added, type: t.blob.type, path: tp }]);
+          man.tray.push([trays[k][0], { name: t.name, added: t.added, type: t.blob.type, path: tp, tray: t.tray }]);
         }
         await zip.add('manifest.json', utf8(JSON.stringify(man)));
         var blob = zip.blob();
@@ -3799,11 +3829,19 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
         }
         for (var k = 0; k < man.tray.length; k++) {
           var t = man.tray[k][1];
-          await idb.put('tray', man.tray[k][0], { name: t.name, added: t.added, blob: await grab(t.path, t.type) });
+          await idb.put('tray', man.tray[k][0], { name: t.name, added: t.added, tray: t.tray, blob: await grab(t.path, t.type) });
           tick();
         }
         for (var e = 0; e < man.edits.length; e++) await idb.put('edits', man.edits[e][0], man.edits[e][1]);
         if (man.songs) await idb.put('meta', 'songs', man.songs);
+        if (Array.isArray(man.trays)) {
+          var have = (await idb.get('meta', 'trays').catch(function () { return null; })) || [];
+          man.trays.forEach(function (t) {
+            var h = have.find(function (x) { return x.id === t.id; });
+            if (h) { h.name = t.name; h.remove = t.remove; } else have.push(t);
+          });
+          await idb.put('meta', 'trays', have);
+        }
         $('bk-progress').textContent = 'Loaded ' + man.art.length + ' covers, ' + man.audio.length + ' song files, ' +
           man.edits.length + ' renames and ' + man.tray.length + ' tray pictures. Reloading…';
         setTimeout(function () { location.reload(); }, 1200);
@@ -3956,15 +3994,24 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       else $('bk-save').disabled = $('bk-load').disabled = false;
     }
 
-    // ---------------- image tray ----------------
-    // Pictures waiting to be used. Ones added here live in the browser; ones from a connected
-    // folder (Chrome/Edge) stay files in that folder. Using a picture removes it from the tray
-    // and, for a connected folder, deletes the file.
-    var tray = [];          // {id, name, url, src: 'db'|'dir', blob}
+    // ---------------- image trays ----------------
+    // Several named trays of pictures waiting to be used. A tray keeps its pictures in the
+    // browser, or (Chrome/Edge) shows a connected folder. Each tray has a "Remove after use"
+    // switch: on, a used picture leaves the tray (and is deleted from a connected folder);
+    // off, it stays put so it can be used again.
+    var tray = [];          // every picture in every tray: {id, name, url, src: 'db'|'dir', blob, tray}
+    var trays = [];         // [{id, name, remove}]
+    var activeTray = 'default';
     var traySel = null;
-    var trayDir = null;
+    var dirs = {};          // tray id -> FileSystemDirectoryHandle (connected and allowed)
+    var pendingDirs = {};   // tray id -> handle that needs permission again
+    var trayDir = null;     // the active tray's folder, if any
     var canDir = 'showDirectoryPicker' in window;
     var IMG_EXT = /\.(jpe?g|png|gif|webp|bmp|avif|heic|heif|tiff?)$/i;
+
+    function curTray() { return trays.find(function (t) { return t.id === activeTray; }) || trays[0]; }
+    function saveTrays() { return idb.put('meta', 'trays', trays).catch(function () {}); }
+    function inTray(id) { return tray.filter(function (t) { return t.tray === id; }); }
 
     function trayOpen(open) {
       document.body.classList.toggle('tray-open', open);
@@ -3972,9 +4019,25 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       try { localStorage.setItem('album-art-tray-open', open ? '1' : ''); } catch (e) {}
     }
     function renderTray() {
+      var ct = curTray();
+      trayDir = dirs[ct.id] || null;
+      // tray picker
+      var sel = $('tray-pick');
+      sel.innerHTML = '';
+      trays.forEach(function (t) {
+        var o = document.createElement('option');
+        o.value = t.id;
+        o.textContent = t.name + ' (' + inTray(t.id).length + ')';
+        sel.appendChild(o);
+      });
+      sel.value = ct.id;
+      $('tray-del-tray').disabled = trays.length < 2;
+      $('tray-remove').checked = ct.remove !== false;
+
+      var items = inTray(ct.id);
       var g = $('tray-grid');
       g.innerHTML = '';
-      tray.forEach(function (t) {
+      items.forEach(function (t) {
         var d = el('div', 'tray-item' + (traySel === t.id ? ' sel' : ''));
         d.dataset.id = t.id;
         d.draggable = true;
@@ -3996,30 +4059,39 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
         d.appendChild(x);
         g.appendChild(d);
       });
-      $('tray-empty').hidden = tray.length > 0;
-      $('tray-n').textContent = tray.length ? '· ' + tray.length : '';
+      $('tray-empty').hidden = items.length > 0;
       $('btn-tray-n').textContent = tray.length ? ' (' + tray.length + ')' : '';
-      $('tray-src').hidden = !trayDir;
-      if (trayDir) $('tray-src').innerHTML = 'Folder: <b></b>';
-      if (trayDir) $('tray-src').querySelector('b').textContent = trayDir.name;
-      $('tray-connect').hidden = !canDir || !!trayDir;
-      $('tray-disconnect').hidden = !trayDir;
-      $('tray-foot-dir').hidden = !trayDir;
+      $('tray-src').hidden = !trayDir && !pendingDirs[ct.id];
+      $('tray-src').innerHTML = '';
+      if (trayDir || pendingDirs[ct.id]) {
+        $('tray-src').appendChild(document.createTextNode('Folder: '));
+        $('tray-src').appendChild(el('b', null, (trayDir || pendingDirs[ct.id]).name));
+      }
+      $('tray-connect').hidden = !canDir || !!trayDir || !!pendingDirs[ct.id];
+      $('tray-reconnect').hidden = !pendingDirs[ct.id];
+      $('tray-disconnect').hidden = !trayDir && !pendingDirs[ct.id];
+      var removing = ct.remove !== false;
+      $('tray-foot').textContent = 'Drag a picture onto a song, or click a picture and then click a song\'s art square. ' +
+        (removing
+          ? 'Once used, a picture leaves this tray' + (trayDir ? ' and is deleted from the folder' : '') + '. Undo puts it back.'
+          : 'Pictures stay in this tray after use, so you can use them again.');
       document.body.classList.toggle('picking', !!traySel);
     }
-    function newId() { return 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+    function newId(p) { return (p || 't') + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
     function addToTray(files) {
       var imgs = files.filter(isImage);
       if (!imgs.length) { toast('No pictures found in what you dropped.'); return Promise.resolve(); }
+      var tid = activeTray;
       return Promise.all(imgs.map(function (f) {
         var id = newId();
-        return idb.put('tray', id, { name: f.name, blob: f, added: Date.now() }).then(function () {
-          tray.push({ id: id, name: f.name, url: URL.createObjectURL(f), src: 'db', blob: f });
+        return idb.put('tray', id, { name: f.name, blob: f, added: Date.now(), tray: tid }).then(function () {
+          tray.push({ id: id, name: f.name, url: URL.createObjectURL(f), src: 'db', blob: f, tray: tid });
         });
       })).then(function () {
         renderTray();
         trayOpen(true);
-        toast('Added ' + imgs.length + ' picture' + (imgs.length === 1 ? '' : 's') + ' to the tray.');
+        toast('Added ' + imgs.length + ' picture' + (imgs.length === 1 ? '' : 's') + ' to ' + curTray().name + '.');
       }).catch(function () { toast('The browser would not store those pictures. Storage may be full.'); });
     }
     // Files from a drop, including folders dragged in from Finder or Explorer.
@@ -4044,48 +4116,49 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       return Promise.all(entries.map(walk)).then(function (r) { return [].concat.apply([], r); });
     }
 
-    var scanSeq = 0;
-    async function scanDir() {
-      var seq = ++scanSeq;
-      if (!trayDir) {
-        tray = tray.filter(function (t) { return t.src !== 'dir'; });
-        return renderTray();
-      }
+    var scanSeq = {};
+    async function scanDir(tid) {
+      tid = tid || activeTray;
+      var seq = scanSeq[tid] = (scanSeq[tid] || 0) + 1;
+      var d = dirs[tid];
       var found = [];
-      for await (var entry of trayDir.values()) {
-        if (entry.kind !== 'file' || !IMG_EXT.test(entry.name) || entry.name.charAt(0) === '.') continue;
-        try {
-          var f = await entry.getFile();
-          found.push({ id: 'f:' + entry.name, name: entry.name, url: URL.createObjectURL(f), src: 'dir', blob: f });
-        } catch (e) {}
+      if (d) {
+        for await (var entry of d.values()) {
+          if (entry.kind !== 'file' || !IMG_EXT.test(entry.name) || entry.name.charAt(0) === '.') continue;
+          try {
+            var f = await entry.getFile();
+            found.push({ id: 'f:' + tid + ':' + entry.name, name: entry.name, url: URL.createObjectURL(f), src: 'dir', blob: f, tray: tid });
+          } catch (e) {}
+        }
       }
-      if (seq !== scanSeq) { found.forEach(function (t) { URL.revokeObjectURL(t.url); }); return; }
+      if (seq !== scanSeq[tid]) { found.forEach(function (t) { URL.revokeObjectURL(t.url); }); return; }
       found.sort(function (a, b) { return a.name.localeCompare(b.name, undefined, { numeric: true }); });
-      tray.filter(function (t) { return t.src === 'dir'; }).forEach(function (t) { URL.revokeObjectURL(t.url); });
-      tray = found.concat(tray.filter(function (t) { return t.src !== 'dir'; }));
+      tray.filter(function (t) { return t.src === 'dir' && t.tray === tid; }).forEach(function (t) { URL.revokeObjectURL(t.url); });
+      tray = found.concat(tray.filter(function (t) { return !(t.src === 'dir' && t.tray === tid); }));
       if (traySel && !tray.some(function (t) { return t.id === traySel; })) traySel = null;
       renderTray();
     }
     async function connectFolder() {
+      var tid = activeTray;
       try {
         var d = await window.showDirectoryPicker({ mode: 'readwrite', id: 'album-art-tray' });
-        trayDir = d;
-        await idb.put('meta', 'trayDir', d).catch(function () {});
-        $('tray-reconnect').hidden = true;
-        await scanDir();
+        dirs[tid] = d;
+        delete pendingDirs[tid];
+        await idb.put('meta', 'trayDir:' + tid, d).catch(function () {});
+        await scanDir(tid);
         trayOpen(true);
-        toast('Connected ' + d.name + '. Pictures you use will be deleted from that folder.');
+        toast('Connected ' + d.name + ' to ' + curTray().name + '.' + (curTray().remove !== false ? ' Pictures you use will be deleted from that folder.' : ''));
       } catch (e) {
         if (e && e.name !== 'AbortError') toast('Could not open that folder: ' + e.message);
       }
     }
-    async function restoreFolder(ask) {
-      var d = await idb.get('meta', 'trayDir').catch(function () { return null; });
+    async function restoreFolder(tid, ask) {
+      var d = await idb.get('meta', 'trayDir:' + tid).catch(function () { return null; });
       if (!d || !d.queryPermission) return;
       var perm = await d.queryPermission({ mode: 'readwrite' });
       if (perm !== 'granted' && ask) perm = await d.requestPermission({ mode: 'readwrite' });
-      if (perm === 'granted') { trayDir = d; $('tray-reconnect').hidden = true; await scanDir(); }
-      else { $('tray-reconnect').hidden = false; $('tray-reconnect').textContent = 'Reconnect ' + d.name; }
+      if (perm === 'granted') { dirs[tid] = d; delete pendingDirs[tid]; await scanDir(tid); }
+      else { pendingDirs[tid] = d; renderTray(); }
     }
 
     function selectTray(id) {
@@ -4098,35 +4171,42 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       var t = tray.find(function (x) { return x.id === id; });
       if (!t) return;
       var s = findSong(key);
+      var tr = trays.find(function (x) { return x.id === t.tray; }) || curTray();
+      var removing = tr.remove !== false;
       var prev = artKeys.has(key) ? await idb.get('art', key) : null;
       // Keep a copy in memory: once the original is deleted it can no longer be read, and Undo needs it.
       var keep;
       try { keep = new Blob([await t.blob.arrayBuffer()], { type: t.blob.type }); }
-      catch (e) { toast('Could not read ' + t.name + '. It may have been moved or deleted.'); if (t.src === 'dir') scanDir(); return; }
+      catch (e) { toast('Could not read ' + t.name + '. It may have been moved or deleted.'); if (t.src === 'dir') scanDir(t.tray); return; }
       t.blob = keep;
       var ok = await setArt(key, keep);
       if (!ok) return;
-      try {
-        if (t.src === 'db') await idb.del('tray', t.id);
-        else await trayDir.removeEntry(t.name);
-      } catch (e) {
-        toast('Used it, but could not delete ' + t.name + ' from the folder: ' + e.message);
+      if (removing) {
+        try {
+          if (t.src === 'db') await idb.del('tray', t.id);
+          else await dirs[t.tray].removeEntry(t.name);
+        } catch (e) {
+          toast('Used it, but could not delete ' + t.name + ' from the folder: ' + e.message);
+        }
+        tray = tray.filter(function (x) { return x !== t; });
       }
-      tray = tray.filter(function (x) { return x !== t; });
-      if (traySel === id) traySel = null;
+      if (traySel === id && removing) traySel = null;
       renderTray();
       toast('Used ' + t.name + ' on ' + cur(s).title + '.', {
         label: 'Undo',
         fn: async function () {
           try {
-            if (t.src === 'db') await idb.put('tray', t.id, { name: t.name, blob: t.blob, added: Date.now() });
-            else {
-              var fh = await trayDir.getFileHandle(t.name, { create: true });
-              var w = await fh.createWritable();
-              await w.write(t.blob);
-              await w.close();
+            if (removing) {
+              if (t.src === 'db') {
+                await idb.put('tray', t.id, { name: t.name, blob: t.blob, added: Date.now(), tray: t.tray });
+                tray.unshift(t);
+              } else {
+                var fh = await dirs[t.tray].getFileHandle(t.name, { create: true });
+                var w = await fh.createWritable();
+                await w.write(t.blob);
+                await w.close();
+              }
             }
-            if (t.src === 'db') tray.unshift(t);
             if (prev) {
               await idb.put('art', key, prev);
               if (artUrls.has(key)) URL.revokeObjectURL(artUrls.get(key));
@@ -4134,8 +4214,8 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
               artKeys.add(key);
               refreshCard(key);
             } else await removeArt(key);
-            if (t.src === 'dir') await scanDir(); else renderTray();
-            toast('Put ' + t.name + ' back in the tray.');
+            if (removing && t.src === 'dir') await scanDir(t.tray); else renderTray();
+            toast(removing ? 'Put ' + t.name + ' back in ' + tr.name + '.' : 'Undone.');
           } catch (e) { toast('Could not undo: ' + e.message); }
         }
       });
@@ -4144,8 +4224,8 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       var t = tray.find(function (x) { return x.id === id; });
       if (!t) return;
       if (t.src === 'dir') {
-        if (!confirm('Delete ' + t.name + ' from the ' + trayDir.name + ' folder without using it?')) return;
-        try { await trayDir.removeEntry(t.name); } catch (e) { toast('Could not delete it: ' + e.message); return; }
+        if (!confirm('Delete ' + t.name + ' from the ' + dirs[t.tray].name + ' folder?')) return;
+        try { await dirs[t.tray].removeEntry(t.name); } catch (e) { toast('Could not delete it: ' + e.message); return; }
       } else await idb.del('tray', t.id);
       URL.revokeObjectURL(t.url);
       tray = tray.filter(function (x) { return x !== t; });
@@ -4153,18 +4233,66 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       renderTray();
     }
 
+    // ----- tray management -----
+    function switchTray(id) {
+      activeTray = id;
+      traySel = null;
+      try { localStorage.setItem('album-art-tray-active', id); } catch (e) {}
+      renderTray();
+      if (dirs[id]) scanDir(id);
+    }
+    $('tray-pick').addEventListener('change', function () { switchTray(this.value); });
+    $('tray-new').addEventListener('click', function () {
+      var name = (prompt('Name for the new tray:', 'Tray ' + (trays.length + 1)) || '').trim();
+      if (!name) return;
+      var t = { id: newId('tr'), name: name.slice(0, 40), remove: true };
+      trays.push(t);
+      saveTrays();
+      switchTray(t.id);
+    });
+    $('tray-rename').addEventListener('click', function () {
+      var ct = curTray();
+      var name = (prompt('Rename this tray:', ct.name) || '').trim();
+      if (!name) return;
+      ct.name = name.slice(0, 40);
+      saveTrays();
+      renderTray();
+    });
+    $('tray-del-tray').addEventListener('click', async function () {
+      if (trays.length < 2) return;
+      var ct = curTray();
+      var mine = inTray(ct.id).filter(function (t) { return t.src === 'db'; });
+      var msg = 'Delete the tray "' + ct.name + '"' + (mine.length ? ' and the ' + mine.length + ' picture' + (mine.length === 1 ? '' : 's') + ' in it' : '') + '?' +
+        (dirs[ct.id] || pendingDirs[ct.id] ? ' Its connected folder is only disconnected; no files are deleted.' : '');
+      if (!confirm(msg)) return;
+      for (var i = 0; i < mine.length; i++) { await idb.del('tray', mine[i].id); URL.revokeObjectURL(mine[i].url); }
+      tray = tray.filter(function (t) { return t.tray !== ct.id; });
+      delete dirs[ct.id]; delete pendingDirs[ct.id];
+      idb.del('meta', 'trayDir:' + ct.id).catch(function () {});
+      trays = trays.filter(function (t) { return t !== ct; });
+      saveTrays();
+      switchTray(trays[0].id);
+    });
+    $('tray-remove').addEventListener('change', function () {
+      curTray().remove = this.checked;
+      saveTrays();
+      renderTray();
+      toast(this.checked ? 'Pictures will leave ' + curTray().name + ' once used.' : 'Pictures will stay in ' + curTray().name + ' after use.');
+    });
+
     $('btn-tray').addEventListener('click', function () { trayOpen(!document.body.classList.contains('tray-open')); });
     $('tray-close').addEventListener('click', function () { trayOpen(false); });
     $('tray-add').addEventListener('click', function () { $('pick-tray').click(); });
     $('pick-tray').addEventListener('change', function () { var f = Array.from(this.files); this.value = ''; addToTray(f); });
     $('tray-connect').addEventListener('click', connectFolder);
-    $('tray-reconnect').addEventListener('click', function () { restoreFolder(true); });
+    $('tray-reconnect').addEventListener('click', function () { restoreFolder(activeTray, true); });
     $('tray-disconnect').addEventListener('click', function () {
-      trayDir = null;
-      idb.del('meta', 'trayDir').catch(function () {});
-      scanDir();
+      var tid = activeTray;
+      delete dirs[tid]; delete pendingDirs[tid];
+      idb.del('meta', 'trayDir:' + tid).catch(function () {});
+      scanDir(tid);
     });
-    window.addEventListener('focus', function () { if (trayDir) scanDir(); });
+    window.addEventListener('focus', function () { if (dirs[activeTray]) scanDir(activeTray); });
     var trayBody = $('tray-body');
     trayBody.addEventListener('dragover', function (e) {
       if (Array.from(e.dataTransfer.types || []).indexOf('text/x-tray') >= 0) return;
@@ -4199,6 +4327,29 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       if (e.key === 'Escape' && traySel) { traySel = null; renderTray(); }
     });
 
+    async function loadTrays() {
+      var saved = await idb.get('meta', 'trays').catch(function () { return null; });
+      trays = Array.isArray(saved) && saved.length ? saved : [{ id: 'default', name: 'Tray 1', remove: true }];
+      // The first version had one tray and one folder; move that folder onto the first tray.
+      var oldDir = await idb.get('meta', 'trayDir').catch(function () { return null; });
+      if (oldDir) {
+        await idb.put('meta', 'trayDir:' + trays[0].id, oldDir).catch(function () {});
+        await idb.del('meta', 'trayDir').catch(function () {});
+      }
+      if (!saved) await saveTrays();
+      try { activeTray = localStorage.getItem('album-art-tray-active') || trays[0].id; } catch (e) { activeTray = trays[0].id; }
+      if (!trays.some(function (t) { return t.id === activeTray; })) activeTray = trays[0].id;
+      var ids = new Set(trays.map(function (t) { return t.id; }));
+      var items = await idb.entries('tray').catch(function () { return []; });
+      items.sort(function (a, b) { return (a[1].added || 0) - (b[1].added || 0); });
+      items.forEach(function (kv) {
+        var tid = kv[1].tray && ids.has(kv[1].tray) ? kv[1].tray : trays[0].id;
+        tray.push({ id: kv[0], name: kv[1].name, url: URL.createObjectURL(kv[1].blob), src: 'db', blob: kv[1].blob, tray: tid });
+      });
+      renderTray();
+      if (canDir) for (var i = 0; i < trays.length; i++) await restoreFolder(trays[i].id, false).catch(function () {});
+    }
+
 
     // ---------------- start ----------------
     // Show the song list right away; saved work is filled in as soon as storage is ready.
@@ -4218,14 +4369,7 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       r[1].forEach(function (kv) { edits.set(kv[0], kv[1]); });
       r[2].forEach(function (k) { artKeys.add(k); });
       r[3].forEach(function (kv) { audioMeta.set(kv[0], kv[1].name); });
-      idb.entries('tray').then(function (items) {
-        items.sort(function (a, b) { return (a[1].added || 0) - (b[1].added || 0); });
-        items.forEach(function (kv) {
-          tray.push({ id: kv[0], name: kv[1].name, url: URL.createObjectURL(kv[1].blob), src: 'db', blob: kv[1].blob });
-        });
-        renderTray();
-        if (canDir) restoreFolder(false).catch(function () {});
-      }).catch(function () { renderTray(); });
+      loadTrays().catch(function () { renderTray(); });
       try { if (localStorage.getItem('album-art-tray-open')) trayOpen(true); } catch (e) {}
       showSource();
       renderTabs();
