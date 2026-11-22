@@ -360,6 +360,7 @@
         </div>
         <div class="actions">
           <button type="button" id="btn-tray" title="Pictures waiting to be used as album art">Image tray<span class="n" id="btn-tray-n"></span></button>
+          <button type="button" id="btn-backup" title="Save everything to one file, or load it back">Backup…</button>
           <button type="button" id="btn-match" title="Pick MP3s (or a whole folder) and match them to songs by file name">Match song files…</button>
           <button type="button" id="btn-import" title="Load a fresh CSV export of the Music to Listen To database">Update from Notion CSV…</button>
           <button type="button" class="primary" id="btn-export">Export folder…</button>
@@ -450,6 +451,22 @@
     <div class="tray-foot">Drag a picture onto a song, or click a picture and then click a song's art square. Once a picture is used it leaves the tray<span id="tray-foot-dir" hidden> and is deleted from the connected folder</span>. Undo puts it back.</div>
   </aside>
   <input type="file" id="pick-tray" accept="image/*" multiple hidden>
+  <dialog id="dlg-backup">
+    <form method="dialog" class="dlg">
+      <h2>Backup</h2>
+      <p>Everything you've done here lives inside this browser. Save it all into one backup file to keep it safe, move it to another browser or computer, or bring it back after clearing your browser.</p>
+      <label class="opt"><input type="checkbox" id="bk-audio" checked> <span id="bk-audio-label">Include song files</span></label>
+      <div class="tree" id="bk-summary"></div>
+      <div class="progress" id="bk-progress" aria-live="polite"></div>
+      <div class="btns">
+        <button value="cancel" class="ghost">Close</button>
+        <button type="button" id="bk-load">Load a backup…</button>
+        <button type="button" class="primary" id="bk-save">Save backup</button>
+      </div>
+      <p class="hint">Loading a backup adds what's in it to what's already here. A song that has artwork in both keeps the backup's. Nothing else is removed.</p>
+    </form>
+  </dialog>
+  <input type="file" id="pick-backup" accept=".zip,application/zip" hidden>
   <div class="toast" id="toast" role="status"></div>
 
   <!-- Snapshot of Music Station > Music to Listen To (only songs on a playlist).
@@ -3603,6 +3620,165 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       clearTimeout(toastTimer);
       toastTimer = setTimeout(function () { t.classList.remove('on', 'action'); }, action ? 7000 : 3200);
     }
+
+    // ---------------- backup / restore ----------------
+    // One .zip holding a manifest plus every stored picture and song file.
+    function bkStats() {
+      return Promise.all([idb.entries('audio'), idb.entries('tray'), idb.keys('art')]).then(function (r) {
+        var audioBytes = r[0].reduce(function (n, kv) { return n + (kv[1].blob ? kv[1].blob.size : 0); }, 0);
+        return { audio: r[0].length, audioBytes: audioBytes, tray: r[1].length, art: r[2].length };
+      });
+    }
+    function bkSummary() {
+      bkStats().then(function (st) {
+        $('bk-audio-label').textContent = 'Include song files (' + st.audio + ', ' + mb(st.audioBytes) + ')';
+        $('bk-audio').disabled = !st.audio;
+        $('bk-summary').textContent =
+          st.art + ' songs with artwork\n' +
+          edits.size + ' renamed songs\n' +
+          st.audio + ' song files' + ($('bk-audio').checked ? '' : ' (left out)') + '\n' +
+          st.tray + ' pictures in the image tray' +
+          (trayDir ? '\n(Pictures in the connected folder stay in that folder and are not copied.)' : '') +
+          (sourceLabel && /^Imported/.test(sourceLabel) ? '\nYour imported song list' : '');
+      });
+    }
+    $('btn-backup').addEventListener('click', function () {
+      $('bk-progress').textContent = '';
+      bkSummary();
+      $('dlg-backup').showModal();
+    });
+    $('bk-audio').addEventListener('change', bkSummary);
+
+    function extOf(name, type) {
+      var m = (name || '').match(/\.[a-z0-9]{2,5}$/i);
+      if (m) return m[0].toLowerCase();
+      return { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif', 'image/webp': '.webp' }[type] || '.bin';
+    }
+    $('bk-save').addEventListener('click', async function () {
+      var btn = this;
+      btn.disabled = $('bk-load').disabled = true;
+      try {
+        var withAudio = $('bk-audio').checked;
+        var zip = new ZipWriter();
+        var man = { app: 'album-art-studio', version: 1, created: new Date().toISOString(), edits: [], art: [], audio: [], tray: [], songs: null };
+        var songsMeta = await idb.get('meta', 'songs').catch(function () { return null; });
+        if (songsMeta) man.songs = songsMeta;
+        (await idb.entries('edits')).forEach(function (kv) { man.edits.push(kv); });
+        var arts = await idb.entries('art');
+        for (var i = 0; i < arts.length; i++) {
+          var path = 'art/' + i + '.jpg';
+          await zip.add(path, arts[i][1]);
+          man.art.push([arts[i][0], path]);
+          if (i % 20 === 0) $('bk-progress').textContent = 'Packing artwork ' + (i + 1) + ' of ' + arts.length + '…';
+        }
+        if (withAudio) {
+          var auds = await idb.entries('audio');
+          for (var j = 0; j < auds.length; j++) {
+            var a = auds[j][1];
+            var ap = 'audio/' + j + extOf(a.name, a.type);
+            await zip.add(ap, a.blob);
+            man.audio.push([auds[j][0], { name: a.name, type: a.type, path: ap }]);
+            $('bk-progress').textContent = 'Packing song files ' + (j + 1) + ' of ' + auds.length + '…';
+          }
+        }
+        var trays = await idb.entries('tray');
+        for (var k = 0; k < trays.length; k++) {
+          var t = trays[k][1];
+          var tp = 'tray/' + k + extOf(t.name, t.blob.type);
+          await zip.add(tp, t.blob);
+          man.tray.push([trays[k][0], { name: t.name, added: t.added, type: t.blob.type, path: tp }]);
+        }
+        await zip.add('manifest.json', utf8(JSON.stringify(man)));
+        var blob = zip.blob();
+        var name = 'Album Art Studio backup ' + new Date().toISOString().slice(0, 10) + '.zip';
+        var dl = document.createElement('a');
+        dl.href = URL.createObjectURL(blob);
+        dl.download = name;
+        document.body.appendChild(dl);
+        dl.click();
+        dl.remove();
+        setTimeout(function () { URL.revokeObjectURL(dl.href); }, 60000);
+        $('bk-progress').textContent = 'Saved ' + name + ' (' + mb(blob.size) + '). Keep it somewhere safe; don\'t unzip it.';
+      } catch (e) {
+        $('bk-progress').textContent = 'Backup stopped: ' + (e && e.message ? e.message : e);
+      }
+      btn.disabled = $('bk-load').disabled = false;
+    });
+
+    // Reads a zip written by ZipWriter (stored entries) without loading it all into memory.
+    async function readZip(file) {
+      var tailLen = Math.min(file.size, 65557);
+      var tail = new DataView(await file.slice(file.size - tailLen).arrayBuffer());
+      var eocd = -1;
+      for (var i = tailLen - 22; i >= 0; i--) { if (tail.getUint32(i, true) === 0x06054b50) { eocd = i; break; } }
+      if (eocd < 0) throw new Error('That file is not a zip.');
+      var count = tail.getUint16(eocd + 10, true);
+      var cdSize = tail.getUint32(eocd + 12, true);
+      var cdOff = tail.getUint32(eocd + 16, true);
+      var cd = new DataView(await file.slice(cdOff, cdOff + cdSize).arrayBuffer());
+      var dec = new TextDecoder();
+      var out = new Map(), p = 0;
+      for (var n = 0; n < count; n++) {
+        if (cd.getUint32(p, true) !== 0x02014b50) throw new Error('That zip looks damaged.');
+        var method = cd.getUint16(p + 10, true);
+        var size = cd.getUint32(p + 20, true);
+        var nameLen = cd.getUint16(p + 28, true), extra = cd.getUint16(p + 30, true), comment = cd.getUint16(p + 32, true);
+        var local = cd.getUint32(p + 42, true);
+        var name = dec.decode(new Uint8Array(cd.buffer, cd.byteOffset + p + 46, nameLen));
+        out.set(name, { method: method, size: size, local: local });
+        p += 46 + nameLen + extra + comment;
+      }
+      return {
+        has: function (name) { return out.has(name); },
+        blob: async function (name, type) {
+          var e = out.get(name);
+          if (!e) throw new Error('The backup is missing ' + name + '.');
+          if (e.method !== 0) throw new Error('That zip was changed after it was saved. Use the original backup file.');
+          var lh = new DataView(await file.slice(e.local, e.local + 30).arrayBuffer());
+          var start = e.local + 30 + lh.getUint16(26, true) + lh.getUint16(28, true);
+          return file.slice(start, start + e.size, type || '');
+        }
+      };
+    }
+    $('bk-load').addEventListener('click', function () { $('pick-backup').click(); });
+    $('pick-backup').addEventListener('change', async function () {
+      var f = this.files[0];
+      this.value = '';
+      if (!f) return;
+      $('bk-save').disabled = $('bk-load').disabled = true;
+      try {
+        var z = await readZip(f);
+        if (!z.has('manifest.json')) throw new Error('That zip is not an Album Art Studio backup. (An export folder can\'t be loaded back in.)');
+        var man = JSON.parse(await (await z.blob('manifest.json')).text());
+        if (man.app !== 'album-art-studio') throw new Error('That zip is not an Album Art Studio backup.');
+        var total = man.art.length + man.audio.length + man.tray.length, done = 0;
+        function tick() { done++; if (done % 10 === 0 || done === total) $('bk-progress').textContent = 'Loading ' + done + ' of ' + total + '…'; }
+        // Copy each file into memory first so it stays readable after the picker closes.
+        async function grab(path, type) { var b = await z.blob(path, type); return new Blob([await b.arrayBuffer()], { type: type || b.type }); }
+        for (var i = 0; i < man.art.length; i++) {
+          await idb.put('art', man.art[i][0], await grab(man.art[i][1], 'image/jpeg'));
+          tick();
+        }
+        for (var j = 0; j < man.audio.length; j++) {
+          var a = man.audio[j][1];
+          await idb.put('audio', man.audio[j][0], { name: a.name, type: a.type, blob: await grab(a.path, a.type) });
+          tick();
+        }
+        for (var k = 0; k < man.tray.length; k++) {
+          var t = man.tray[k][1];
+          await idb.put('tray', man.tray[k][0], { name: t.name, added: t.added, blob: await grab(t.path, t.type) });
+          tick();
+        }
+        for (var e = 0; e < man.edits.length; e++) await idb.put('edits', man.edits[e][0], man.edits[e][1]);
+        if (man.songs) await idb.put('meta', 'songs', man.songs);
+        $('bk-progress').textContent = 'Loaded ' + man.art.length + ' covers, ' + man.audio.length + ' song files, ' +
+          man.edits.length + ' renames and ' + man.tray.length + ' tray pictures. Reloading…';
+        setTimeout(function () { location.reload(); }, 1200);
+      } catch (err) {
+        $('bk-progress').textContent = (err && err.message) ? err.message : 'Could not load that backup.';
+        $('bk-save').disabled = $('bk-load').disabled = false;
+      }
+    });
 
     // ---------------- image tray ----------------
     // Pictures waiting to be used. Ones added here live in the browser; ones from a connected
