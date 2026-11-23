@@ -1,0 +1,741 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pook TV</title>
+  <style>
+    :root {
+      --bg: #000;
+      --fg: #fff;
+      --muted: rgba(255, 255, 255, 0.7);
+      --panel: rgba(10, 10, 14, 0.82);
+      --accent: #ffcc33;
+      --ad: #ff5a5a;
+      --button: rgba(255, 255, 255, 0.14);
+      --button-hover: rgba(255, 255, 255, 0.26);
+    }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--fg);
+      font: 15px/1.4 system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+    }
+    .layer {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .layer.on { display: flex; }
+    #vid, #img { width: 100%; height: 100%; object-fit: contain; background: #000; }
+    #yt-wrap iframe { width: 100%; height: 100%; border: 0; }
+    /* The YouTube player takes clicks; the overlay above it stays click-through. */
+
+    #card {
+      flex-direction: column;
+      gap: 10px;
+      padding: 16px;
+      text-align: center;
+      background: radial-gradient(circle at center, #2a2048 0%, #07060c 75%);
+    }
+    #card-title { font-size: clamp(26px, 6vw, 64px); font-weight: 800; letter-spacing: 0.01em; }
+    #card-sub { font-size: clamp(15px, 2.4vw, 26px); color: var(--muted); }
+
+    /* ---------- On-screen graphics ---------- */
+    #bug {
+      position: fixed;
+      top: 14px;
+      right: 16px;
+      z-index: 4;
+      font-weight: 800;
+      font-size: 15px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      opacity: 0.55;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+      pointer-events: none;
+    }
+    #bug img { max-height: 40px; max-width: 160px; display: block; }
+
+    #ad-tag {
+      position: fixed;
+      top: 14px;
+      left: 16px;
+      z-index: 4;
+      display: none;
+      gap: 8px;
+      align-items: center;
+      padding: 5px 10px;
+      border-radius: 6px;
+      background: var(--panel);
+      font-size: 13px;
+      pointer-events: none;
+    }
+    #ad-tag b { color: var(--ad); letter-spacing: 0.06em; }
+    body.in-break #ad-tag { display: flex; }
+
+    #lower {
+      position: fixed;
+      left: 16px;
+      bottom: 72px;
+      z-index: 4;
+      max-width: calc(100% - 32px);
+      padding: 10px 16px;
+      border-left: 4px solid var(--accent);
+      background: var(--panel);
+      border-radius: 0 8px 8px 0;
+      transform: translateX(-120%);
+      transition: transform 0.45s ease;
+      pointer-events: none;
+    }
+    #lower.on { transform: none; }
+    #lower small { display: block; color: var(--accent); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; font-size: 11px; }
+    #lower span { font-size: 18px; font-weight: 600; }
+
+    #sound {
+      position: fixed;
+      top: 50px;
+      right: 16px;
+      z-index: 6;
+      display: none;
+    }
+    body.muted #sound { display: block; }
+
+    /* ---------- Controls ---------- */
+    button {
+      font: inherit;
+      color: var(--fg);
+      background: var(--button);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 999px;
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+    button:hover { background: var(--button-hover); }
+    #sound button { background: var(--accent); color: #000; font-weight: 700; border: 0; }
+
+    #bar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 5;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: linear-gradient(transparent, var(--panel));
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    body.ui #bar { opacity: 1; pointer-events: auto; }
+    #now { margin-right: auto; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ---------- Guide panel ---------- */
+    #guide {
+      position: fixed;
+      inset: 0;
+      z-index: 7;
+      display: none;
+      overflow: auto;
+      padding: 24px 16px 40px;
+      background: rgba(5, 5, 9, 0.94);
+    }
+    #guide.on { display: block; }
+    #guide .inner { max-width: 760px; margin: 0 auto; }
+    #guide h2 { margin: 0 0 4px; font-size: 22px; }
+    #guide h3 { margin: 22px 0 8px; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+    #guide p { color: var(--muted); margin: 6px 0; }
+    #guide ol { margin: 0; padding-left: 22px; }
+    #guide li { padding: 3px 0; }
+    #guide li.cur { color: var(--accent); font-weight: 700; }
+    #guide .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+    #guide .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    #guide label.btn { position: relative; overflow: hidden; }
+    #guide input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    #guide .kind { color: var(--muted); font-size: 12px; margin-left: 6px; }
+
+    #msg {
+      position: fixed;
+      inset: 0;
+      z-index: 3;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      text-align: center;
+      color: var(--muted);
+    }
+    #msg.on { display: flex; }
+  </style>
+</head>
+<body class="muted">
+  <!--
+    Pook TV: a channel that autoplays your shows with commercial breaks.
+
+    Set it up in channel.json (next to this file):
+      shows        your videos, played in order
+      commercials  played during breaks, picked in rotation
+      breakEveryMinutes  cut to a break this often inside a long show (0 = only between shows)
+      adsPerBreak        how many commercials each break has
+
+    Each show or commercial can be:
+      { "title": "Ep 1", "src": "media/ep1.mp4" }    a video file (mp4/webm), here or any URL
+      { "title": "Ep 2", "youtube": "VIDEO_ID" }     a YouTube video (ID or full link)
+      { "title": "Ad",   "src": "ad.png", "seconds": 8 }               a picture, shown 8 s
+      { "title": "Promo", "card": "Big text", "sub": "Small text", "seconds": 6 }  a title card
+
+    Optional URL settings:
+      ?config=other.json   use a different channel file
+      &shuffle=1           shuffle the shows
+      &break=5             break every 5 minutes
+      &ads=3               3 commercials per break
+
+    It starts muted (browsers only autoplay silently). Tap "Turn sound on" once.
+    Keys: → skip, ← back, M mute, F full screen, G guide.
+  -->
+
+  <div id="vid-wrap" class="layer"><video id="vid" playsinline preload="auto"></video></div>
+  <div id="yt-wrap" class="layer"><div id="yt"></div></div>
+  <div id="img-wrap" class="layer"><img id="img" alt=""></div>
+  <div id="card" class="layer"><div id="card-title"></div><div id="card-sub"></div></div>
+  <div id="msg"></div>
+
+  <div id="bug"></div>
+  <div id="ad-tag"><b>COMMERCIAL</b><span id="ad-count"></span><span id="ad-left"></span></div>
+  <div id="lower"><small id="lower-k"></small><span id="lower-t"></span></div>
+  <div id="sound"><button id="unmute" type="button">🔊 Turn sound on</button></div>
+
+  <div id="bar">
+    <span id="now"></span>
+    <button id="back" type="button">⏮ Back</button>
+    <button id="skip" type="button">Skip ⏭</button>
+    <button id="mute" type="button">🔇 Sound</button>
+    <button id="guide-btn" type="button">☰ Guide</button>
+    <button id="fs" type="button">⛶ Full screen</button>
+  </div>
+
+  <div id="guide">
+    <div class="inner">
+      <div class="top">
+        <div>
+          <h2 id="g-name"></h2>
+          <p id="g-rules"></p>
+        </div>
+        <button id="g-close" type="button">✕ Close</button>
+      </div>
+
+      <h3>Play files from this device</h3>
+      <p>Pick videos or pictures on this computer or phone. They play right here and are not uploaded anywhere. They are gone when you reload the page.</p>
+      <div class="row">
+        <label class="btn"><button type="button" tabindex="-1">＋ Add shows</button><input id="add-shows" type="file" accept="video/*,image/*" multiple></label>
+        <label class="btn"><button type="button" tabindex="-1">＋ Add commercials</button><input id="add-ads" type="file" accept="video/*,image/*" multiple></label>
+        <button id="only-mine" type="button">Play only my files</button>
+      </div>
+
+      <h3>Shows</h3>
+      <ol id="g-shows"></ol>
+      <h3>Commercials</h3>
+      <ol id="g-ads"></ol>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      // Used if channel.json can't be loaded (e.g. opening the file straight from disk).
+      var FALLBACK = {
+        name: 'Pook TV',
+        breakEveryMinutes: 8,
+        adsPerBreak: 2,
+        shows: [{ title: 'Pook Gaming Center', youtube: 'WzFgVCbw7Rg' }],
+        commercials: [
+          { title: 'Yeon & Skylar', src: 'yeonskylar.mp4' },
+          { title: 'Pook TV promo', card: "You're watching Pook TV", sub: 'Your shows. Your ads. All day.', seconds: 6 }
+        ]
+      };
+      var MIN_LEFT_FOR_MIDROLL = 60;   // don't cut to a break if the show is about to end anyway
+      var UP_NEXT_AT = 15;             // seconds before the end to show "Up next"
+      var STALL_SKIP_MS = 20000;       // skip anything that won't start in this long
+
+      var params = new URLSearchParams(location.search);
+      var el = function (id) { return document.getElementById(id); };
+
+      var cfg, shows, ads;
+      var showIdx = 0;
+      var adOrder = [], adPos = 0;
+      var mode = null;           // 'show' | 'break'
+      var breakQueue = [];       // items left in the current break
+      var breakTotal = 0;
+      var current = null;        // the item on screen now
+      var resumeAt = {};         // show index -> seconds to resume from after a mid-roll
+      var watchedSinceBreak = 0;
+      var lastTick = null;
+      var muted = true;
+      var timedTimer = null, timedEnd = 0;
+      var stallTimer = null;
+      var upNextShown = false;
+      var uiTimer = null, lowerTimer = null;
+
+      // ---------- Config ----------
+      function normalize(raw) {
+        if (typeof raw === 'string') raw = /^yt:/.test(raw) ? { youtube: raw.slice(3) } : { src: raw };
+        if (!raw || typeof raw !== 'object') return null;
+        var it = { title: raw.title || '', seconds: +raw.seconds || 0, autoTitle: !raw.title };
+        if (raw.youtube) {
+          var m = String(raw.youtube).match(/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([\w-]{11})/);
+          it.type = 'yt';
+          it.id = m ? m[1] : String(raw.youtube).trim();
+          if (!/^[\w-]{11}$/.test(it.id)) return null;
+        } else if (raw.card) {
+          it.type = 'card';
+          it.card = String(raw.card);
+          it.sub = raw.sub ? String(raw.sub) : '';
+          it.seconds = it.seconds || 6;
+        } else if (raw.src) {
+          it.src = String(raw.src);
+          it.type = raw.image || /\.(png|jpe?g|gif|webp|avif|svg)(\?|#|$)/i.test(it.src) ? 'img' : 'video';
+          if (it.type === 'img') it.seconds = it.seconds || 8;
+        } else {
+          return null;
+        }
+        if (!it.title) it.title = it.type === 'card' ? it.card : it.type === 'yt' ? 'YouTube video' : decodeURIComponent(it.src.split('/').pop().split('?')[0]);
+        return it;
+      }
+      function normList(a) { return (Array.isArray(a) ? a : []).map(normalize).filter(Boolean); }
+
+      function shuffle(a) {
+        for (var i = a.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var t = a[i]; a[i] = a[j]; a[j] = t;
+        }
+        return a;
+      }
+
+      function start(conf) {
+        cfg = conf;
+        shows = normList(conf.shows);
+        ads = normList(conf.commercials);
+        if (params.get('break') !== null) cfg.breakEveryMinutes = +params.get('break');
+        if (params.get('ads') !== null) cfg.adsPerBreak = +params.get('ads');
+        cfg.breakEveryMinutes = Math.max(0, +cfg.breakEveryMinutes || 0);
+        cfg.adsPerBreak = Math.max(0, Math.round(cfg.adsPerBreak === undefined ? 2 : +cfg.adsPerBreak || 0));
+        if (params.get('shuffle') === '1' || (cfg.shuffleShows && params.get('shuffle') !== '0')) shuffle(shows);
+
+        document.title = cfg.name || 'Pook TV';
+        if (cfg.logo) {
+          var img = document.createElement('img');
+          img.src = cfg.logo; img.alt = cfg.name || '';
+          el('bug').appendChild(img);
+        } else {
+          el('bug').textContent = cfg.name || 'Pook TV';
+        }
+        renderGuide();
+        if (!shows.length) { showMsg('No shows yet. Add some to channel.json, or open the Guide (G) to play files from this device.'); return; }
+        playShow(0, false);
+      }
+
+      // ---------- Players ----------
+      var vid = el('vid');
+      vid.muted = true;
+      vid.addEventListener('ended', onItemEnded);
+      vid.addEventListener('error', function () { if (current && current.type === 'video') skipBroken(); });
+      vid.addEventListener('playing', clearStall);
+
+      var ytApiReady = false, ytPlayer = null, ytReady = false, ytPending = null;
+      var tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(tag);
+      window.onYouTubeIframeAPIReady = function () {
+        ytApiReady = true;
+        if (ytPending) { var p = ytPending; ytPending = null; loadYt(p.id, p.at); }
+      };
+
+      function loadYt(id, at) {
+        if (!ytApiReady) { ytPending = { id: id, at: at }; return; }
+        if (!ytPlayer) {
+          ytPlayer = new YT.Player('yt', {
+            width: '100%', height: '100%', videoId: id,
+            playerVars: { autoplay: 1, mute: 1, controls: 0, rel: 0, playsinline: 1, modestbranding: 1, start: Math.floor(at || 0) },
+            events: {
+              onReady: function (e) {
+                ytReady = true;
+                applyMute();
+                e.target.playVideo();
+                if (ytPending) { var p = ytPending; ytPending = null; loadYt(p.id, p.at); }
+              },
+              onStateChange: function (e) {
+                if (!current || current.type !== 'yt') return;
+                if (e.data === YT.PlayerState.PLAYING) {
+                  clearStall();
+                  // No title in channel.json: use the one YouTube has.
+                  var d = e.target.getVideoData && e.target.getVideoData();
+                  if (current.autoTitle && d && d.title) {
+                    current.title = d.title;
+                    current.autoTitle = false;
+                    updateNow();
+                    if (mode === 'show') lowerThird(current.announce || 'Now playing', current.title);
+                  }
+                }
+                if (e.data === YT.PlayerState.ENDED) onItemEnded();
+              },
+              // 101/150: the owner blocked embedding; 100: removed. Skip it.
+              onError: function () { if (current && current.type === 'yt') skipBroken(); }
+            }
+          });
+          return;
+        }
+        if (!ytReady) { ytPending = { id: id, at: at }; return; }
+        applyMute();
+        ytPlayer.loadVideoById({ videoId: id, startSeconds: at || 0 });
+      }
+
+      function hideAll() {
+        clearTimeout(timedTimer); timedTimer = null;
+        clearStall();
+        ['vid-wrap', 'yt-wrap', 'img-wrap', 'card'].forEach(function (id) { el(id).classList.remove('on'); });
+        try { vid.pause(); } catch (e) {}
+        if (ytReady && ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) ytPlayer.pauseVideo();
+        el('msg').classList.remove('on');
+      }
+
+      // Put one item on screen, starting at `at` seconds.
+      function playItem(it, at) {
+        hideAll();
+        current = it;
+        upNextShown = false;
+        lastTick = null;
+        if (it.type === 'video') {
+          el('vid-wrap').classList.add('on');
+          if (vid.getAttribute('src') !== it.src) vid.src = it.src;
+          var seek = function () {
+            if (at) { try { vid.currentTime = at; } catch (e) {} }
+            tryPlayVid();
+          };
+          if (vid.readyState >= 1) seek(); else vid.addEventListener('loadedmetadata', seek, { once: true });
+          tryPlayVid();
+          armStall();
+        } else if (it.type === 'yt') {
+          el('yt-wrap').classList.add('on');
+          loadYt(it.id, at);
+          armStall();
+        } else {
+          if (it.type === 'img') { el('img').src = it.src; el('img-wrap').classList.add('on'); }
+          else {
+            el('card-title').textContent = it.card;
+            el('card-sub').textContent = it.sub;
+            el('card').classList.add('on');
+          }
+          var ms = (it.seconds - (at || 0)) * 1000;
+          timedEnd = Date.now() + ms;
+          timedTimer = setTimeout(onItemEnded, Math.max(500, ms));
+        }
+        updateNow();
+      }
+
+      function tryPlayVid() {
+        vid.muted = muted;
+        var r = vid.play();
+        if (r && r.catch) r.catch(function () {
+          // Blocked with sound: fall back to muted so the channel keeps running.
+          if (!vid.muted) { muted = true; applyMute(); vid.play().catch(function () {}); }
+        });
+      }
+
+      function armStall() {
+        clearStall();
+        stallTimer = setTimeout(function () {
+          if (position() >= 0.5) return;
+          // A file that loaded but was held back by the browser isn't broken; leave it.
+          if (current && current.type === 'video' && vid.readyState >= 2) return;
+          skipBroken();
+        }, STALL_SKIP_MS);
+      }
+      function clearStall() { clearTimeout(stallTimer); stallTimer = null; }
+
+      function position() {
+        if (!current) return 0;
+        if (current.type === 'video') return vid.currentTime || 0;
+        if (current.type === 'yt') return ytReady && ytPlayer.getCurrentTime ? ytPlayer.getCurrentTime() || 0 : 0;
+        return current.seconds - Math.max(0, (timedEnd - Date.now()) / 1000);
+      }
+      function duration() {
+        if (!current) return 0;
+        if (current.type === 'video') return isFinite(vid.duration) ? vid.duration : 0;
+        if (current.type === 'yt') return ytReady && ytPlayer.getDuration ? ytPlayer.getDuration() || 0 : 0;
+        return current.seconds;
+      }
+      function isPlaying() {
+        if (!current) return false;
+        if (current.type === 'video') return !vid.paused && !vid.ended && vid.readyState > 2;
+        if (current.type === 'yt') return ytReady && ytPlayer.getPlayerState() === YT.PlayerState.PLAYING;
+        return true;
+      }
+
+      // ---------- Programming ----------
+      function playShow(i, announceBack) {
+        mode = 'show';
+        document.body.classList.remove('in-break');
+        showIdx = ((i % shows.length) + shows.length) % shows.length;
+        var at = resumeAt[showIdx] || 0;
+        delete resumeAt[showIdx];
+        watchedSinceBreak = 0;
+        var it = shows[showIdx];
+        it.announce = announceBack ? 'Back to' : 'Now playing';
+        playItem(it, at);
+        // A YouTube video without a title gets its lower third once YouTube says what it is.
+        if (!(it.type === 'yt' && it.autoTitle)) lowerThird(it.announce, it.title);
+      }
+
+      function nextAd() {
+        if (!ads.length) return null;
+        if (adPos >= adOrder.length) {
+          var last = adOrder[adOrder.length - 1];
+          adOrder = shuffle(ads.map(function (_, k) { return k; }));
+          if (adOrder.length > 1 && adOrder[0] === last) adOrder.push(adOrder.shift());
+          adPos = 0;
+        }
+        return ads[adOrder[adPos++]];
+      }
+
+      // midroll: the show pauses and resumes after; otherwise move to the next show.
+      function startBreak(midroll) {
+        if (midroll) resumeAt[showIdx] = Math.max(0, position() - 2);
+        var n = Math.min(cfg.adsPerBreak, Math.max(1, ads.length));
+        breakQueue = [];
+        for (var k = 0; k < n && ads.length && cfg.adsPerBreak; k++) breakQueue.push(nextAd());
+        var nextIdx = midroll ? showIdx : showIdx + 1;
+        if (!breakQueue.length) { playShow(nextIdx, midroll); return; }
+        breakQueue.nextIdx = nextIdx;
+        breakQueue.midroll = midroll;
+        breakTotal = breakQueue.length;
+        mode = 'break';
+        document.body.classList.add('in-break');
+        el('lower').classList.remove('on');
+        playNextInBreak();
+      }
+
+      function playNextInBreak() {
+        if (!breakQueue.length) {
+          var nextIdx = breakQueue.nextIdx, mid = breakQueue.midroll;
+          playShow(nextIdx, mid);
+          return;
+        }
+        var it = breakQueue.shift();
+        el('ad-count').textContent = (breakTotal - breakQueue.length) + ' of ' + breakTotal;
+        playItem(it, 0);
+      }
+
+      function onItemEnded() {
+        if (mode === 'break') playNextInBreak();
+        else if (mode === 'show') startBreak(false);
+      }
+
+      function skipBroken() {
+        if (mode === 'break') playNextInBreak();
+        else { delete resumeAt[showIdx]; playShow(showIdx + 1, false); }
+      }
+
+      function skip() {
+        if (mode === 'break') playNextInBreak();
+        else startBreak(false);
+      }
+      function back() {
+        if (mode === 'break') {
+          // Leave the break and go back to the show it interrupted (or the one before).
+          playShow(breakQueue.midroll ? breakQueue.nextIdx : breakQueue.nextIdx - 1, true);
+        } else if (position() > 10) {
+          playShow(showIdx, false);
+        } else {
+          playShow(showIdx - 1, false);
+        }
+      }
+
+      // Runs twice a second: counts watch time for mid-rolls and draws the graphics.
+      setInterval(function () {
+        if (!current) return;
+        var now = Date.now();
+        if (mode === 'show' && isPlaying()) {
+          if (lastTick) watchedSinceBreak += (now - lastTick) / 1000;
+          lastTick = now;
+          var dur = duration(), pos = position(), left = dur ? dur - pos : Infinity;
+          if (cfg.breakEveryMinutes && watchedSinceBreak >= cfg.breakEveryMinutes * 60 && left > MIN_LEFT_FOR_MIDROLL) {
+            startBreak(true);
+            return;
+          }
+          if (dur && left < UP_NEXT_AT && !upNextShown && shows.length > 1) {
+            upNextShown = true;
+            lowerThird('Up next', shows[(showIdx + 1) % shows.length].title, 12000);
+          }
+        } else {
+          lastTick = null;
+        }
+        if (mode === 'break') {
+          var rest = Math.max(0, duration() - position());
+          breakQueue.forEach(function (it) { rest += it.seconds || 30; });
+          var unknown = breakQueue.some(function (it) { return !it.seconds; });
+          el('ad-left').textContent = '· back in ' + (unknown ? '~' : '') + fmt(rest);
+        }
+      }, 500);
+
+      function fmt(s) {
+        s = Math.max(0, Math.round(s));
+        return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
+      }
+
+      function lowerThird(kicker, title, ms) {
+        el('lower-k').textContent = kicker;
+        el('lower-t').textContent = title;
+        el('lower').classList.add('on');
+        clearTimeout(lowerTimer);
+        lowerTimer = setTimeout(function () { el('lower').classList.remove('on'); }, ms || 6000);
+      }
+
+      function updateNow() {
+        if (!current) return;
+        el('now').textContent = (mode === 'break' ? 'Commercial: ' : 'Show ' + (showIdx + 1) + ' of ' + shows.length + ': ') + current.title;
+        renderGuide();
+      }
+
+      function showMsg(t) {
+        el('msg').textContent = t;
+        el('msg').classList.add('on');
+      }
+
+      // ---------- Sound ----------
+      function applyMute() {
+        document.body.classList.toggle('muted', muted);
+        el('mute').textContent = muted ? '🔇 Sound' : '🔊 Mute';
+        vid.muted = muted;
+        if (ytReady) {
+          if (muted) ytPlayer.mute(); else { ytPlayer.unMute(); ytPlayer.setVolume(100); }
+        }
+      }
+      function setMuted(m) {
+        muted = m;
+        applyMute();
+        if (current && current.type === 'video' && vid.paused) tryPlayVid();
+      }
+      el('unmute').addEventListener('click', function () { setMuted(false); });
+      el('mute').addEventListener('click', function () { setMuted(!muted); });
+
+      // ---------- Guide & local files ----------
+      function renderGuide() {
+        if (!cfg) return;
+        el('g-name').textContent = cfg.name || 'Pook TV';
+        el('g-rules').textContent = (cfg.breakEveryMinutes ? 'A commercial break every ' + cfg.breakEveryMinutes + ' min and between shows' : 'Commercial breaks between shows') +
+          ', ' + cfg.adsPerBreak + ' commercial' + (cfg.adsPerBreak === 1 ? '' : 's') + ' each.';
+        fill('g-shows', shows, mode === 'show' ? current : null, true);
+        fill('g-ads', ads, mode === 'break' ? current : null, false);
+      }
+      function fill(id, list, cur, clickable) {
+        var ol = el(id);
+        ol.innerHTML = '';
+        if (!list.length) { var e = document.createElement('li'); e.textContent = 'None yet.'; ol.appendChild(e); return; }
+        list.forEach(function (it, k) {
+          var li = document.createElement('li');
+          li.textContent = it.title;
+          var kind = document.createElement('span');
+          kind.className = 'kind';
+          kind.textContent = { yt: 'YouTube', video: 'video', img: 'picture · ' + it.seconds + 's', card: 'card · ' + it.seconds + 's' }[it.type];
+          li.appendChild(kind);
+          if (it === cur) li.className = 'cur';
+          if (clickable) {
+            li.style.cursor = 'pointer';
+            li.title = 'Play now';
+            li.addEventListener('click', function () { closeGuide(); playShow(k, false); });
+          }
+          ol.appendChild(li);
+        });
+      }
+
+      function filesToItems(files) {
+        return Array.prototype.map.call(files, function (f) {
+          var img = /^image\//.test(f.type);
+          return { title: f.name.replace(/\.[^.]+$/, ''), src: URL.createObjectURL(f), type: img ? 'img' : 'video', seconds: img ? 8 : 0, local: true };
+        });
+      }
+      el('add-shows').addEventListener('change', function (e) {
+        var wasEmpty = !shows.length;
+        shows = shows.concat(filesToItems(e.target.files));
+        e.target.value = '';
+        renderGuide();
+        if (wasEmpty && shows.length) { closeGuide(); playShow(0, false); }
+      });
+      el('add-ads').addEventListener('change', function (e) {
+        ads = ads.concat(filesToItems(e.target.files));
+        adOrder = []; adPos = 0;
+        e.target.value = '';
+        renderGuide();
+      });
+      el('only-mine').addEventListener('click', function () {
+        var myShows = shows.filter(function (s) { return s.local; });
+        var myAds = ads.filter(function (s) { return s.local; });
+        if (!myShows.length && !myAds.length) { alert('Add some files first.'); return; }
+        if (myShows.length) shows = myShows;
+        if (myAds.length) { ads = myAds; adOrder = []; adPos = 0; }
+        resumeAt = {};
+        closeGuide();
+        playShow(0, false);
+      });
+
+      function openGuide() { renderGuide(); el('guide').classList.add('on'); }
+      function closeGuide() { el('guide').classList.remove('on'); }
+      el('guide-btn').addEventListener('click', openGuide);
+      el('g-close').addEventListener('click', closeGuide);
+
+      // ---------- Controls ----------
+      function toggleFullscreen() {
+        if (document.fullscreenElement) document.exitFullscreen();
+        else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(function () {});
+      }
+      el('skip').addEventListener('click', skip);
+      el('back').addEventListener('click', back);
+      el('fs').addEventListener('click', toggleFullscreen);
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeGuide();
+        if (el('guide').classList.contains('on')) return;
+        if (e.key === 'ArrowRight') skip();
+        else if (e.key === 'ArrowLeft') back();
+        else if (e.key === 'm' || e.key === 'M') setMuted(!muted);
+        else if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+        else if (e.key === 'g' || e.key === 'G') openGuide();
+      });
+
+      function flashUi() {
+        document.body.classList.add('ui');
+        clearTimeout(uiTimer);
+        uiTimer = setTimeout(function () { document.body.classList.remove('ui'); }, 3000);
+      }
+      document.addEventListener('mousemove', flashUi);
+      document.addEventListener('touchstart', flashUi);
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden && current && current.type === 'video' && vid.paused) tryPlayVid();
+      });
+
+      // ---------- Go ----------
+      fetch(params.get('config') || 'channel.json', { cache: 'no-cache' })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .catch(function () { return FALLBACK; })
+        .then(start);
+
+      // Testing hook.
+      window.pookTV = {
+        skip: skip, back: back, startBreak: startBreak,
+        get mode() { return mode; },
+        get current() { return current; },
+        get showIdx() { return showIdx; },
+        get position() { return position(); },
+        get resumeAt() { return resumeAt; },
+        get muted() { return muted; },
+        get config() { return cfg; }
+      };
+    })();
+  </script>
+</body>
+</html>
