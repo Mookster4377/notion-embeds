@@ -6,6 +6,8 @@
   "breakEveryMinutes": 8,
   "adsPerBreak": 2,
 
+  "github": { "repo": "Mookster4377/notion-embeds", "branch": "main" },
+
   "shows": [
     { "youtube": "WzFgVCbw7Rg" },
     { "youtube": "By416mzsTH8" },

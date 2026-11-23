@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pook TV</title>
   <style>
+    /* Written for old smart-TV browsers too: no `inset`, `gap` only where losing it is harmless. */
     :root {
       --bg: #000;
       --fg: #fff;
@@ -12,110 +13,118 @@
       --panel: rgba(10, 10, 14, 0.82);
       --accent: #ffcc33;
       --ad: #ff5a5a;
+      --ok: #6ee7a0;
       --button: rgba(255, 255, 255, 0.14);
       --button-hover: rgba(255, 255, 255, 0.26);
+      --edge: 16px;          /* distance from the screen edge; bigger on TVs (overscan) */
     }
     html, body {
       margin: 0;
       height: 100%;
+      background: #000;
       background: var(--bg);
+      color: #fff;
       color: var(--fg);
-      font: 15px/1.4 system-ui, -apple-system, sans-serif;
+      font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
       overflow: hidden;
     }
-    .layer {
-      position: fixed;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-    }
+    body.tv { --edge: 5vw; font-size: 22px; }
+    .full { position: fixed; top: 0; right: 0; bottom: 0; left: 0; }
+    .layer { display: none; align-items: center; justify-content: center; }
     .layer.on { display: flex; }
     #vid, #img { width: 100%; height: 100%; object-fit: contain; background: #000; }
     #yt-wrap iframe { width: 100%; height: 100%; border: 0; }
-    /* The YouTube player takes clicks; the overlay above it stays click-through. */
 
     #card {
       flex-direction: column;
-      gap: 10px;
       padding: 16px;
       text-align: center;
       background: radial-gradient(circle at center, #2a2048 0%, #07060c 75%);
     }
-    #card-title { font-size: clamp(26px, 6vw, 64px); font-weight: 800; letter-spacing: 0.01em; }
-    #card-sub { font-size: clamp(15px, 2.4vw, 26px); color: var(--muted); }
+    #card-title { font-size: 44px; font-size: clamp(26px, 6vw, 64px); font-weight: 800; margin-bottom: 10px; }
+    #card-sub { font-size: 20px; font-size: clamp(15px, 2.4vw, 26px); color: var(--muted); }
 
     /* ---------- On-screen graphics ---------- */
     #bug {
       position: fixed;
       top: 14px;
-      right: 16px;
+      top: calc(var(--edge) * 0.9);
+      right: var(--edge);
       z-index: 4;
       font-weight: 800;
-      font-size: 15px;
+      font-size: 1em;
       letter-spacing: 0.06em;
       text-transform: uppercase;
       opacity: 0.55;
       text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
       pointer-events: none;
     }
-    #bug img { max-height: 40px; max-width: 160px; display: block; }
+    #bug img { max-height: 2.6em; max-width: 10em; display: block; }
 
     #ad-tag {
       position: fixed;
       top: 14px;
-      left: 16px;
+      top: calc(var(--edge) * 0.9);
+      left: var(--edge);
       z-index: 4;
       display: none;
-      gap: 8px;
       align-items: center;
       padding: 5px 10px;
       border-radius: 6px;
       background: var(--panel);
-      font-size: 13px;
+      font-size: 0.87em;
       pointer-events: none;
     }
+    #ad-tag > * { margin-right: 8px; }
+    #ad-tag > :last-child { margin-right: 0; }
     #ad-tag b { color: var(--ad); letter-spacing: 0.06em; }
     body.in-break #ad-tag { display: flex; }
 
     #lower {
       position: fixed;
-      left: 16px;
+      left: var(--edge);
       bottom: 72px;
+      bottom: calc(var(--edge) + 56px);
       z-index: 4;
-      max-width: calc(100% - 32px);
+      max-width: 80%;
       padding: 10px 16px;
       border-left: 4px solid var(--accent);
       background: var(--panel);
       border-radius: 0 8px 8px 0;
-      transform: translateX(-120%);
+      transform: translateX(-130%);
       transition: transform 0.45s ease;
       pointer-events: none;
     }
     #lower.on { transform: none; }
-    #lower small { display: block; color: var(--accent); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; font-size: 11px; }
-    #lower span { font-size: 18px; font-weight: 600; }
+    #lower small { display: block; color: var(--accent); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.73em; }
+    #lower span { font-size: 1.2em; font-weight: 600; }
 
     #sound {
       position: fixed;
       top: 50px;
-      right: 16px;
+      top: calc(var(--edge) + 36px);
+      right: var(--edge);
       z-index: 6;
       display: none;
     }
     body.muted #sound { display: block; }
+    body.tv #sound button::after { content: " (OK)"; font-weight: 400; }
 
     /* ---------- Controls ---------- */
-    button {
+    button, select, input {
       font: inherit;
       color: var(--fg);
+    }
+    button {
       background: var(--button);
       border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 999px;
-      padding: 8px 14px;
+      padding: 0.5em 0.95em;
       cursor: pointer;
     }
     button:hover { background: var(--button-hover); }
+    button:focus, select:focus, input:focus { outline: 3px solid var(--accent); outline-offset: 2px; }
+    button[disabled] { opacity: 0.5; cursor: default; }
     #sound button { background: var(--accent); color: #000; font-weight: 700; border: 0; }
 
     #bar {
@@ -127,43 +136,62 @@
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 8px;
-      padding: 12px 16px;
+      padding: 12px var(--edge);
+      padding-bottom: calc(var(--edge) * 0.75);
       background: linear-gradient(transparent, var(--panel));
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.3s;
     }
+    #bar button { margin: 4px 0 4px 8px; }
     body.ui #bar { opacity: 1; pointer-events: auto; }
-    #now { margin-right: auto; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #now { margin-right: auto; color: var(--muted); min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     /* ---------- Guide panel ---------- */
     #guide {
-      position: fixed;
-      inset: 0;
       z-index: 7;
       display: none;
       overflow: auto;
-      padding: 24px 16px 40px;
-      background: rgba(5, 5, 9, 0.94);
+      padding: 24px var(--edge) 40px;
+      background: rgba(5, 5, 9, 0.95);
     }
     #guide.on { display: block; }
-    #guide .inner { max-width: 760px; margin: 0 auto; }
-    #guide h2 { margin: 0 0 4px; font-size: 22px; }
-    #guide h3 { margin: 22px 0 8px; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+    #guide .inner { max-width: 780px; margin: 0 auto; }
+    #guide h2 { margin: 0 0 4px; font-size: 1.45em; }
+    #guide h3 { margin: 24px 0 8px; font-size: 0.93em; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
     #guide p { color: var(--muted); margin: 6px 0; }
-    #guide ol { margin: 0; padding-left: 22px; }
+    #guide a { color: var(--accent); }
+    #guide ol { margin: 0; padding-left: 1.6em; }
     #guide li { padding: 3px 0; }
-    #guide li.cur { color: var(--accent); font-weight: 700; }
-    #guide .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
-    #guide .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-    #guide label.btn { position: relative; overflow: hidden; }
-    #guide input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-    #guide .kind { color: var(--muted); font-size: 12px; margin-left: 6px; }
+    #guide li.cur > .t { color: var(--accent); font-weight: 700; }
+    #guide li .t { cursor: pointer; }
+    #guide li button { padding: 0.1em 0.6em; margin-left: 8px; font-size: 0.85em; }
+    #guide li button.t { font-size: 1em; margin-left: 0; }
+    #guide .row { display: flex; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+    #guide .row > * { margin: 4px 8px 4px 0; }
+    #guide .top { display: flex; justify-content: space-between; align-items: flex-start; }
+    #guide .top > div { margin-right: 12px; }
+    #guide label.btn { position: relative; overflow: hidden; display: inline-block; }
+    #guide label.btn input { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+    #guide .kind { color: var(--muted); font-size: 0.8em; margin-left: 6px; }
+    #guide select, #guide input[type=password], #guide input[type=text] {
+      background: #16151d;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 8px;
+      padding: 0.45em 0.6em;
+    }
+    #guide input[type=password] { width: 22em; max-width: 100%; }
+    #up-status { min-height: 1.4em; }
+    #up-status.ok { color: var(--ok); }
+    #up-status.err { color: var(--ad); }
+    .box { border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 12px; padding: 12px 16px; margin-top: 8px; }
+    .only-tv { display: none; }
+    body.tv .only-tv { display: block; }
+    body.tv .not-tv { display: none; }
+    body.can-edit .need-key { display: none; }
+    body:not(.can-edit) .has-key { display: none; }
 
     #msg {
-      position: fixed;
-      inset: 0;
       z-index: 3;
       display: none;
       align-items: center;
@@ -179,16 +207,17 @@
   <!--
     Pook TV: a channel that autoplays your shows with commercial breaks.
 
-    Set it up in channel.json (next to this file):
-      shows        your videos, played in order
-      commercials  played during breaks, picked in rotation
+    Set it up in channel.json (next to this file), or upload videos from the Guide (☰ or G).
+      shows              your videos, played in order
+      commercials        played during breaks, picked in rotation
       breakEveryMinutes  cut to a break this often inside a long show (0 = only between shows)
       adsPerBreak        how many commercials each break has
+      github             where uploads from the Guide are saved
 
     Each show or commercial can be:
       { "title": "Ep 1", "src": "media/ep1.mp4" }    a video file (mp4/webm), here or any URL
-      { "title": "Ep 2", "youtube": "VIDEO_ID" }     a YouTube video (ID or full link)
-      { "title": "Ad",   "src": "ad.png", "seconds": 8 }               a picture, shown 8 s
+      { "youtube": "VIDEO_ID" }                      a YouTube video (title filled in automatically)
+      { "title": "Ad",   "src": "ad.png", "seconds": 8 }                     a picture, shown 8 s
       { "title": "Promo", "card": "Big text", "sub": "Small text", "seconds": 6 }  a title card
 
     Optional URL settings:
@@ -196,16 +225,19 @@
       &shuffle=1           shuffle the shows
       &break=5             break every 5 minutes
       &ads=3               3 commercials per break
+      &tv=1                TV layout (turned on by itself in smart-TV browsers)
 
-    It starts muted (browsers only autoplay silently). Tap "Turn sound on" once.
+    It starts muted (browsers only autoplay silently). Tap "Turn sound on" once (OK on a TV remote).
     Keys: → skip, ← back, M mute, F full screen, G guide.
+    TV remote: ◀ ▶ back/skip, OK sound on / controls, ▲ ▼ controls, CH+/CH− skip/back, Back closes.
+    The lineup reloads every 2 minutes, so new uploads show up without touching the TV.
   -->
 
-  <div id="vid-wrap" class="layer"><video id="vid" playsinline preload="auto"></video></div>
-  <div id="yt-wrap" class="layer"><div id="yt"></div></div>
-  <div id="img-wrap" class="layer"><img id="img" alt=""></div>
-  <div id="card" class="layer"><div id="card-title"></div><div id="card-sub"></div></div>
-  <div id="msg"></div>
+  <div id="vid-wrap" class="full layer"><video id="vid" playsinline preload="auto"></video></div>
+  <div id="yt-wrap" class="full layer"><div id="yt"></div></div>
+  <div id="img-wrap" class="full layer"><img id="img" alt=""></div>
+  <div id="card" class="full layer"><div id="card-title"></div><div id="card-sub"></div></div>
+  <div id="msg" class="full"></div>
 
   <div id="bug"></div>
   <div id="ad-tag"><b>COMMERCIAL</b><span id="ad-count"></span><span id="ad-left"></span></div>
@@ -221,7 +253,7 @@
     <button id="fs" type="button">⛶ Full screen</button>
   </div>
 
-  <div id="guide">
+  <div id="guide" class="full">
     <div class="inner">
       <div class="top">
         <div>
@@ -231,12 +263,45 @@
         <button id="g-close" type="button">✕ Close</button>
       </div>
 
-      <h3>Play files from this device</h3>
-      <p>Pick videos or pictures on this computer or phone. They play right here and are not uploaded anywhere. They are gone when you reload the page.</p>
-      <div class="row">
-        <label class="btn"><button type="button" tabindex="-1">＋ Add shows</button><input id="add-shows" type="file" accept="video/*,image/*" multiple></label>
-        <label class="btn"><button type="button" tabindex="-1">＋ Add commercials</button><input id="add-ads" type="file" accept="video/*,image/*" multiple></label>
-        <button id="only-mine" type="button">Play only my files</button>
+      <div class="only-tv">
+        <h3>Adding videos</h3>
+        <p>Open this page on your phone or computer, press ☰ Guide, and upload there. New videos show up on this TV within a few minutes, by themselves.</p>
+      </div>
+
+      <div class="not-tv">
+        <h3>Upload to the channel</h3>
+        <p>Saves videos or pictures to the channel, so every screen gets them, smart TVs included. They show up everywhere about a minute after uploading.</p>
+
+        <div class="box need-key">
+          <p><b>One-time setup on this device:</b> uploads are saved in your GitHub repo <b id="gh-repo"></b>, so this page needs a GitHub key.</p>
+          <p>1. <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Make a token</a>: under <i>Repository access</i> pick <i>Only select repositories</i> → <b id="gh-repo2"></b>; under <i>Permissions</i> set <i>Contents</i> to <i>Read and write</i>. Generate and copy it.</p>
+          <p>2. Paste it here. It stays on this device only and is sent only to GitHub.</p>
+          <div class="row">
+            <input id="token" type="password" placeholder="github_pat_…" autocomplete="off">
+            <button id="token-save" type="button">Save key</button>
+          </div>
+        </div>
+
+        <div class="box has-key">
+          <div class="row">
+            <select id="up-kind">
+              <option value="shows">as shows</option>
+              <option value="commercials">as commercials</option>
+            </select>
+            <label class="btn"><button type="button" tabindex="-1">⬆ Choose files to upload</button><input id="up-files" type="file" accept="video/*,image/*" multiple></label>
+          </div>
+          <p id="up-status"></p>
+          <p>Files up to 95 MB each (GitHub's limit). For longer episodes, put them on YouTube and add the link in channel.json. Use ✕ in the lists below to take something off the channel.</p>
+          <div class="row"><button id="token-forget" type="button">Forget key on this device</button></div>
+        </div>
+
+        <h3>Play files just on this screen</h3>
+        <p>Plays videos or pictures from this device without uploading them. They're gone when you reload.</p>
+        <div class="row">
+          <label class="btn"><button type="button" tabindex="-1">＋ Add shows</button><input id="add-shows" type="file" accept="video/*,image/*" multiple></label>
+          <label class="btn"><button type="button" tabindex="-1">＋ Add commercials</button><input id="add-ads" type="file" accept="video/*,image/*" multiple></label>
+          <button id="only-mine" type="button">Play only these</button>
+        </div>
       </div>
 
       <h3>Shows</h3>
@@ -253,7 +318,7 @@
         name: 'Pook TV',
         breakEveryMinutes: 8,
         adsPerBreak: 2,
-        shows: [{ title: 'Pook Gaming Center', youtube: 'WzFgVCbw7Rg' }],
+        shows: [{ youtube: 'WzFgVCbw7Rg' }],
         commercials: [
           { title: 'Yeon & Skylar', src: 'yeonskylar.mp4' },
           { title: 'Pook TV promo', card: "You're watching Pook TV", sub: 'Your shows. Your ads. All day.', seconds: 6 }
@@ -262,18 +327,29 @@
       var MIN_LEFT_FOR_MIDROLL = 60;   // don't cut to a break if the show is about to end anyway
       var UP_NEXT_AT = 15;             // seconds before the end to show "Up next"
       var STALL_SKIP_MS = 20000;       // skip anything that won't start in this long
+      var REFRESH_MS = 2 * 60 * 1000;  // reload the lineup this often (picks up uploads)
+      var MAX_UPLOAD = 95 * 1024 * 1024;
+      var TOKEN_KEY = 'pooktv-github-token';
 
       var params = new URLSearchParams(location.search);
+      var configUrl = params.get('config') || 'channel.json';
       var el = function (id) { return document.getElementById(id); };
 
-      var cfg, shows, ads;
+      var isTV = params.get('tv') === '1' || (params.get('tv') !== '0' &&
+        /Tizen|Web0S|webOS|SMART-TV|SmartTV|NetCast|BRAVIA|HbbTV|VIDAA|Roku|AFT[A-Z]|CrKey|GoogleTV|Android TV|AndroidTV|Xbox|PlayStation/i.test(navigator.userAgent));
+      if (isTV) document.body.classList.add('tv');
+
+      var cfg = null, cfgText = '';
+      var shows = [], ads = [];
+      var sessionShows = [], sessionAds = [];  // picked on this screen, not uploaded
+      var pending = [];                        // uploaded, waiting for the site to update
+      var onlyMine = false;
       var showIdx = 0;
       var adOrder = [], adPos = 0;
       var mode = null;           // 'show' | 'break'
-      var breakQueue = [];       // items left in the current break
-      var breakTotal = 0;
+      var brk = null;            // { queue, total, midroll, nextKey }
       var current = null;        // the item on screen now
-      var resumeAt = {};         // show index -> seconds to resume from after a mid-roll
+      var resumeAt = {};         // show key -> seconds to resume from after a mid-roll
       var watchedSinceBreak = 0;
       var lastTick = null;
       var muted = true;
@@ -281,8 +357,18 @@
       var stallTimer = null;
       var upNextShown = false;
       var uiTimer = null, lowerTimer = null;
+      var ytTitles = {};
 
-      // ---------- Config ----------
+      // ---------- Storage (may be blocked; never required) ----------
+      function store(k, v) {
+        try {
+          if (v === undefined) return localStorage.getItem(k);
+          if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v);
+        } catch (e) {}
+        return null;
+      }
+
+      // ---------- Items ----------
       function normalize(raw) {
         if (typeof raw === 'string') raw = /^yt:/.test(raw) ? { youtube: raw.slice(3) } : { src: raw };
         if (!raw || typeof raw !== 'object') return null;
@@ -292,18 +378,23 @@
           it.type = 'yt';
           it.id = m ? m[1] : String(raw.youtube).trim();
           if (!/^[\w-]{11}$/.test(it.id)) return null;
+          it.key = 'yt:' + it.id;
+          if (it.autoTitle && ytTitles[it.id]) { it.title = ytTitles[it.id]; it.autoTitle = false; }
         } else if (raw.card) {
           it.type = 'card';
           it.card = String(raw.card);
           it.sub = raw.sub ? String(raw.sub) : '';
           it.seconds = it.seconds || 6;
+          it.key = 'card:' + it.card;
         } else if (raw.src) {
           it.src = String(raw.src);
+          it.key = it.src;
           it.type = raw.image || /\.(png|jpe?g|gif|webp|avif|svg)(\?|#|$)/i.test(it.src) ? 'img' : 'video';
           if (it.type === 'img') it.seconds = it.seconds || 8;
         } else {
           return null;
         }
+        it.raw = raw;
         if (!it.title) it.title = it.type === 'card' ? it.card : it.type === 'yt' ? 'YouTube video' : decodeURIComponent(it.src.split('/').pop().split('?')[0]);
         return it;
       }
@@ -316,18 +407,68 @@
         }
         return a;
       }
+      function indexOfKey(list, key) {
+        for (var i = 0; i < list.length; i++) if (list[i].key === key) return i;
+        return -1;
+      }
 
-      function start(conf) {
-        cfg = conf;
-        shows = normList(conf.shows);
-        ads = normList(conf.commercials);
-        if (params.get('break') !== null) cfg.breakEveryMinutes = +params.get('break');
-        if (params.get('ads') !== null) cfg.adsPerBreak = +params.get('ads');
-        cfg.breakEveryMinutes = Math.max(0, +cfg.breakEveryMinutes || 0);
-        cfg.adsPerBreak = Math.max(0, Math.round(cfg.adsPerBreak === undefined ? 2 : +cfg.adsPerBreak || 0));
-        if (params.get('shuffle') === '1' || (cfg.shuffleShows && params.get('shuffle') !== '0')) shuffle(shows);
+      // ---------- Config ----------
+      function loadConfig() {
+        return fetch(configUrl + (configUrl.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now(), { cache: 'no-store' })
+          .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); });
+      }
 
+      function settings(conf) {
+        if (params.get('break') !== null) conf.breakEveryMinutes = +params.get('break');
+        if (params.get('ads') !== null) conf.adsPerBreak = +params.get('ads');
+        conf.breakEveryMinutes = Math.max(0, +conf.breakEveryMinutes || 0);
+        conf.adsPerBreak = Math.max(0, Math.round(conf.adsPerBreak === undefined ? 2 : +conf.adsPerBreak || 0));
+        return conf;
+      }
+
+      // Build the lineups from the config plus anything added on this screen.
+      function buildLists() {
+        var keepOrder = shows.length ? shows.map(function (s) { return s.key; }) : null;
+        var cShows = normList(cfg.shows), cAds = normList(cfg.commercials);
+        pending = pending.filter(function (p) {
+          return indexOfKey(p.kind === 'shows' ? cShows : cAds, p.item.key) < 0;
+        });
+        var pShows = pending.filter(function (p) { return p.kind === 'shows'; }).map(function (p) { return p.item; });
+        var pAds = pending.filter(function (p) { return p.kind !== 'shows'; }).map(function (p) { return p.item; });
+        var newShows = onlyMine ? sessionShows.slice() : cShows.concat(pShows, sessionShows);
+        var newAds = onlyMine && sessionAds.length ? sessionAds.slice() : cAds.concat(pAds, sessionAds);
+        if (onlyMine && !newShows.length) newShows = cShows.concat(pShows);
+
+        var shuffled = params.get('shuffle') === '1' || (cfg.shuffleShows && params.get('shuffle') !== '0');
+        if (shuffled) {
+          // Keep the existing order on reloads; shuffle in only what's new.
+          if (keepOrder) {
+            var known = [], fresh = [];
+            newShows.forEach(function (s) { (keepOrder.indexOf(s.key) >= 0 ? known : fresh).push(s); });
+            known.sort(function (a, b) { return keepOrder.indexOf(a.key) - keepOrder.indexOf(b.key); });
+            newShows = known.concat(shuffle(fresh));
+          } else {
+            shuffle(newShows);
+          }
+        }
+        var curKey = mode === 'show' && current ? current.key : null;
+        shows = newShows;
+        if (newAds.length !== ads.length || newAds.some(function (a, i) { return a.key !== ads[i].key; })) { adOrder = []; adPos = 0; }
+        ads = newAds;
+        if (curKey) {
+          var i = indexOfKey(shows, curKey);
+          if (i >= 0) showIdx = i;
+        }
+        renderGuide();
+      }
+
+      function applyConfig(text, first) {
+        var conf;
+        try { conf = JSON.parse(text); } catch (e) { if (first) conf = FALLBACK; else return; }
+        cfgText = text;
+        cfg = settings(conf);
         document.title = cfg.name || 'Pook TV';
+        el('bug').innerHTML = '';
         if (cfg.logo) {
           var img = document.createElement('img');
           img.src = cfg.logo; img.alt = cfg.name || '';
@@ -335,10 +476,19 @@
         } else {
           el('bug').textContent = cfg.name || 'Pook TV';
         }
-        renderGuide();
-        if (!shows.length) { showMsg('No shows yet. Add some to channel.json, or open the Guide (G) to play files from this device.'); return; }
-        playShow(0, false);
+        var repo = ghRepo();
+        el('gh-repo').textContent = el('gh-repo2').textContent = repo ? repo.repo : '(set "github" in channel.json)';
+        buildLists();
+        if (!current || !shows.length) {
+          if (!shows.length) { showMsg('No shows yet. Open the Guide (☰ or G) to upload some, or add them to channel.json.'); return; }
+          playShow(0, false);
+        }
       }
+
+      function refresh() {
+        loadConfig().then(function (text) { if (text !== cfgText) applyConfig(text, false); }).catch(function () {});
+      }
+      setInterval(refresh, REFRESH_MS);
 
       // ---------- Players ----------
       var vid = el('vid');
@@ -346,6 +496,11 @@
       vid.addEventListener('ended', onItemEnded);
       vid.addEventListener('error', function () { if (current && current.type === 'video') skipBroken(); });
       vid.addEventListener('playing', clearStall);
+      var pendingSeek = null;
+      vid.addEventListener('loadedmetadata', function () {
+        if (pendingSeek !== null) { try { vid.currentTime = pendingSeek; } catch (e) {} pendingSeek = null; }
+        if (current && current.type === 'video') tryPlayVid();
+      });
 
       var ytApiReady = false, ytPlayer = null, ytReady = false, ytPending = null;
       var tag = document.createElement('script');
@@ -375,7 +530,8 @@
                   clearStall();
                   // No title in channel.json: use the one YouTube has.
                   var d = e.target.getVideoData && e.target.getVideoData();
-                  if (current.autoTitle && d && d.title) {
+                  if (current.autoTitle && d && d.title && d.video_id === current.id) {
+                    ytTitles[current.id] = d.title;
                     current.title = d.title;
                     current.autoTitle = false;
                     updateNow();
@@ -412,12 +568,13 @@
         lastTick = null;
         if (it.type === 'video') {
           el('vid-wrap').classList.add('on');
-          if (vid.getAttribute('src') !== it.src) vid.src = it.src;
-          var seek = function () {
-            if (at) { try { vid.currentTime = at; } catch (e) {} }
-            tryPlayVid();
-          };
-          if (vid.readyState >= 1) seek(); else vid.addEventListener('loadedmetadata', seek, { once: true });
+          if (vid.getAttribute('src') !== it.src) {
+            pendingSeek = at || null;
+            vid.src = it.src;
+          } else {
+            pendingSeek = null;
+            try { vid.currentTime = at || 0; } catch (e) {}
+          }
           tryPlayVid();
           armStall();
         } else if (it.type === 'yt') {
@@ -443,7 +600,7 @@
         var r = vid.play();
         if (r && r.catch) r.catch(function () {
           // Blocked with sound: fall back to muted so the channel keeps running.
-          if (!vid.muted) { muted = true; applyMute(); vid.play().catch(function () {}); }
+          if (!vid.muted) { muted = true; applyMute(); var r2 = vid.play(); if (r2 && r2.catch) r2.catch(function () {}); }
         });
       }
 
@@ -479,17 +636,23 @@
 
       // ---------- Programming ----------
       function playShow(i, announceBack) {
+        if (!shows.length) { hideAll(); current = null; showMsg('No shows yet.'); return; }
         mode = 'show';
+        brk = null;
         document.body.classList.remove('in-break');
         showIdx = ((i % shows.length) + shows.length) % shows.length;
-        var at = resumeAt[showIdx] || 0;
-        delete resumeAt[showIdx];
-        watchedSinceBreak = 0;
         var it = shows[showIdx];
+        var at = resumeAt[it.key] || 0;
+        delete resumeAt[it.key];
+        watchedSinceBreak = 0;
         it.announce = announceBack ? 'Back to' : 'Now playing';
         playItem(it, at);
         // A YouTube video without a title gets its lower third once YouTube says what it is.
         if (!(it.type === 'yt' && it.autoTitle)) lowerThird(it.announce, it.title);
+      }
+      function playShowKey(key, fallbackIdx, announceBack) {
+        var i = indexOfKey(shows, key);
+        playShow(i >= 0 ? i : fallbackIdx, announceBack && i >= 0);
       }
 
       function nextAd() {
@@ -503,17 +666,16 @@
         return ads[adOrder[adPos++]];
       }
 
-      // midroll: the show pauses and resumes after; otherwise move to the next show.
+      // midroll: the show pauses and resumes after; otherwise move on to the next show.
       function startBreak(midroll) {
-        if (midroll) resumeAt[showIdx] = Math.max(0, position() - 2);
-        var n = Math.min(cfg.adsPerBreak, Math.max(1, ads.length));
-        breakQueue = [];
-        for (var k = 0; k < n && ads.length && cfg.adsPerBreak; k++) breakQueue.push(nextAd());
-        var nextIdx = midroll ? showIdx : showIdx + 1;
-        if (!breakQueue.length) { playShow(nextIdx, midroll); return; }
-        breakQueue.nextIdx = nextIdx;
-        breakQueue.midroll = midroll;
-        breakTotal = breakQueue.length;
+        if (!shows.length) return;
+        var cur = shows[showIdx];
+        if (midroll) resumeAt[cur.key] = Math.max(0, position() - 2);
+        var nextI = midroll ? showIdx : (showIdx + 1) % shows.length;
+        var queue = [];
+        for (var k = 0; k < (ads.length ? cfg.adsPerBreak : 0); k++) queue.push(nextAd());
+        if (!queue.length) { playShow(nextI, midroll); return; }
+        brk = { queue: queue, total: queue.length, midroll: midroll, nextKey: shows[nextI].key, nextIdx: nextI, fromKey: cur.key, fromIdx: showIdx };
         mode = 'break';
         document.body.classList.add('in-break');
         el('lower').classList.remove('on');
@@ -521,13 +683,9 @@
       }
 
       function playNextInBreak() {
-        if (!breakQueue.length) {
-          var nextIdx = breakQueue.nextIdx, mid = breakQueue.midroll;
-          playShow(nextIdx, mid);
-          return;
-        }
-        var it = breakQueue.shift();
-        el('ad-count').textContent = (breakTotal - breakQueue.length) + ' of ' + breakTotal;
+        if (!brk.queue.length) { playShowKey(brk.nextKey, brk.nextIdx, brk.midroll); return; }
+        var it = brk.queue.shift();
+        el('ad-count').textContent = (brk.total - brk.queue.length) + ' of ' + brk.total;
         playItem(it, 0);
       }
 
@@ -538,7 +696,7 @@
 
       function skipBroken() {
         if (mode === 'break') playNextInBreak();
-        else { delete resumeAt[showIdx]; playShow(showIdx + 1, false); }
+        else { if (current) delete resumeAt[current.key]; playShow(showIdx + 1, false); }
       }
 
       function skip() {
@@ -547,8 +705,8 @@
       }
       function back() {
         if (mode === 'break') {
-          // Leave the break and go back to the show it interrupted (or the one before).
-          playShow(breakQueue.midroll ? breakQueue.nextIdx : breakQueue.nextIdx - 1, true);
+          // Leave the break and go back to the show it came from.
+          playShowKey(brk.fromKey, brk.fromIdx, brk.midroll);
         } else if (position() > 10) {
           playShow(showIdx, false);
         } else {
@@ -558,7 +716,7 @@
 
       // Runs twice a second: counts watch time for mid-rolls and draws the graphics.
       setInterval(function () {
-        if (!current) return;
+        if (!current || !cfg) return;
         var now = Date.now();
         if (mode === 'show' && isPlaying()) {
           if (lastTick) watchedSinceBreak += (now - lastTick) / 1000;
@@ -575,10 +733,10 @@
         } else {
           lastTick = null;
         }
-        if (mode === 'break') {
+        if (mode === 'break' && brk) {
           var rest = Math.max(0, duration() - position());
-          breakQueue.forEach(function (it) { rest += it.seconds || 30; });
-          var unknown = breakQueue.some(function (it) { return !it.seconds; });
+          brk.queue.forEach(function (it) { rest += it.seconds || 30; });
+          var unknown = brk.queue.some(function (it) { return !it.seconds; });
           el('ad-left').textContent = '· back in ' + (unknown ? '~' : '') + fmt(rest);
         }
       }, 500);
@@ -624,32 +782,243 @@
       el('unmute').addEventListener('click', function () { setMuted(false); });
       el('mute').addEventListener('click', function () { setMuted(!muted); });
 
-      // ---------- Guide & local files ----------
+      // ---------- GitHub uploads ----------
+      // The site is a GitHub Pages site, so "uploading" = committing the file to the repo.
+      function ghRepo() {
+        var g = (cfg && cfg.github) || {};
+        var repo = g.repo;
+        if (!repo) {
+          var m = location.hostname.match(/^([\w-]+)\.github\.io$/i);
+          var seg = location.pathname.split('/')[1];
+          if (m && seg && !/\./.test(seg)) repo = m[1] + '/' + seg;
+        }
+        if (!repo) return null;
+        // channel.json path inside the repo (the page may live in a subfolder of the site).
+        return { repo: repo, branch: g.branch || 'main', config: (g.path || '') + configUrl.split('?')[0] };
+      }
+
+      function token() { return store(TOKEN_KEY) || ''; }
+      function updateKeyUi() { document.body.classList.toggle('can-edit', !!token() && !isTV); renderGuide(); }
+
+      function gh(method, path, body) {
+        var r = ghRepo();
+        if (!r) return Promise.reject(new Error('This page doesn\'t know which GitHub repo to save to. Add "github": { "repo": "you/your-repo" } to channel.json.'));
+        return fetch('https://api.github.com/repos/' + r.repo + path, {
+          method: method,
+          headers: {
+            'Authorization': 'Bearer ' + token(),
+            'Accept': 'application/vnd.github+json',
+            'Content-Type': 'application/json'
+          },
+          body: body ? JSON.stringify(body) : undefined
+        }).then(function (res) {
+          return res.text().then(function (t) {
+            var j = null;
+            try { j = t ? JSON.parse(t) : null; } catch (e) {}
+            if (!res.ok) {
+              var err = new Error(res.status === 401 ? 'GitHub refused the key. It may be expired or mistyped. Forget it and add a new one.'
+                : res.status === 403 || res.status === 404 ? 'The key can\'t write to ' + r.repo + '. Check it has Contents: Read and write on that repo.'
+                : (j && j.message) || ('GitHub error ' + res.status));
+              err.status = res.status;
+              throw err;
+            }
+            return j;
+          });
+        });
+      }
+
+      function b64encodeText(s) { return btoa(unescape(encodeURIComponent(s))); }
+      function b64decodeText(s) { return decodeURIComponent(escape(atob(s.replace(/\s/g, '')))); }
+      function fileToB64(f) {
+        return new Promise(function (resolve, reject) {
+          var fr = new FileReader();
+          fr.onload = function () { resolve(String(fr.result).split(',')[1] || ''); };
+          fr.onerror = function () { reject(new Error('Could not read ' + f.name)); };
+          fr.readAsDataURL(f);
+        });
+      }
+
+      // Keep channel.json readable: one show or commercial per line.
+      function formatChannel(obj) {
+        var keys = Object.keys(obj);
+        return '{\n' + keys.map(function (k) {
+          var v = obj[k];
+          var val = Array.isArray(v) && v.length && v.every(function (x) { return x && typeof x === 'object'; })
+            ? '[\n' + v.map(function (x) { return '    ' + JSON.stringify(x).replace(/","/g, '", "').replace(/":/g, '": ').replace(/,"/g, ', "'); }).join(',\n') + '\n  ]'
+            : JSON.stringify(v, null, 2).replace(/\n/g, '\n  ');
+          return '  ' + JSON.stringify(k) + ': ' + val;
+        }).join(',\n') + '\n}\n';
+      }
+
+      // Read channel.json from GitHub, change it, save it. Retries if someone else saved first.
+      function editChannel(change, message, tries) {
+        var r = ghRepo();
+        var path = '/contents/' + r.config.split('/').map(encodeURIComponent).join('/');
+        return gh('GET', path + '?ref=' + encodeURIComponent(r.branch)).then(function (f) {
+          var obj = JSON.parse(b64decodeText(f.content));
+          change(obj);
+          return gh('PUT', path, { message: message, content: b64encodeText(formatChannel(obj)), sha: f.sha, branch: r.branch });
+        }).catch(function (e) {
+          if ((e.status === 409 || e.status === 422) && (tries || 0) < 3) return editChannel(change, message, (tries || 0) + 1);
+          throw e;
+        });
+      }
+
+      function safeName(name) {
+        var dot = name.lastIndexOf('.');
+        var base = (dot > 0 ? name.slice(0, dot) : name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'video';
+        var ext = dot > 0 ? name.slice(dot + 1).toLowerCase().replace(/[^a-z0-9]/g, '') : 'mp4';
+        return base + '.' + ext;
+      }
+
+      function putMedia(file, b64, name, attempt) {
+        var r = ghRepo();
+        var fname = attempt ? name.replace(/(\.[^.]+)$/, '-' + (attempt + 1) + '$1') : name;
+        return gh('PUT', '/contents/media/' + encodeURIComponent(fname), {
+          message: 'Upload ' + fname + ' to the TV channel',
+          content: b64,
+          branch: r.branch
+        }).then(function () { return 'media/' + fname; }).catch(function (e) {
+          // 422 = a file with that name already exists: pick another name.
+          if (e.status === 422 && attempt < 20) return putMedia(file, b64, name, attempt + 1);
+          throw e;
+        });
+      }
+
+      function status(t, cls) {
+        el('up-status').textContent = t;
+        el('up-status').className = cls || '';
+      }
+
+      el('up-files').addEventListener('change', function (e) {
+        var files = Array.prototype.slice.call(e.target.files);
+        e.target.value = '';
+        if (!files.length) return;
+        var kind = el('up-kind').value;
+        var tooBig = files.filter(function (f) { return f.size > MAX_UPLOAD; });
+        if (tooBig.length) { status(tooBig[0].name + ' is over 95 MB, GitHub\'s limit. Try a shorter clip, or put it on YouTube.', 'err'); return; }
+        el('up-files').disabled = true;
+        var entries = [], i = 0;
+        function nextFile() {
+          if (i >= files.length) return Promise.resolve();
+          var f = files[i++];
+          status('Uploading ' + f.name + ' (' + i + ' of ' + files.length + ', ' + (f.size / 1048576).toFixed(1) + ' MB)…');
+          return fileToB64(f).then(function (b64) {
+            return putMedia(f, b64, safeName(f.name), 0);
+          }).then(function (path) {
+            var img = /^image\//.test(f.type);
+            var entry = { title: f.name.replace(/\.[^.]+$/, ''), src: path };
+            if (img) entry.seconds = 8;
+            entries.push({ entry: entry, file: f });
+            return nextFile();
+          });
+        }
+        nextFile().then(function () {
+          status('Adding to the lineup…');
+          return editChannel(function (obj) {
+            obj[kind] = obj[kind] || [];
+            entries.forEach(function (x) { obj[kind].push(x.entry); });
+          }, 'Add ' + entries.length + ' ' + (kind === 'shows' ? 'show' : 'commercial') + (entries.length === 1 ? '' : 's') + ' to the TV channel');
+        }).then(function () {
+          // Play it here right away from the local copy; the site catches up in about a minute.
+          entries.forEach(function (x) {
+            var it = normalize(x.entry);
+            it.src = URL.createObjectURL(x.file);
+            pending.push({ kind: kind, item: it });
+          });
+          buildLists();
+          status('Done! ' + entries.length + ' file' + (entries.length === 1 ? '' : 's') + ' added. Other screens get ' + (entries.length === 1 ? 'it' : 'them') + ' within a few minutes.', 'ok');
+        }).catch(function (err) {
+          status((entries.length ? entries.length + ' file(s) uploaded, then: ' : 'Upload failed: ') + err.message, 'err');
+        }).then(function () { el('up-files').disabled = false; });
+      });
+
+      function removeItem(kind, it) {
+        if (!confirm('Take "' + it.title + '" off the channel' + (/^media\//.test(it.key) ? ' and delete the file' : '') + '?')) return;
+        status('Removing "' + it.title + '"…');
+        var r = ghRepo();
+        var stillUsed = false;
+        editChannel(function (obj) {
+          obj[kind] = (obj[kind] || []).filter(function (raw) { var n = normalize(raw); return !n || n.key !== it.key; });
+          ['shows', 'commercials'].forEach(function (k) {
+            (obj[k] || []).forEach(function (raw) { var n = normalize(raw); if (n && n.key === it.key) stillUsed = true; });
+          });
+        }, 'Remove ' + it.title + ' from the TV channel').then(function () {
+          if (!/^media\//.test(it.key) || stillUsed) return;
+          var path = '/contents/' + it.key.split('/').map(encodeURIComponent).join('/');
+          return gh('GET', path + '?ref=' + encodeURIComponent(r.branch)).then(function (f) {
+            return gh('DELETE', path, { message: 'Delete ' + it.key, sha: f.sha, branch: r.branch });
+          }).catch(function (e) { if (e.status !== 404) throw e; });
+        }).then(function () {
+          var list = kind === 'shows' ? cfg.shows : cfg.commercials;
+          if (list) {
+            for (var i = list.length - 1; i >= 0; i--) { var n = normalize(list[i]); if (n && n.key === it.key) list.splice(i, 1); }
+          }
+          pending = pending.filter(function (p) { return p.item.key !== it.key; });
+          var wasOn = current && current.key === it.key;
+          buildLists();
+          if (wasOn) skipBroken();
+          status('Removed "' + it.title + '".', 'ok');
+        }).catch(function (err) { status('Couldn\'t remove it: ' + err.message, 'err'); });
+      }
+
+      el('token-save').addEventListener('click', function () {
+        var t = el('token').value.trim();
+        if (!t) return;
+        store(TOKEN_KEY, t);
+        el('token').value = '';
+        if (!token()) { alert('This browser won\'t let the page remember the key (private mode?).'); return; }
+        updateKeyUi();
+        status('Checking the key…');
+        gh('GET', '').then(function (repo) {
+          if (repo && repo.permissions && repo.permissions.push === false) status('That key can read ' + ghRepo().repo + ' but not write to it. Give it Contents: Read and write.', 'err');
+          else status('Key saved. You can upload now.', 'ok');
+        }).catch(function (err) { status(err.message, 'err'); });
+      });
+      el('token-forget').addEventListener('click', function () { store(TOKEN_KEY, null); status(''); updateKeyUi(); });
+
+      // ---------- Guide & files on this screen ----------
       function renderGuide() {
         if (!cfg) return;
         el('g-name').textContent = cfg.name || 'Pook TV';
         el('g-rules').textContent = (cfg.breakEveryMinutes ? 'A commercial break every ' + cfg.breakEveryMinutes + ' min and between shows' : 'Commercial breaks between shows') +
           ', ' + cfg.adsPerBreak + ' commercial' + (cfg.adsPerBreak === 1 ? '' : 's') + ' each.';
-        fill('g-shows', shows, mode === 'show' ? current : null, true);
-        fill('g-ads', ads, mode === 'break' ? current : null, false);
+        fill('g-shows', shows, 'shows', mode === 'show' ? current : null);
+        fill('g-ads', ads, 'commercials', mode === 'break' ? current : null);
       }
-      function fill(id, list, cur, clickable) {
+      function fill(id, list, kind, cur) {
         var ol = el(id);
         ol.innerHTML = '';
+        var canEdit = document.body.classList.contains('can-edit');
+        var inConfig = normList(kind === 'shows' ? cfg.shows : cfg.commercials).map(function (x) { return x.key; });
         if (!list.length) { var e = document.createElement('li'); e.textContent = 'None yet.'; ol.appendChild(e); return; }
         list.forEach(function (it, k) {
           var li = document.createElement('li');
-          li.textContent = it.title;
-          var kind = document.createElement('span');
-          kind.className = 'kind';
-          kind.textContent = { yt: 'YouTube', video: 'video', img: 'picture · ' + it.seconds + 's', card: 'card · ' + it.seconds + 's' }[it.type];
-          li.appendChild(kind);
-          if (it === cur) li.className = 'cur';
-          if (clickable) {
-            li.style.cursor = 'pointer';
-            li.title = 'Play now';
-            li.addEventListener('click', function () { closeGuide(); playShow(k, false); });
+          var t = document.createElement(kind === 'shows' ? 'button' : 'span');
+          t.className = 't';
+          t.textContent = it.title;
+          if (kind === 'shows') {
+            // A plain-looking button, so TV remotes can reach it.
+            t.style.background = 'none'; t.style.border = '0'; t.style.padding = '0.15em 0.2em'; t.style.textAlign = 'left';
+            t.title = 'Play now';
+            t.addEventListener('click', function () { closeGuide(); playShow(k, false); });
           }
+          li.appendChild(t);
+          var tag = document.createElement('span');
+          tag.className = 'kind';
+          tag.textContent = { yt: 'YouTube', video: 'video', img: 'picture · ' + it.seconds + 's', card: 'card · ' + it.seconds + 's' }[it.type] +
+            (it.local ? ' · this screen only' : '') +
+            (pending.some(function (p) { return p.item === it; }) ? ' · just uploaded' : '');
+          li.appendChild(tag);
+          if (canEdit && inConfig.indexOf(it.key) >= 0) {
+            var x = document.createElement('button');
+            x.type = 'button';
+            x.textContent = '✕';
+            x.title = 'Take off the channel';
+            x.addEventListener('click', function () { removeItem(kind, it); });
+            li.appendChild(x);
+          }
+          if (it === cur) li.className = 'cur';
           ol.appendChild(li);
         });
       }
@@ -657,60 +1026,130 @@
       function filesToItems(files) {
         return Array.prototype.map.call(files, function (f) {
           var img = /^image\//.test(f.type);
-          return { title: f.name.replace(/\.[^.]+$/, ''), src: URL.createObjectURL(f), type: img ? 'img' : 'video', seconds: img ? 8 : 0, local: true };
+          var src = URL.createObjectURL(f);
+          return { title: f.name.replace(/\.[^.]+$/, ''), src: src, key: src, type: img ? 'img' : 'video', seconds: img ? 8 : 0, local: true };
         });
       }
       el('add-shows').addEventListener('change', function (e) {
         var wasEmpty = !shows.length;
-        shows = shows.concat(filesToItems(e.target.files));
+        sessionShows = sessionShows.concat(filesToItems(e.target.files));
         e.target.value = '';
-        renderGuide();
+        buildLists();
         if (wasEmpty && shows.length) { closeGuide(); playShow(0, false); }
       });
       el('add-ads').addEventListener('change', function (e) {
-        ads = ads.concat(filesToItems(e.target.files));
-        adOrder = []; adPos = 0;
+        sessionAds = sessionAds.concat(filesToItems(e.target.files));
         e.target.value = '';
-        renderGuide();
+        buildLists();
       });
       el('only-mine').addEventListener('click', function () {
-        var myShows = shows.filter(function (s) { return s.local; });
-        var myAds = ads.filter(function (s) { return s.local; });
-        if (!myShows.length && !myAds.length) { alert('Add some files first.'); return; }
-        if (myShows.length) shows = myShows;
-        if (myAds.length) { ads = myAds; adOrder = []; adPos = 0; }
+        if (!sessionShows.length && !sessionAds.length) { alert('Add some files first.'); return; }
+        onlyMine = true;
         resumeAt = {};
+        buildLists();
         closeGuide();
         playShow(0, false);
       });
 
-      function openGuide() { renderGuide(); el('guide').classList.add('on'); }
-      function closeGuide() { el('guide').classList.remove('on'); }
+      var guideReturnFocus = null;
+      function guideOpen() { return el('guide').classList.contains('on'); }
+      function openGuide() {
+        renderGuide();
+        el('guide').classList.add('on');
+        guideReturnFocus = document.activeElement;
+        var cur = el('guide').querySelector('li.cur button.t');
+        (cur || el('g-close')).focus();
+      }
+      function closeGuide() {
+        el('guide').classList.remove('on');
+        if (guideReturnFocus && guideReturnFocus.focus && guideReturnFocus !== document.body) guideReturnFocus.focus();
+      }
       el('guide-btn').addEventListener('click', openGuide);
       el('g-close').addEventListener('click', closeGuide);
 
-      // ---------- Controls ----------
+      // ---------- Controls: keyboard & TV remote ----------
       function toggleFullscreen() {
-        if (document.fullscreenElement) document.exitFullscreen();
-        else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(function () {});
+        var d = document, de = d.documentElement;
+        if (d.fullscreenElement || d.webkitFullscreenElement) (d.exitFullscreen || d.webkitExitFullscreen).call(d);
+        else {
+          var req = de.requestFullscreen || de.webkitRequestFullscreen;
+          if (req) { var r = req.call(de); if (r && r.catch) r.catch(function () {}); }
+        }
       }
       el('skip').addEventListener('click', skip);
       el('back').addEventListener('click', back);
       el('fs').addEventListener('click', toggleFullscreen);
+
+      var K = {
+        LEFT: [37], RIGHT: [39], UP: [38], DOWN: [40], OK: [13],
+        BACK: [8, 27, 461, 10009, 166],                 // Backspace, Esc, LG, Samsung, Android
+        NEXT: [427, 33, 176, 417, 228],                 // CH+, PageUp, media next, fast-forward
+        PREV: [428, 34, 177, 412, 227]                  // CH−, PageDown, media previous, rewind
+      };
+      function is(e, name) { return K[name].indexOf(e.keyCode) >= 0; }
+      function focusables(root) {
+        return Array.prototype.filter.call(root.querySelectorAll('button, select, input, a[href]'), function (n) {
+          return n.offsetParent !== null && !n.disabled && n.tabIndex !== -1;
+        });
+      }
+      function moveFocus(root, dir) {
+        var list = focusables(root);
+        if (!list.length) return;
+        var i = list.indexOf(document.activeElement);
+        var n = i < 0 ? (dir > 0 ? 0 : list.length - 1) : Math.max(0, Math.min(list.length - 1, i + dir));
+        list[n].focus();
+        if (list[n].scrollIntoView) list[n].scrollIntoView({ block: 'nearest' });
+      }
+      function barFocused() { return el('bar').contains(document.activeElement); }
+      function showBar(focusId) {
+        flashUi();
+        if (focusId) el(focusId).focus();
+      }
+      function hideBar() {
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+        document.body.classList.remove('ui');
+      }
+
       document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closeGuide();
-        if (el('guide').classList.contains('on')) return;
-        if (e.key === 'ArrowRight') skip();
-        else if (e.key === 'ArrowLeft') back();
-        else if (e.key === 'm' || e.key === 'M') setMuted(!muted);
-        else if (e.key === 'f' || e.key === 'F') toggleFullscreen();
-        else if (e.key === 'g' || e.key === 'G') openGuide();
+        var typing = /^(INPUT|SELECT|TEXTAREA)$/.test((e.target || {}).tagName || '') && e.target.type !== 'file';
+        if (guideOpen()) {
+          if (typing && !is(e, 'UP') && !is(e, 'DOWN') && e.keyCode !== 27) return;
+          if (is(e, 'BACK') && !typing) { e.preventDefault(); closeGuide(); }
+          else if (e.keyCode === 27) closeGuide();
+          else if (is(e, 'DOWN') || (is(e, 'RIGHT') && !typing)) { e.preventDefault(); moveFocus(el('guide'), 1); }
+          else if (is(e, 'UP') || (is(e, 'LEFT') && !typing)) { e.preventDefault(); moveFocus(el('guide'), -1); }
+          return;
+        }
+        if (typing) return;
+        flashUi();
+
+        if (barFocused()) {
+          if (is(e, 'LEFT')) { e.preventDefault(); moveFocus(el('bar'), -1); }
+          else if (is(e, 'RIGHT')) { e.preventDefault(); moveFocus(el('bar'), 1); }
+          else if (is(e, 'UP') || is(e, 'BACK')) { e.preventDefault(); hideBar(); }
+          else if (is(e, 'NEXT')) { e.preventDefault(); skip(); }
+          else if (is(e, 'PREV')) { e.preventDefault(); back(); }
+          return;   // OK clicks the focused button by itself
+        }
+        if (document.activeElement === el('unmute') && is(e, 'OK')) return;
+
+        if (is(e, 'RIGHT') || is(e, 'NEXT')) { e.preventDefault(); skip(); }
+        else if (is(e, 'LEFT') || is(e, 'PREV')) { e.preventDefault(); back(); }
+        else if (is(e, 'OK')) { e.preventDefault(); if (muted) setMuted(false); else showBar('skip'); }
+        else if (is(e, 'DOWN') || is(e, 'UP')) { e.preventDefault(); showBar('skip'); }
+        else if (e.key === 'm' || e.key === 'M' || e.keyCode === 77) setMuted(!muted);
+        else if (e.key === 'f' || e.key === 'F' || e.keyCode === 70) toggleFullscreen();
+        else if (e.key === 'g' || e.key === 'G' || e.keyCode === 71) openGuide();
       });
 
       function flashUi() {
         document.body.classList.add('ui');
         clearTimeout(uiTimer);
-        uiTimer = setTimeout(function () { document.body.classList.remove('ui'); }, 3000);
+        uiTimer = setTimeout(function hide() {
+          // Keep the bar up while a remote is moving around in it.
+          if (barFocused()) { uiTimer = setTimeout(hide, 3000); return; }
+          document.body.classList.remove('ui');
+        }, isTV ? 5000 : 3000);
       }
       document.addEventListener('mousemove', flashUi);
       document.addEventListener('touchstart', flashUi);
@@ -719,21 +1158,24 @@
       });
 
       // ---------- Go ----------
-      fetch(params.get('config') || 'channel.json', { cache: 'no-cache' })
-        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-        .catch(function () { return FALLBACK; })
-        .then(start);
+      updateKeyUi();
+      loadConfig()
+        .then(function (text) { applyConfig(text, true); })
+        .catch(function () { applyConfig(JSON.stringify(FALLBACK), true); });
 
       // Testing hook.
       window.pookTV = {
-        skip: skip, back: back, startBreak: startBreak,
+        skip: skip, back: back, startBreak: startBreak, refresh: refresh, formatChannel: formatChannel,
         get mode() { return mode; },
         get current() { return current; },
         get showIdx() { return showIdx; },
+        get shows() { return shows; },
+        get ads() { return ads; },
         get position() { return position(); },
         get resumeAt() { return resumeAt; },
         get muted() { return muted; },
-        get config() { return cfg; }
+        get config() { return cfg; },
+        get isTV() { return isTV; }
       };
     })();
   </script>
