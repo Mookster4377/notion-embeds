@@ -153,7 +153,10 @@
       pointer-events: none;
     }
     #yt-tap a { color: var(--accent); margin-left: 8px; white-space: nowrap; pointer-events: auto; }
-    body.yt-locked.on-yt:not(.muted) #yt-tap { display: block; }
+    body.yt-locked.on-yt:not(.muted) #yt-tap, body.yt-needs-tap.on-yt #yt-tap { display: block; }
+    #yt-tap .t-start { display: none; }
+    body.yt-needs-tap #yt-tap .t-start { display: inline; }
+    body.yt-needs-tap #yt-tap .t-sound { display: none; }
     @media (max-width: 560px) { #yt-tap { left: var(--edge); transform: none; } }
     @media (max-width: 560px) { #sound { left: var(--edge); transform: none; } }
     body.tv #sound button::after { content: " (OK)"; font-weight: 400; }
@@ -301,7 +304,7 @@
   <div id="ad-tag"><b>COMMERCIAL</b><span id="ad-count"></span><span id="ad-left"></span></div>
   <div id="lower"><small id="lower-k"></small><span id="lower-t"></span></div>
   <div id="sound"><button id="unmute" type="button">🔊 Turn sound on</button></div>
-  <div id="yt-tap">🔊 Tap the video once for YouTube sound<a id="open-full" href="#" target="_blank" rel="noopener">or open the full page ↗</a></div>
+  <div id="yt-tap"><span class="t-sound">🔊 Tap the video once for YouTube sound</span><span class="t-start">▶ Tap the video to start it</span><a id="open-full" href="#" target="_blank" rel="noopener">or open the full page ↗</a></div>
 
   <div id="bar">
     <span id="now"></span>
@@ -642,9 +645,9 @@
             events: {
               onReady: function (e) {
                 ytReady = true;
-                applyMute();
+                e.target.mute();          // start muted: browsers always allow that
                 if (!away) e.target.playVideo();
-                checkYtSound();
+                ytWatchStart();
                 if (ytPending) { var p = ytPending; ytPending = null; loadYt(p.id, p.at); }
               },
               onStateChange: function (e) {
@@ -652,6 +655,7 @@
                 if (e.data === YT.PlayerState.PLAYING) {
                   clearStall();
                   if (away) { e.target.pauseVideo(); return; }
+                  ytStarted();
                   // No title in channel.json: use the one YouTube has.
                   var d = e.target.getVideoData && e.target.getVideoData();
                   if (current.autoTitle && d && d.title && d.video_id === current.id) {
@@ -671,13 +675,15 @@
           return;
         }
         if (!ytReady) { ytPending = { id: id, at: at }; return; }
-        applyMute();
+        ytPlayer.mute();            // start muted; sound goes on once it's playing (see ytStarted)
         ytPlayer.loadVideoById({ videoId: id, startSeconds: at || 0 });
-        checkYtSound();
+        ytWatchStart();
       }
 
       function hideAll() {
         clearTimeout(timedTimer); timedTimer = null;
+        clearTimeout(ytStartTimer); clearTimeout(ytCheckTimer);
+        document.body.classList.remove('yt-needs-tap');
         clearStall();
         ['vid-wrap', 'yt-wrap', 'img-wrap', 'card'].forEach(function (id) { el(id).classList.remove('on'); });
         try { vid.pause(); } catch (e) {}
@@ -734,12 +740,13 @@
 
       function armStall() {
         clearStall();
+        var wait = current && current.type === 'yt' ? 60000 : STALL_SKIP_MS;
         stallTimer = setTimeout(function () {
           if (position() >= 0.5) return;
           // A file that loaded but was held back by the browser isn't broken; leave it.
           if (current && current.type === 'video' && vid.readyState >= 2) return;
           skipBroken();
-        }, STALL_SKIP_MS);
+        }, wait);
       }
       function clearStall() { clearTimeout(stallTimer); stallTimer = null; }
 
@@ -902,23 +909,52 @@
         el('mute').textContent = muted ? '🔇 Sound' : '🔊 Mute';
         vid.muted = muted;
         if (ytReady) {
-          if (muted || ytLocked) ytPlayer.mute(); else { ytPlayer.unMute(); ytPlayer.setVolume(100); }
-          checkYtSound();
+          var playing = ytPlayer.getPlayerState() === YT.PlayerState.PLAYING;
+          if (muted || ytLocked || !playing) ytPlayer.mute();
+          else { ytPlayer.unMute(); ytPlayer.setVolume(100); checkYtSound(); }
         }
       }
 
       // When this page is embedded in another site (a Notion page), the browser may refuse YouTube
       // sound until the viewer taps the YouTube video itself. If so: keep YouTube playing muted, say so,
       // and turn its sound on at the first tap.
-      var ytLocked = false, ytCheckTimer = null;
+      var ytLocked = false, ytCheckTimer = null, ytStartTimer = null;
       function ytOn() { return ytReady && current && current.type === 'yt' && !away; }
+      function ytNeedsTap(on) { document.body.classList.toggle('yt-needs-tap', !!on); }
+
+      // Every YouTube video starts muted. If it hasn't started after a few seconds, nudge it;
+      // if it still won't, ask for a tap (and only move on after a minute of nothing).
+      function ytWatchStart() {
+        clearTimeout(ytStartTimer);
+        ytNeedsTap(false);
+        var playingNow = function () {
+          var st = ytPlayer.getPlayerState();
+          return st === YT.PlayerState.PLAYING || st === YT.PlayerState.BUFFERING || st === YT.PlayerState.ENDED;
+        };
+        ytStartTimer = setTimeout(function () {
+          if (!ytOn() || playingNow()) return;
+          ytPlayer.mute(); ytPlayer.playVideo();
+          ytStartTimer = setTimeout(function () {
+            if (ytOn() && !playingNow()) ytNeedsTap(true);
+          }, 4000);
+        }, 4000);
+      }
+      // It's playing (muted): now turn the sound on if the viewer wants it.
+      function ytStarted() {
+        clearTimeout(ytStartTimer);
+        ytNeedsTap(false);
+        if (!muted && !ytLocked && ytPlayer.isMuted()) {
+          ytPlayer.unMute(); ytPlayer.setVolume(100);
+          checkYtSound();
+        }
+      }
       function checkYtSound() {
         clearTimeout(ytCheckTimer);
         if (muted || ytLocked) return;
         ytCheckTimer = setTimeout(function () {
           if (!ytOn() || muted || ytLocked) return;
           var st = ytPlayer.getPlayerState();
-          if (st === YT.PlayerState.BUFFERING || st === YT.PlayerState.UNSTARTED) { checkYtSound(); return; }
+          if (st === YT.PlayerState.BUFFERING) { checkYtSound(); return; }
           if (st === YT.PlayerState.PLAYING && !ytPlayer.isMuted()) return;     // sound works
           if (st === YT.PlayerState.ENDED) return;
           // Paused or muted by the browser: sound isn't allowed here yet.
@@ -929,7 +965,9 @@
         }, 1500);
       }
       function ytTapped() {
-        if (!ytLocked || muted || !ytOn()) return;
+        if (!ytOn()) return;
+        if (document.body.classList.contains('yt-needs-tap')) { ytNeedsTap(false); ytPlayer.playVideo(); }
+        if (!ytLocked || muted) return;
         ytPlayer.unMute(); ytPlayer.setVolume(100);
         ytPlayer.playVideo();   // the tap also toggles YouTube's pause
         setTimeout(function () {
