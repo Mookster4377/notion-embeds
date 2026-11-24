@@ -1,0 +1,23 @@
+{
+  "name": "Pook TV",
+  "logo": { "image": "", "size": "medium", "flashEveryMinutes": 1 },
+
+  "shuffleShows": false,
+  "breakEveryMinutes": 5,
+  "adsPerBreak": 2,
+
+  "github": { "repo": "Mookster4377/notion-embeds", "branch": "main", "path": "" },
+
+  "shows": [
+    { "title": "Pook TV test broadcast", "src": "media/pook-tv-test.mp4" },
+    { "youtube": "aqz-KE-bpKQ" }
+  ],
+
+  "movies": [
+  ],
+
+  "commercials": [
+    { "title": "Yeon & Skylar", "src": "yeonskylar.mp4" },
+    { "title": "Test card", "card": "This is a commercial", "sub": "Back to the show in a moment", "seconds": 6 }
+  ]
+}

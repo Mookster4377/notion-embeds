@@ -1,0 +1,32 @@
+{
+  "name": "Pook TV",
+  "logo": { "image": "", "size": "medium", "flashEveryMinutes": 2 },
+
+  "shuffleShows": false,
+  "breakEveryMinutes": 10,
+  "adsPerBreak": 2,
+
+  "github": { "repo": "Mookster4377/notion-embeds", "branch": "main" },
+
+  "shows": [
+    { "youtube": "WzFgVCbw7Rg" },
+    { "youtube": "By416mzsTH8" },
+    { "youtube": "JzUnmNiRnpw" },
+    { "youtube": "PiYE-DJ4jwQ" },
+    { "youtube": "u9o1OYX5UOQ" },
+    { "youtube": "rmlWSkxTWbA" },
+    { "youtube": "ibNrPjETR_k" },
+    { "youtube": "pIwRg6rb1cI" },
+    { "youtube": "uXsZz4bwEYQ" },
+    { "youtube": "Nh9BrD3xIeU" }
+  ],
+
+  "movies": [
+  ],
+
+  "commercials": [
+    { "title": "Yeon & Skylar", "src": "yeonskylar.mp4" },
+    { "title": "Pook TV promo", "card": "You're watching Pook TV", "sub": "Your shows. Your ads. All day.", "seconds": 6 },
+    { "title": "Pook Scoreboard", "card": "Pook Scoreboard", "sub": "Live scores and phone alerts", "seconds": 6 }
+  ]
+}
