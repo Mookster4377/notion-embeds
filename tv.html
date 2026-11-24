@@ -45,21 +45,45 @@
     #card-sub { font-size: 20px; font-size: clamp(15px, 2.4vw, 26px); color: var(--muted); }
 
     /* ---------- On-screen graphics ---------- */
+    /* The channel logo ("bug"): idles faded in the corner, flashes every so often. */
     #bug {
       position: fixed;
-      top: 14px;
-      top: calc(var(--edge) * 0.9);
+      top: 12px;
+      top: calc(var(--edge) * 0.8);
       right: var(--edge);
       z-index: 4;
-      font-weight: 800;
-      font-size: 1em;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      opacity: 0.55;
-      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
       pointer-events: none;
     }
-    #bug img { max-height: 2.6em; max-width: 10em; display: block; }
+    .logo { --logo-h: 48px; display: inline-block; opacity: 0.7; transform-origin: 100% 0; line-height: 0; }
+    .logo.size-small { --logo-h: 32px; }
+    .logo.size-large { --logo-h: 76px; }
+    body.tv .logo { --logo-h: 64px; }
+    body.tv .logo.size-small { --logo-h: 44px; }
+    body.tv .logo.size-large { --logo-h: 100px; }
+    .logo img, .logo svg { height: 48px; height: var(--logo-h); width: auto; max-width: 40vw; display: block; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6)); }
+    .logo.flash { animation: logo-flash 2.6s ease-in-out; }
+    .logo .shine { transform: translateX(-140%); }
+    .logo.flash .shine { animation: logo-shine 1.1s ease-in-out 0.35s; }
+    @keyframes logo-flash {
+      0%   { opacity: 0.7; transform: scale(1); }
+      14%  { opacity: 1; transform: scale(1.4); filter: brightness(1.35) drop-shadow(0 0 14px rgba(255, 204, 51, 0.95)); }
+      28%  { transform: scale(1.22); }
+      42%  { transform: scale(1.32); filter: brightness(1.2) drop-shadow(0 0 10px rgba(255, 204, 51, 0.8)); }
+      80%  { opacity: 1; transform: scale(1.22); }
+      100% { opacity: 0.7; transform: scale(1); }
+    }
+    @keyframes logo-shine { from { transform: translateX(-140%); } to { transform: translateX(140%); } }
+    @media (prefers-reduced-motion: reduce) {
+      .logo.flash { animation: logo-fade 2.6s; }
+      .logo.flash .shine { animation: none; }
+      @keyframes logo-fade { 20%, 80% { opacity: 1; } }
+    }
+    #logo-preview { display: inline-block; padding: 14px 18px; border-radius: 10px; background: repeating-conic-gradient(#1b1a22 0% 25%, #24232c 0% 50%) 0 0 / 16px 16px; }
+    #logo-preview .logo { opacity: 1; }
+    #logo-url { width: 20em; max-width: 100%; }
+    #yt-links { width: 100%; box-sizing: border-box; min-height: 6em; background: #16151d; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 8px; padding: 0.5em; font: inherit; color: var(--fg); }
+    #g-find { width: 20em; max-width: 100%; }
+    #guide h3 .n { color: var(--muted); font-weight: 400; letter-spacing: 0; text-transform: none; }
 
     #ad-tag {
       position: fixed;
@@ -101,13 +125,16 @@
 
     #sound {
       position: fixed;
-      top: 50px;
-      top: calc(var(--edge) + 36px);
-      right: var(--edge);
+      top: 12px;
+      top: calc(var(--edge) * 0.8);
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
       z-index: 6;
       display: none;
     }
     body.muted #sound { display: block; }
+    @media (max-width: 560px) { #sound { left: var(--edge); transform: none; } }
     body.tv #sound button::after { content: " (OK)"; font-weight: 400; }
 
     /* ---------- Controls ---------- */
@@ -173,7 +200,7 @@
     #guide .top > div { margin-right: 12px; }
     #guide label.btn { position: relative; overflow: hidden; display: inline-block; }
     #guide label.btn input { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
-    #every-choices button.on { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+    .choices button.on, #every-choices button.on { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
     #guide .kind { color: var(--muted); font-size: 0.8em; margin-left: 6px; }
     #guide select, #guide input[type=password], #guide input[type=text] {
       background: #16151d;
@@ -212,6 +239,8 @@
       shows              your shows, played in order
       movies             your movies, played after the shows (shown separately in the Guide)
       commercials        played during breaks, picked in rotation
+      logo               { "image": "media/logo.gif", "size": "medium", "flashEveryMinutes": 2 }
+                         (no image = the built-in logo; set it up in the Guide)
       breakEveryMinutes  5, 10 or 15: a break this often inside a show or movie (0 = only between them).
                          Each screen can change this in the Guide or with the ⏱ button.
       adsPerBreak        how many commercials each break has
@@ -283,6 +312,37 @@
       <p id="every-note"></p>
       <div class="row has-key not-tv"><button id="every-save" type="button">Make this the default for every screen</button></div>
 
+      <div class="not-tv">
+        <h3>Channel logo</h3>
+        <p>Sits in the corner and flashes every so often. Use the built-in logo, or your own picture or GIF (animated GIFs play). Try things here, then save.</p>
+        <div class="row"><div id="logo-preview"></div><button id="logo-flash-now" type="button">✨ Flash it</button></div>
+        <div class="row">
+          <label class="btn"><button type="button" tabindex="-1">🖼 Choose a picture or GIF</button><input id="logo-file" type="file" accept="image/*"></label>
+          <input id="logo-url" type="text" placeholder="…or paste an image/GIF link" autocomplete="off">
+          <button id="logo-url-use" type="button">Use link</button>
+          <button id="logo-builtin" type="button">Built-in logo</button>
+        </div>
+        <div class="row choices" id="logo-sizes">
+          <span>Size:</span>
+          <button type="button" data-size="small">Small</button>
+          <button type="button" data-size="medium">Medium</button>
+          <button type="button" data-size="large">Large</button>
+        </div>
+        <div class="row choices" id="logo-flashes">
+          <span>Flash:</span>
+          <button type="button" data-flash="0">Never</button>
+          <button type="button" data-flash="1">Every 1 min</button>
+          <button type="button" data-flash="2">Every 2 min</button>
+          <button type="button" data-flash="5">Every 5 min</button>
+        </div>
+        <p id="logo-note"></p>
+        <div class="row">
+          <button id="logo-save" class="has-key" type="button">Save logo for every screen</button>
+          <button id="logo-discard" type="button">Undo changes</button>
+        </div>
+        <p id="logo-status"></p>
+      </div>
+
       <div class="only-tv">
         <h3>Adding videos</h3>
         <p>Open this page on your phone or computer, press ☰ Guide, and upload there. New videos show up on this TV within a few minutes, by themselves.</p>
@@ -312,7 +372,10 @@
             <label class="btn"><button type="button" tabindex="-1">⬆ Choose files to upload</button><input id="up-files" type="file" accept="video/*,image/*" multiple></label>
           </div>
           <p id="up-status"></p>
-          <p>Files up to 95 MB each (GitHub's limit). For longer episodes, put them on YouTube and add the link in channel.json. Use ✕ in the lists below to take something off the channel.</p>
+          <p>Files up to 95 MB each, and about 1 GB for the whole site (GitHub's limits). For lots of videos or long ones, put them on YouTube (unlisted is fine) and paste the links below. Use ✕ in the lists below to take something off the channel.</p>
+          <p><b>Add YouTube videos in bulk:</b> paste links, as many as you like (one per line, or straight from a list). They're added to the type picked above, with their YouTube titles.</p>
+          <textarea id="yt-links" placeholder="https://www.youtube.com/watch?v=…&#10;https://youtu.be/…"></textarea>
+          <div class="row"><button id="yt-add" type="button">＋ Add YouTube links</button></div>
           <div class="row"><button id="token-forget" type="button">Forget key on this device</button></div>
         </div>
 
@@ -325,11 +388,13 @@
         </div>
       </div>
 
-      <h3>Shows</h3>
+      <h3>Lineup</h3>
+      <div class="row"><input id="g-find" type="text" placeholder="Find a show, movie or commercial…" autocomplete="off"></div>
+      <h3>Shows <span class="n" id="n-shows"></span></h3>
       <ol id="g-shows"></ol>
-      <h3>Movies</h3>
+      <h3>Movies <span class="n" id="n-movies"></span></h3>
       <ol id="g-movies"></ol>
-      <h3>Commercials</h3>
+      <h3>Commercials <span class="n" id="n-ads"></span></h3>
       <ol id="g-ads"></ol>
     </div>
   </div>
@@ -501,14 +566,7 @@
         cfgText = text;
         cfg = settings(conf);
         document.title = cfg.name || 'Pook TV';
-        el('bug').innerHTML = '';
-        if (cfg.logo) {
-          var img = document.createElement('img');
-          img.src = cfg.logo; img.alt = cfg.name || '';
-          el('bug').appendChild(img);
-        } else {
-          el('bug').textContent = cfg.name || 'Pook TV';
-        }
+        renderLogo();
         var repo = ghRepo();
         el('gh-repo').textContent = el('gh-repo2').textContent = repo ? repo.repo : '(set "github" in channel.json)';
         buildLists();
@@ -695,6 +753,7 @@
         playItem(it, at);
         // A YouTube video without a title gets its lower third once YouTube says what it is.
         if (!(it.type === 'yt' && it.autoTitle)) lowerThird(it.announce, it.title);
+        if (logoNow().flash) setTimeout(function () { flashLogo(false); }, 1200);
       }
       function playShowKey(key, fallbackIdx, announceBack) {
         var i = indexOfKey(shows, key);
@@ -845,7 +904,7 @@
       }
 
       function token() { return store(TOKEN_KEY) || ''; }
-      function updateKeyUi() { document.body.classList.toggle('can-edit', !!token() && !isTV); renderGuide(); }
+      function updateKeyUi() { document.body.classList.toggle('can-edit', !!token() && !isTV); renderGuide(); if (cfg) renderLogo(); }
 
       function gh(method, path, body) {
         var r = ghRepo();
@@ -946,6 +1005,7 @@
         if (tooBig.length) { status(tooBig[0].name + ' is over 95 MB, GitHub\'s limit. Try a shorter clip, or put it on YouTube.', 'err'); return; }
         el('up-files').disabled = true;
         var entries = [], i = 0;
+        var total = files.reduce(function (a, f) { return a + f.size; }, 0);
         function nextFile() {
           if (i >= files.length) return Promise.resolve();
           var f = files[i++];
@@ -960,7 +1020,16 @@
             return nextFile();
           });
         }
-        nextFile().then(function () {
+        status('Checking space…');
+        siteSize().then(function (used) {
+          // GitHub Pages sites can be at most 1 GB.
+          if (used + total > PAGES_LIMIT) {
+            var e = new Error('There isn\'t room: the site uses ' + mb(used) + ' of about 1 GB and these files are ' + mb(total) + '. Put videos on YouTube (unlisted is fine) and paste the links below instead.');
+            e.noRoom = true;
+            throw e;
+          }
+          return nextFile();
+        }).then(function () {
           status('Adding to the lineup…');
           return editChannel(function (obj) {
             obj[kind] = obj[kind] || [];
@@ -977,8 +1046,68 @@
           buildLists();
           status('Done! ' + entries.length + ' file' + (entries.length === 1 ? '' : 's') + ' added. Other screens get ' + (entries.length === 1 ? 'it' : 'them') + ' within a few minutes.', 'ok');
         }).catch(function (err) {
-          status((entries.length ? entries.length + ' file(s) uploaded, then: ' : 'Upload failed: ') + err.message, 'err');
+          status(err.noRoom ? err.message : (entries.length ? entries.length + ' file(s) uploaded, then: ' : 'Upload failed: ') + err.message, 'err');
         }).then(function () { el('up-files').disabled = false; });
+      });
+
+      var PAGES_LIMIT = 950 * 1024 * 1024;   // GitHub Pages allows 1 GB; keep some room
+      function mb(b) { return (b / 1048576).toFixed(b < 10485760 ? 1 : 0) + ' MB'; }
+      // Size of everything published (the branch the site is built from).
+      function siteSize() {
+        return gh('GET', '/git/trees/' + encodeURIComponent(ghRepo().branch) + '?recursive=1').then(function (t) {
+          return (t.tree || []).reduce(function (a, x) { return a + (x.size || 0); }, 0);
+        }).catch(function () { return 0; });   // couldn't check: don't block the upload
+      }
+
+      function parseYouTube(text) {
+        var ids = [], seen = {}, m;
+        var re = /(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([\w-]{11})(?![\w-])/g;
+        while ((m = re.exec(text))) if (!seen[m[1]]) { seen[m[1]] = 1; ids.push(m[1]); }
+        // Bare IDs on their own line.
+        text.split(/[\r\n]+/).forEach(function (line) {
+          var w = line.trim();
+          // Real IDs have a digit, - or _, or a capital after the first letter; plain words don't.
+          if (/^[\w-]{11}$/.test(w) && /[\d_-]|.[A-Z]/.test(w) && !seen[w]) { seen[w] = 1; ids.push(w); }
+        });
+        return ids;
+      }
+      el('yt-add').addEventListener('click', function () {
+        var kind = el('up-kind').value;
+        var ids = parseYouTube(el('yt-links').value);
+        if (!ids.length) { status('No YouTube links found in what you pasted.', 'err'); return; }
+        var have = {};
+        ['shows', 'movies', 'commercials'].forEach(function (k) { normList(cfg[k]).forEach(function (x) { have[x.key] = 1; }); });
+        var fresh = ids.filter(function (id) { return !have['yt:' + id]; });
+        var dupes = ids.length - fresh.length;
+        if (!fresh.length) { status('All ' + ids.length + ' of those are already on the channel.', 'ok'); return; }
+        el('yt-add').disabled = true;
+        var titles = {}, done = 0, next = 0;
+        status('Looking up titles: 0 of ' + fresh.length + '…');
+        function worker() {
+          if (next >= fresh.length) return Promise.resolve();
+          var id = fresh[next++];
+          return ytTitle(id).then(function (t) { titles[id] = t; }, function () {}).then(function () {
+            done++;
+            status('Looking up titles: ' + done + ' of ' + fresh.length + '…');
+            return worker();
+          });
+        }
+        var workers = [];
+        for (var w = 0; w < 6; w++) workers.push(worker());
+        Promise.all(workers).then(function () {
+          var entries = fresh.map(function (id) { return titles[id] ? { title: titles[id], youtube: id } : { youtube: id }; });
+          status('Adding ' + entries.length + ' to the lineup…');
+          return editChannel(function (obj) {
+            obj[kind] = (obj[kind] || []).concat(entries);
+          }, 'Add ' + entries.length + ' YouTube ' + { shows: 'show', movies: 'movie', commercials: 'commercial' }[kind] + (entries.length === 1 ? '' : 's') + ' to the TV channel').then(function () {
+            cfg[kind] = (cfg[kind] || []).concat(entries);
+            buildLists();
+            if (!current && shows.length) playShow(0, false);
+            el('yt-links').value = '';
+            status('Added ' + entries.length + ' video' + (entries.length === 1 ? '' : 's') + (dupes ? ' (skipped ' + dupes + ' already on the channel)' : '') + '. Other screens get them within a few minutes.', 'ok');
+          });
+        }).catch(function (err) { status('Couldn\'t add them: ' + err.message, 'err'); })
+          .then(function () { el('yt-add').disabled = false; });
       });
 
       function removeItem(kind, it) {
@@ -1020,12 +1149,138 @@
         status('Checking the key…');
         gh('GET', '').then(function (repo) {
           if (repo && repo.permissions && repo.permissions.push === false) status('That key can read ' + ghRepo().repo + ' but not write to it. Give it Contents: Read and write.', 'err');
-          else status('Key saved. You can upload now.', 'ok');
+          else return siteSize().then(function (used) {
+            status('Key saved. You can upload now. The site uses ' + mb(used) + ' of about 1 GB.', 'ok');
+          }, function () { status('Key saved. You can upload now.', 'ok'); });
         }).catch(function (err) { status(err.message, 'err'); });
       });
       el('token-forget').addEventListener('click', function () { store(TOKEN_KEY, null); status(''); updateKeyUi(); });
 
       // ---------- Guide & files on this screen ----------
+      // ---------- Channel logo ----------
+      var logoDraft = null;      // changes tried in the Guide, not saved yet
+      var flashTimer = null, flashOffTimer = null;
+      var LOGO_SIZES = ['small', 'medium', 'large'];
+
+      function savedLogo() {
+        var l = cfg && cfg.logo;
+        if (typeof l === 'string') l = { image: l };
+        l = l || {};
+        return {
+          image: l.image ? String(l.image) : '',
+          size: LOGO_SIZES.indexOf(l.size) >= 0 ? l.size : 'medium',
+          flash: l.flashEveryMinutes === undefined ? 2 : Math.max(0, +l.flashEveryMinutes || 0)
+        };
+      }
+      function logoNow() { return logoDraft || savedLogo(); }
+      function draft() {
+        if (!logoDraft) { var s = savedLogo(); logoDraft = { image: s.image, size: s.size, flash: s.flash, file: null }; }
+        return logoDraft;
+      }
+
+      function xml(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+      var logoN = 0;
+      // The built-in logo: a little TV set with the channel name on its screen.
+      function builtinLogo(name) {
+        name = (name || 'Pook TV').toUpperCase();
+        var w = Math.max(96, Math.round(28 + name.length * 11.5)), c = w / 2, id = 'lg' + (++logoN);
+        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + w + ' 58" role="img" aria-label="' + xml(name) + '">' +
+          '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd84d"/><stop offset="1" stop-color="#ff6b3d"/></linearGradient>' +
+          '<clipPath id="' + id + 'c"><rect x="1" y="14" width="' + (w - 2) + '" height="37" rx="9"/></clipPath></defs>' +
+          '<g stroke="#ffd84d" stroke-width="2.5" stroke-linecap="round"><line x1="' + c + '" y1="15" x2="' + (c - 13) + '" y2="4"/><line x1="' + c + '" y1="15" x2="' + (c + 13) + '" y2="4"/></g>' +
+          '<circle cx="' + (c - 13) + '" cy="4" r="3" fill="#ffd84d"/><circle cx="' + (c + 13) + '" cy="4" r="3" fill="#ff9a3d"/>' +
+          '<rect x="' + (w * 0.18) + '" y="49" width="7" height="8" rx="2" fill="#ff6b3d"/><rect x="' + (w * 0.82 - 7) + '" y="49" width="7" height="8" rx="2" fill="#ff6b3d"/>' +
+          '<rect x="1" y="14" width="' + (w - 2) + '" height="37" rx="9" fill="url(#' + id + ')"/>' +
+          '<rect x="6" y="19" width="' + (w - 12) + '" height="27" rx="6" fill="#14101f"/>' +
+          '<text x="' + c + '" y="37.5" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-weight="800" font-size="15" letter-spacing="1" fill="#fff">' + xml(name) + '</text>' +
+          '<g clip-path="url(#' + id + 'c)"><rect class="shine" x="' + (c - 18) + '" y="0" width="22" height="70" fill="#fff" opacity="0.45" transform="skewX(-20)"/></g>' +
+          '</svg>';
+      }
+      function drawLogo(box, l) {
+        box.innerHTML = '';
+        var wrap = document.createElement('div');
+        wrap.className = 'logo size-' + l.size;
+        if (l.image) {
+          var img = document.createElement('img');
+          img.alt = (cfg && cfg.name) || 'Logo';
+          img.src = l.image;
+          img.onerror = function () { if (box === el('bug') && !logoDraft) wrap.innerHTML = builtinLogo(cfg && cfg.name); };
+          wrap.appendChild(img);
+        } else {
+          wrap.innerHTML = builtinLogo(cfg && cfg.name);
+        }
+        box.appendChild(wrap);
+      }
+      function renderLogo() {
+        var l = logoNow();
+        drawLogo(el('bug'), l);
+        drawLogo(el('logo-preview'), l);
+        clearInterval(flashTimer);
+        if (l.flash) flashTimer = setInterval(function () { flashLogo(false); }, l.flash * 60000);
+        Array.prototype.forEach.call(el('logo-sizes').querySelectorAll('button'), function (b) { b.classList.toggle('on', b.getAttribute('data-size') === l.size); });
+        Array.prototype.forEach.call(el('logo-flashes').querySelectorAll('button'), function (b) { b.classList.toggle('on', +b.getAttribute('data-flash') === l.flash); });
+        el('logo-note').textContent = logoDraft ? 'Trying this out on this screen' + (document.body.classList.contains('can-edit') ? ' — press Save to put it on every screen.' : '. To put it on every screen, add a GitHub key under "Upload to the channel".') : '';
+        el('logo-discard').style.display = logoDraft ? '' : 'none';
+      }
+      function flashLogo(evenIfAway) {
+        if (away && !evenIfAway) return;
+        var logos = document.querySelectorAll('.logo');
+        Array.prototype.forEach.call(logos, function (n) { n.classList.remove('flash'); void n.offsetWidth; n.classList.add('flash'); });
+        clearTimeout(flashOffTimer);
+        flashOffTimer = setTimeout(function () {
+          Array.prototype.forEach.call(document.querySelectorAll('.logo.flash'), function (n) { n.classList.remove('flash'); });
+        }, 2700);
+      }
+      function logoStatus(t, cls) { el('logo-status').textContent = t; el('logo-status').className = cls || ''; }
+
+      el('logo-flash-now').addEventListener('click', function () { flashLogo(true); });
+      el('logo-file').addEventListener('change', function (e) {
+        var f = e.target.files[0];
+        e.target.value = '';
+        if (!f) return;
+        if (f.size > 10 * 1024 * 1024) { logoStatus('That picture is over 10 MB. Pick a smaller one.', 'err'); return; }
+        var d = draft();
+        d.file = f; d.image = URL.createObjectURL(f);
+        logoStatus('');
+        renderLogo(); flashLogo(true);
+      });
+      el('logo-url-use').addEventListener('click', function () {
+        var u = el('logo-url').value.trim();
+        if (!/^https?:\/\/\S+$/i.test(u)) { logoStatus('Paste a link that starts with http:// or https://', 'err'); return; }
+        var d = draft(); d.file = null; d.image = u;
+        logoStatus('');
+        renderLogo(); flashLogo(true);
+      });
+      el('logo-builtin').addEventListener('click', function () { var d = draft(); d.file = null; d.image = ''; renderLogo(); flashLogo(true); });
+      Array.prototype.forEach.call(el('logo-sizes').querySelectorAll('button'), function (b) {
+        b.addEventListener('click', function () { draft().size = b.getAttribute('data-size'); renderLogo(); });
+      });
+      Array.prototype.forEach.call(el('logo-flashes').querySelectorAll('button'), function (b) {
+        b.addEventListener('click', function () { draft().flash = +b.getAttribute('data-flash'); renderLogo(); if (draft().flash) flashLogo(true); });
+      });
+      el('logo-discard').addEventListener('click', function () { logoDraft = null; logoStatus(''); renderLogo(); });
+      el('logo-save').addEventListener('click', function () {
+        if (!logoDraft) { logoStatus('Nothing to save: change something first.'); return; }
+        var d = logoDraft;
+        el('logo-save').disabled = true;
+        logoStatus(d.file ? 'Uploading the picture…' : 'Saving…');
+        var up = d.file
+          ? fileToB64(d.file).then(function (b64) { return putMedia(d.file, b64, 'logo-' + safeName(d.file.name), 0); })
+          : Promise.resolve(d.image);
+        up.then(function (image) {
+          var logo = { image: image, size: d.size, flashEveryMinutes: d.flash };
+          return editChannel(function (obj) { obj.logo = logo; }, 'TV channel: update the logo').then(function () {
+            cfg.logo = logo;
+            // Keep showing the local copy until the site has the uploaded file.
+            logoDraft = null;
+            if (d.file) { cfg.logo = { image: d.image, size: d.size, flashEveryMinutes: d.flash }; }
+            renderLogo();
+            logoStatus('Saved. Every screen gets the new logo within a few minutes.', 'ok');
+          });
+        }).catch(function (err) { logoStatus('Couldn\'t save the logo: ' + err.message, 'err'); })
+          .then(function () { el('logo-save').disabled = false; });
+      });
+
       // ---------- How often commercials come ----------
       // This screen's pick (Guide / ⏱ button) wins, then ?break= in the link, then channel.json.
       function breakEvery() {
@@ -1075,23 +1330,65 @@
       });
 
       function renderGuide() {
-        if (!cfg) return;
+        if (!cfg || !guideOpen()) return;   // big lineups: only build the lists when someone's looking
         el('g-name').textContent = cfg.name || 'Pook TV';
         var n = breakEvery();
         el('g-rules').textContent = (n ? 'A commercial break every ' + n + ' min, and between shows and movies' : 'Commercial breaks between shows and movies') +
           ', ' + cfg.adsPerBreak + ' commercial' + (cfg.adsPerBreak === 1 ? '' : 's') + ' each.';
         var playing = mode === 'show' ? current : null;
-        fill('g-shows', shows.filter(function (x) { return x.cat !== 'movie'; }), 'shows', playing);
-        fill('g-movies', shows.filter(function (x) { return x.cat === 'movie'; }), 'movies', playing);
-        fill('g-ads', ads, 'commercials', mode === 'break' ? current : null);
+        var q = el('g-find').value.trim().toLowerCase();
+        var match = function (x) { return !q || x.title.toLowerCase().indexOf(q) >= 0; };
+        var sh = shows.filter(function (x) { return x.cat !== 'movie'; });
+        var mv = shows.filter(function (x) { return x.cat === 'movie'; });
+        el('n-shows').textContent = '(' + sh.length + ')';
+        el('n-movies').textContent = '(' + mv.length + ')';
+        el('n-ads').textContent = '(' + ads.length + ')';
+        fill('g-shows', sh.filter(match), 'shows', playing, q);
+        fill('g-movies', mv.filter(match), 'movies', playing, q);
+        fill('g-ads', ads.filter(match), 'commercials', mode === 'break' ? current : null, q);
+        lookupTitles(shows.concat(ads));
       }
-      function fill(id, list, kind, cur) {
+      var findTimer = null;
+      el('g-find').addEventListener('input', function () { clearTimeout(findTimer); findTimer = setTimeout(renderGuide, 150); });
+
+      // Fill in YouTube titles (the Guide would otherwise say "YouTube video" until each one plays).
+      var titleQueue = [], titleBusy = 0, titleTried = {}, titleRedraw = null;
+      function lookupTitles(items) {
+        items.forEach(function (it) {
+          if (it.type === 'yt' && it.autoTitle && !titleTried[it.id]) { titleTried[it.id] = 1; titleQueue.push(it); }
+        });
+        while (titleBusy < 6 && titleQueue.length) fetchTitle(titleQueue.shift());
+      }
+      function ytTitle(id) {
+        return fetch('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent('https://www.youtube.com/watch?v=' + id))
+          .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+          .then(function (j) { return j.title || ''; });
+      }
+      function fetchTitle(it) {
+        titleBusy++;
+        ytTitle(it.id).then(function (t) {
+          if (!t) return;
+          ytTitles[it.id] = t;
+          [shows, ads].forEach(function (list) { list.forEach(function (x) { if (x.type === 'yt' && x.id === it.id && x.autoTitle) { x.title = t; x.autoTitle = false; } }); });
+          clearTimeout(titleRedraw);
+          titleRedraw = setTimeout(function () { renderGuide(); updateNow(); }, 400);
+        }).catch(function () {}).then(function () {
+          titleBusy--;
+          if (titleQueue.length) fetchTitle(titleQueue.shift());
+        });
+      }
+      function fill(id, list, kind, cur, q) {
         var ol = el(id);
         ol.innerHTML = '';
         var canEdit = document.body.classList.contains('can-edit');
-        var inConfig = normList(cfg[kind]).map(function (x) { return x.key; });
+        var inConfig = {};
+        normList(cfg[kind]).forEach(function (x) { inConfig[x.key] = 1; });
+        var pendingSet = pending.map(function (p) { return p.item; });
         var playable = kind !== 'commercials';
-        if (!list.length) { var e = document.createElement('li'); e.textContent = 'None yet.'; ol.appendChild(e); return; }
+        if (!list.length) { var e = document.createElement('li'); e.textContent = q ? 'No matches.' : 'None yet.'; ol.appendChild(e); return; }
+        var frag = document.createDocumentFragment();
+        var showCount = 0;
+        shows.forEach(function (x) { if (x.cat !== 'movie') showCount++; });
         list.forEach(function (it) {
           var li = document.createElement('li');
           var t = document.createElement(playable ? 'button' : 'span');
@@ -1108,9 +1405,9 @@
           tag.className = 'kind';
           tag.textContent = { yt: 'YouTube', video: 'video', img: 'picture · ' + it.seconds + 's', card: 'card · ' + it.seconds + 's' }[it.type] +
             (it.local ? ' · this screen only' : '') +
-            (pending.some(function (p) { return p.item === it; }) ? ' · just uploaded' : '');
+            (pendingSet.indexOf(it) >= 0 ? ' · just uploaded' : '');
           li.appendChild(tag);
-          if (canEdit && inConfig.indexOf(it.key) >= 0) {
+          if (canEdit && inConfig[it.key]) {
             var x = document.createElement('button');
             x.type = 'button';
             x.textContent = '✕';
@@ -1119,8 +1416,10 @@
             li.appendChild(x);
           }
           if (it === cur) li.className = 'cur';
-          ol.appendChild(li);
+          if (playable) li.value = shows.indexOf(it) + 1 - (it.cat === 'movie' ? showCount : 0);   // keep lineup numbers when searching
+          frag.appendChild(li);
         });
+        ol.appendChild(frag);
       }
 
       function filesToItems(files) {
@@ -1154,8 +1453,8 @@
       var guideReturnFocus = null;
       function guideOpen() { return el('guide').classList.contains('on'); }
       function openGuide() {
-        renderGuide();
         el('guide').classList.add('on');
+        renderGuide();
         guideReturnFocus = document.activeElement;
         var cur = el('guide').querySelector('li.cur button.t');
         (cur || el('g-close')).focus();

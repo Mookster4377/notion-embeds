@@ -1,6 +1,6 @@
 {
   "name": "Pook TV",
-  "logo": "",
+  "logo": { "image": "", "size": "medium", "flashEveryMinutes": 2 },
 
   "shuffleShows": false,
   "breakEveryMinutes": 10,
