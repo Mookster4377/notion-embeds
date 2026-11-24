@@ -134,6 +134,27 @@
       display: none;
     }
     body.muted #sound { display: block; }
+    /* Inside some embeds (e.g. a Notion page) YouTube may only play with sound after a tap on the video itself. */
+    #yt-tap {
+      position: fixed;
+      top: 12px;
+      top: calc(var(--edge) * 0.8);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 6;
+      display: none;
+      max-width: 70%;
+      padding: 7px 14px;
+      border-radius: 999px;
+      background: var(--panel);
+      border: 1px solid var(--accent);
+      text-align: center;
+      font-size: 0.9em;
+      pointer-events: none;
+    }
+    #yt-tap a { color: var(--accent); margin-left: 8px; white-space: nowrap; pointer-events: auto; }
+    body.yt-locked.on-yt:not(.muted) #yt-tap { display: block; }
+    @media (max-width: 560px) { #yt-tap { left: var(--edge); transform: none; } }
     @media (max-width: 560px) { #sound { left: var(--edge); transform: none; } }
     body.tv #sound button::after { content: " (OK)"; font-weight: 400; }
 
@@ -280,6 +301,7 @@
   <div id="ad-tag"><b>COMMERCIAL</b><span id="ad-count"></span><span id="ad-left"></span></div>
   <div id="lower"><small id="lower-k"></small><span id="lower-t"></span></div>
   <div id="sound"><button id="unmute" type="button">🔊 Turn sound on</button></div>
+  <div id="yt-tap">🔊 Tap the video once for YouTube sound<a id="open-full" href="#" target="_blank" rel="noopener">or open the full page ↗</a></div>
 
   <div id="bar">
     <span id="now"></span>
@@ -622,6 +644,7 @@
                 ytReady = true;
                 applyMute();
                 if (!away) e.target.playVideo();
+                checkYtSound();
                 if (ytPending) { var p = ytPending; ytPending = null; loadYt(p.id, p.at); }
               },
               onStateChange: function (e) {
@@ -650,6 +673,7 @@
         if (!ytReady) { ytPending = { id: id, at: at }; return; }
         applyMute();
         ytPlayer.loadVideoById({ videoId: id, startSeconds: at || 0 });
+        checkYtSound();
       }
 
       function hideAll() {
@@ -664,6 +688,7 @@
       // Put one item on screen, starting at `at` seconds.
       function playItem(it, at) {
         hideAll();
+        document.body.classList.toggle('on-yt', it.type === 'yt');
         current = it;
         upNextShown = false;
         lastTick = null;
@@ -877,9 +902,58 @@
         el('mute').textContent = muted ? '🔇 Sound' : '🔊 Mute';
         vid.muted = muted;
         if (ytReady) {
-          if (muted) ytPlayer.mute(); else { ytPlayer.unMute(); ytPlayer.setVolume(100); }
+          if (muted || ytLocked) ytPlayer.mute(); else { ytPlayer.unMute(); ytPlayer.setVolume(100); }
+          checkYtSound();
         }
       }
+
+      // When this page is embedded in another site (a Notion page), the browser may refuse YouTube
+      // sound until the viewer taps the YouTube video itself. If so: keep YouTube playing muted, say so,
+      // and turn its sound on at the first tap.
+      var ytLocked = false, ytCheckTimer = null;
+      function ytOn() { return ytReady && current && current.type === 'yt' && !away; }
+      function checkYtSound() {
+        clearTimeout(ytCheckTimer);
+        if (muted || ytLocked) return;
+        ytCheckTimer = setTimeout(function () {
+          if (!ytOn() || muted || ytLocked) return;
+          var st = ytPlayer.getPlayerState();
+          if (st === YT.PlayerState.BUFFERING || st === YT.PlayerState.UNSTARTED) { checkYtSound(); return; }
+          if (st === YT.PlayerState.PLAYING && !ytPlayer.isMuted()) return;     // sound works
+          if (st === YT.PlayerState.ENDED) return;
+          // Paused or muted by the browser: sound isn't allowed here yet.
+          ytLocked = true;
+          document.body.classList.add('yt-locked');
+          ytPlayer.mute();
+          ytPlayer.playVideo();
+        }, 1500);
+      }
+      function ytTapped() {
+        if (!ytLocked || muted || !ytOn()) return;
+        ytPlayer.unMute(); ytPlayer.setVolume(100);
+        ytPlayer.playVideo();   // the tap also toggles YouTube's pause
+        setTimeout(function () {
+          if (!ytOn()) return;
+          if (ytPlayer.getPlayerState() === YT.PlayerState.PLAYING && !ytPlayer.isMuted()) {
+            ytLocked = false;
+            document.body.classList.remove('yt-locked');
+            lowerThird('Sound', 'YouTube sound is on');
+          } else {
+            ytPlayer.mute(); ytPlayer.playVideo();
+          }
+        }, 800);
+      }
+      // A tap on the YouTube video moves focus into its frame; notice that, then take focus back for the keys.
+      window.addEventListener('blur', function () {
+        setTimeout(function () {
+          var a = document.activeElement;
+          if (a && a.tagName === 'IFRAME' && el('yt-wrap').contains(a)) {
+            ytTapped();
+            setTimeout(function () { if (document.activeElement === a) { a.blur(); window.focus(); } }, 300);
+          }
+        }, 0);
+      });
+      el('open-full').href = location.href;
       function setMuted(m) {
         muted = m;
         applyMute();
