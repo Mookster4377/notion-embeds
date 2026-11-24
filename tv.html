@@ -173,6 +173,7 @@
     #guide .top > div { margin-right: 12px; }
     #guide label.btn { position: relative; overflow: hidden; display: inline-block; }
     #guide label.btn input { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+    #every-choices button.on { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
     #guide .kind { color: var(--muted); font-size: 0.8em; margin-left: 6px; }
     #guide select, #guide input[type=password], #guide input[type=text] {
       background: #16151d;
@@ -187,9 +188,9 @@
     .box { border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 12px; padding: 12px 16px; margin-top: 8px; }
     .only-tv { display: none; }
     body.tv .only-tv { display: block; }
-    body.tv .not-tv { display: none; }
-    body.can-edit .need-key { display: none; }
-    body:not(.can-edit) .has-key { display: none; }
+    body.tv .not-tv { display: none !important; }
+    body.can-edit .need-key { display: none !important; }
+    body:not(.can-edit) .has-key { display: none !important; }
 
     #msg {
       z-index: 3;
@@ -208,9 +209,11 @@
     Pook TV: a channel that autoplays your shows with commercial breaks.
 
     Set it up in channel.json (next to this file), or upload videos from the Guide (☰ or G).
-      shows              your videos, played in order
+      shows              your shows, played in order
+      movies             your movies, played after the shows (shown separately in the Guide)
       commercials        played during breaks, picked in rotation
-      breakEveryMinutes  cut to a break this often inside a long show (0 = only between shows)
+      breakEveryMinutes  5, 10 or 15: a break this often inside a show or movie (0 = only between them).
+                         Each screen can change this in the Guide or with the ⏱ button.
       adsPerBreak        how many commercials each break has
       github             where uploads from the Guide are saved
 
@@ -223,7 +226,7 @@
     Optional URL settings:
       ?config=other.json   use a different channel file
       &shuffle=1           shuffle the shows
-      &break=5             break every 5 minutes
+      &break=5             start with a break every 5 minutes (0 = only between shows)
       &ads=3               3 commercials per break
       &tv=1                TV layout (turned on by itself in smart-TV browsers)
 
@@ -249,6 +252,7 @@
     <button id="back" type="button">⏮ Back</button>
     <button id="skip" type="button">Skip ⏭</button>
     <button id="mute" type="button">🔇 Sound</button>
+    <button id="every" type="button"></button>
     <button id="guide-btn" type="button">☰ Guide</button>
     <button id="fs" type="button">⛶ Full screen</button>
   </div>
@@ -262,6 +266,17 @@
         </div>
         <button id="g-close" type="button">✕ Close</button>
       </div>
+
+      <h3>Commercial breaks</h3>
+      <p>There's always a break when a show or movie ends. Choose how often to also break in the middle:</p>
+      <div class="row" id="every-choices">
+        <button type="button" data-min="0">Only between</button>
+        <button type="button" data-min="5">Every 5 min</button>
+        <button type="button" data-min="10">Every 10 min</button>
+        <button type="button" data-min="15">Every 15 min</button>
+      </div>
+      <p id="every-note"></p>
+      <div class="row has-key not-tv"><button id="every-save" type="button">Make this the default for every screen</button></div>
 
       <div class="only-tv">
         <h3>Adding videos</h3>
@@ -286,6 +301,7 @@
           <div class="row">
             <select id="up-kind">
               <option value="shows">as shows</option>
+              <option value="movies">as movies</option>
               <option value="commercials">as commercials</option>
             </select>
             <label class="btn"><button type="button" tabindex="-1">⬆ Choose files to upload</button><input id="up-files" type="file" accept="video/*,image/*" multiple></label>
@@ -306,6 +322,8 @@
 
       <h3>Shows</h3>
       <ol id="g-shows"></ol>
+      <h3>Movies</h3>
+      <ol id="g-movies"></ol>
       <h3>Commercials</h3>
       <ol id="g-ads"></ol>
     </div>
@@ -330,9 +348,12 @@
       var REFRESH_MS = 2 * 60 * 1000;  // reload the lineup this often (picks up uploads)
       var MAX_UPLOAD = 95 * 1024 * 1024;
       var TOKEN_KEY = 'pooktv-github-token';
+      var BREAK_KEY = 'pooktv-break-minutes';
+      var BREAK_CHOICES = [0, 5, 10, 15];
 
       var params = new URLSearchParams(location.search);
       var configUrl = params.get('config') || 'channel.json';
+      var urlBreak = params.get('break');   // until someone picks in the Guide
       var el = function (id) { return document.getElementById(id); };
 
       var isTV = params.get('tv') === '1' || (params.get('tv') !== '0' &&
@@ -372,7 +393,7 @@
       function normalize(raw) {
         if (typeof raw === 'string') raw = /^yt:/.test(raw) ? { youtube: raw.slice(3) } : { src: raw };
         if (!raw || typeof raw !== 'object') return null;
-        var it = { title: raw.title || '', seconds: +raw.seconds || 0, autoTitle: !raw.title };
+        var it = { title: raw.title || '', seconds: +raw.seconds || 0, autoTitle: !raw.title, cat: 'show' };
         if (raw.youtube) {
           var m = String(raw.youtube).match(/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([\w-]{11})/);
           it.type = 'yt';
@@ -398,7 +419,11 @@
         if (!it.title) it.title = it.type === 'card' ? it.card : it.type === 'yt' ? 'YouTube video' : decodeURIComponent(it.src.split('/').pop().split('?')[0]);
         return it;
       }
-      function normList(a) { return (Array.isArray(a) ? a : []).map(normalize).filter(Boolean); }
+      function normList(a, cat) {
+        return (Array.isArray(a) ? a : []).map(normalize).filter(Boolean).map(function (it) { if (cat) it.cat = cat; return it; });
+      }
+      // Shows and movies play in one lineup: the shows, then the movies.
+      function lineupFrom(conf) { return normList(conf.shows, 'show').concat(normList(conf.movies, 'movie')); }
 
       function shuffle(a) {
         for (var i = a.length - 1; i > 0; i--) {
@@ -419,7 +444,6 @@
       }
 
       function settings(conf) {
-        if (params.get('break') !== null) conf.breakEveryMinutes = +params.get('break');
         if (params.get('ads') !== null) conf.adsPerBreak = +params.get('ads');
         conf.breakEveryMinutes = Math.max(0, +conf.breakEveryMinutes || 0);
         conf.adsPerBreak = Math.max(0, Math.round(conf.adsPerBreak === undefined ? 2 : +conf.adsPerBreak || 0));
@@ -429,12 +453,12 @@
       // Build the lineups from the config plus anything added on this screen.
       function buildLists() {
         var keepOrder = shows.length ? shows.map(function (s) { return s.key; }) : null;
-        var cShows = normList(cfg.shows), cAds = normList(cfg.commercials);
+        var cShows = lineupFrom(cfg), cAds = normList(cfg.commercials);
         pending = pending.filter(function (p) {
-          return indexOfKey(p.kind === 'shows' ? cShows : cAds, p.item.key) < 0;
+          return indexOfKey(p.kind === 'commercials' ? cAds : cShows, p.item.key) < 0;
         });
-        var pShows = pending.filter(function (p) { return p.kind === 'shows'; }).map(function (p) { return p.item; });
-        var pAds = pending.filter(function (p) { return p.kind !== 'shows'; }).map(function (p) { return p.item; });
+        var pShows = pending.filter(function (p) { return p.kind !== 'commercials'; }).map(function (p) { return p.item; });
+        var pAds = pending.filter(function (p) { return p.kind === 'commercials'; }).map(function (p) { return p.item; });
         var newShows = onlyMine ? sessionShows.slice() : cShows.concat(pShows, sessionShows);
         var newAds = onlyMine && sessionAds.length ? sessionAds.slice() : cAds.concat(pAds, sessionAds);
         if (onlyMine && !newShows.length) newShows = cShows.concat(pShows);
@@ -479,6 +503,7 @@
         var repo = ghRepo();
         el('gh-repo').textContent = el('gh-repo2').textContent = repo ? repo.repo : '(set "github" in channel.json)';
         buildLists();
+        updateBreakUi();
         if (!current || !shows.length) {
           if (!shows.length) { showMsg('No shows yet. Open the Guide (☰ or G) to upload some, or add them to channel.json.'); return; }
           playShow(0, false);
@@ -645,7 +670,7 @@
         var at = resumeAt[it.key] || 0;
         delete resumeAt[it.key];
         watchedSinceBreak = 0;
-        it.announce = announceBack ? 'Back to' : 'Now playing';
+        it.announce = announceBack ? 'Back to' : it.cat === 'movie' ? 'Feature presentation' : 'Now playing';
         playItem(it, at);
         // A YouTube video without a title gets its lower third once YouTube says what it is.
         if (!(it.type === 'yt' && it.autoTitle)) lowerThird(it.announce, it.title);
@@ -722,7 +747,8 @@
           if (lastTick) watchedSinceBreak += (now - lastTick) / 1000;
           lastTick = now;
           var dur = duration(), pos = position(), left = dur ? dur - pos : Infinity;
-          if (cfg.breakEveryMinutes && watchedSinceBreak >= cfg.breakEveryMinutes * 60 && left > MIN_LEFT_FOR_MIDROLL) {
+          var every = breakEvery();
+          if (every && watchedSinceBreak >= every * 60 && left > MIN_LEFT_FOR_MIDROLL) {
             startBreak(true);
             return;
           }
@@ -756,7 +782,7 @@
 
       function updateNow() {
         if (!current) return;
-        el('now').textContent = (mode === 'break' ? 'Commercial: ' : 'Show ' + (showIdx + 1) + ' of ' + shows.length + ': ') + current.title;
+        el('now').textContent = (mode === 'break' ? 'Commercial: ' : (current.cat === 'movie' ? 'Movie' : 'Show') + ' · ' + (showIdx + 1) + ' of ' + shows.length + ': ') + current.title;
         renderGuide();
       }
 
@@ -918,12 +944,13 @@
           return editChannel(function (obj) {
             obj[kind] = obj[kind] || [];
             entries.forEach(function (x) { obj[kind].push(x.entry); });
-          }, 'Add ' + entries.length + ' ' + (kind === 'shows' ? 'show' : 'commercial') + (entries.length === 1 ? '' : 's') + ' to the TV channel');
+          }, 'Add ' + entries.length + ' ' + { shows: 'show', movies: 'movie', commercials: 'commercial' }[kind] + (entries.length === 1 ? '' : 's') + ' to the TV channel');
         }).then(function () {
           // Play it here right away from the local copy; the site catches up in about a minute.
           entries.forEach(function (x) {
             var it = normalize(x.entry);
             it.src = URL.createObjectURL(x.file);
+            if (kind === 'movies') it.cat = 'movie';
             pending.push({ kind: kind, item: it });
           });
           buildLists();
@@ -940,7 +967,7 @@
         var stillUsed = false;
         editChannel(function (obj) {
           obj[kind] = (obj[kind] || []).filter(function (raw) { var n = normalize(raw); return !n || n.key !== it.key; });
-          ['shows', 'commercials'].forEach(function (k) {
+          ['shows', 'movies', 'commercials'].forEach(function (k) {
             (obj[k] || []).forEach(function (raw) { var n = normalize(raw); if (n && n.key === it.key) stillUsed = true; });
           });
         }, 'Remove ' + it.title + ' from the TV channel').then(function () {
@@ -950,7 +977,7 @@
             return gh('DELETE', path, { message: 'Delete ' + it.key, sha: f.sha, branch: r.branch });
           }).catch(function (e) { if (e.status !== 404) throw e; });
         }).then(function () {
-          var list = kind === 'shows' ? cfg.shows : cfg.commercials;
+          var list = cfg[kind];
           if (list) {
             for (var i = list.length - 1; i >= 0; i--) { var n = normalize(list[i]); if (n && n.key === it.key) list.splice(i, 1); }
           }
@@ -978,30 +1005,82 @@
       el('token-forget').addEventListener('click', function () { store(TOKEN_KEY, null); status(''); updateKeyUi(); });
 
       // ---------- Guide & files on this screen ----------
+      // ---------- How often commercials come ----------
+      // This screen's pick (Guide / ⏱ button) wins, then ?break= in the link, then channel.json.
+      function breakEvery() {
+        if (urlBreak !== null && urlBreak !== '') return Math.max(0, +urlBreak || 0);
+        var mine = store(BREAK_KEY);
+        if (mine !== null && mine !== '') return Math.max(0, +mine || 0);
+        return cfg ? cfg.breakEveryMinutes : 0;
+      }
+      function breakLabel(n) { return n ? 'Every ' + n + ' min, plus after each show and movie' : 'Only after each show and movie'; }
+      function setBreak(n) {
+        urlBreak = null;
+        store(BREAK_KEY, String(n));
+        // Switching to a shorter gap mid-show: give it half a minute instead of cutting away instantly.
+        if (mode === 'show' && n && watchedSinceBreak > n * 60 - 30) watchedSinceBreak = Math.max(0, n * 60 - 30);
+        updateBreakUi();
+        if (!guideOpen()) lowerThird('Commercials', breakLabel(n), 3500);
+      }
+      function updateBreakUi() {
+        var n = breakEvery();
+        el('every').textContent = '⏱ Ads: ' + (n ? 'every ' + n + ' min' : 'between shows');
+        Array.prototype.forEach.call(el('every-choices').querySelectorAll('button'), function (b) {
+          var on = +b.getAttribute('data-min') === n;
+          b.classList.toggle('on', on);
+          b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+        var def = cfg ? cfg.breakEveryMinutes : 0;
+        el('every-note').textContent = n === def ? '' : 'This screen only. The channel default is: ' + breakLabel(def).toLowerCase() + '.';
+        renderGuide();
+      }
+      el('every').addEventListener('click', function () {
+        var i = BREAK_CHOICES.indexOf(breakEvery());
+        setBreak(BREAK_CHOICES[(i + 1) % BREAK_CHOICES.length]);
+      });
+      Array.prototype.forEach.call(el('every-choices').querySelectorAll('button'), function (b) {
+        b.addEventListener('click', function () { setBreak(+b.getAttribute('data-min')); });
+      });
+      el('every-save').addEventListener('click', function () {
+        var n = breakEvery();
+        status('Saving…');
+        editChannel(function (obj) { obj.breakEveryMinutes = n; }, 'TV channel: commercials ' + breakLabel(n).toLowerCase())
+          .then(function () {
+            cfg.breakEveryMinutes = n;
+            updateBreakUi();
+            status('Saved. Every screen now defaults to: ' + breakLabel(n).toLowerCase() + '.', 'ok');
+          })
+          .catch(function (err) { status('Couldn\'t save: ' + err.message, 'err'); });
+      });
+
       function renderGuide() {
         if (!cfg) return;
         el('g-name').textContent = cfg.name || 'Pook TV';
-        el('g-rules').textContent = (cfg.breakEveryMinutes ? 'A commercial break every ' + cfg.breakEveryMinutes + ' min and between shows' : 'Commercial breaks between shows') +
+        var n = breakEvery();
+        el('g-rules').textContent = (n ? 'A commercial break every ' + n + ' min, and between shows and movies' : 'Commercial breaks between shows and movies') +
           ', ' + cfg.adsPerBreak + ' commercial' + (cfg.adsPerBreak === 1 ? '' : 's') + ' each.';
-        fill('g-shows', shows, 'shows', mode === 'show' ? current : null);
+        var playing = mode === 'show' ? current : null;
+        fill('g-shows', shows.filter(function (x) { return x.cat !== 'movie'; }), 'shows', playing);
+        fill('g-movies', shows.filter(function (x) { return x.cat === 'movie'; }), 'movies', playing);
         fill('g-ads', ads, 'commercials', mode === 'break' ? current : null);
       }
       function fill(id, list, kind, cur) {
         var ol = el(id);
         ol.innerHTML = '';
         var canEdit = document.body.classList.contains('can-edit');
-        var inConfig = normList(kind === 'shows' ? cfg.shows : cfg.commercials).map(function (x) { return x.key; });
+        var inConfig = normList(cfg[kind]).map(function (x) { return x.key; });
+        var playable = kind !== 'commercials';
         if (!list.length) { var e = document.createElement('li'); e.textContent = 'None yet.'; ol.appendChild(e); return; }
-        list.forEach(function (it, k) {
+        list.forEach(function (it) {
           var li = document.createElement('li');
-          var t = document.createElement(kind === 'shows' ? 'button' : 'span');
+          var t = document.createElement(playable ? 'button' : 'span');
           t.className = 't';
           t.textContent = it.title;
-          if (kind === 'shows') {
+          if (playable) {
             // A plain-looking button, so TV remotes can reach it.
             t.style.background = 'none'; t.style.border = '0'; t.style.padding = '0.15em 0.2em'; t.style.textAlign = 'left';
             t.title = 'Play now';
-            t.addEventListener('click', function () { closeGuide(); playShow(k, false); });
+            t.addEventListener('click', function () { closeGuide(); playShow(shows.indexOf(it), false); });
           }
           li.appendChild(t);
           var tag = document.createElement('span');
@@ -1129,6 +1208,7 @@
           else if (is(e, 'UP') || is(e, 'BACK')) { e.preventDefault(); hideBar(); }
           else if (is(e, 'NEXT')) { e.preventDefault(); skip(); }
           else if (is(e, 'PREV')) { e.preventDefault(); back(); }
+          else if (!is(e, 'OK') && !is(e, 'DOWN')) letterKeys(e);
           return;   // OK clicks the focused button by itself
         }
         if (document.activeElement === el('unmute') && is(e, 'OK')) return;
@@ -1137,10 +1217,13 @@
         else if (is(e, 'LEFT') || is(e, 'PREV')) { e.preventDefault(); back(); }
         else if (is(e, 'OK')) { e.preventDefault(); if (muted) setMuted(false); else showBar('skip'); }
         else if (is(e, 'DOWN') || is(e, 'UP')) { e.preventDefault(); showBar('skip'); }
-        else if (e.key === 'm' || e.key === 'M' || e.keyCode === 77) setMuted(!muted);
-        else if (e.key === 'f' || e.key === 'F' || e.keyCode === 70) toggleFullscreen();
-        else if (e.key === 'g' || e.key === 'G' || e.keyCode === 71) openGuide();
+        else letterKeys(e);
       });
+      function letterKeys(e) {
+        if (e.keyCode === 77) setMuted(!muted);              // M
+        else if (e.keyCode === 70) toggleFullscreen();       // F
+        else if (e.keyCode === 71) openGuide();              // G
+      }
 
       function flashUi() {
         document.body.classList.add('ui');

@@ -3,7 +3,7 @@
   "logo": "",
 
   "shuffleShows": false,
-  "breakEveryMinutes": 8,
+  "breakEveryMinutes": 10,
   "adsPerBreak": 2,
 
   "github": { "repo": "Mookster4377/notion-embeds", "branch": "main" },
@@ -19,6 +19,9 @@
     { "youtube": "pIwRg6rb1cI" },
     { "youtube": "uXsZz4bwEYQ" },
     { "youtube": "Nh9BrD3xIeU" }
+  ],
+
+  "movies": [
   ],
 
   "commercials": [
