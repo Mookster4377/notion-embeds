@@ -229,11 +229,15 @@
       &break=5             start with a break every 5 minutes (0 = only between shows)
       &ads=3               3 commercials per break
       &tv=1                TV layout (turned on by itself in smart-TV browsers)
+      &pause=0             keep playing when the page is hidden (normally it pauses)
+      &restart=1           start from the first show instead of where you left off
 
     It starts muted (browsers only autoplay silently). Tap "Turn sound on" once (OK on a TV remote).
     Keys: → skip, ← back, M mute, F full screen, G guide.
     TV remote: ◀ ▶ back/skip, OK sound on / controls, ▲ ▼ controls, CH+/CH− skip/back, Back closes.
     The lineup reloads every 2 minutes, so new uploads show up without touching the TV.
+    It pauses when you switch away, close the tab, or scroll it out of view, and picks up
+    where you left off when you come back, even after closing it (remembered on each device).
   -->
 
   <div id="vid-wrap" class="full layer"><video id="vid" playsinline preload="auto"></video></div>
@@ -241,6 +245,7 @@
   <div id="img-wrap" class="full layer"><img id="img" alt=""></div>
   <div id="card" class="full layer"><div id="card-title"></div><div id="card-sub"></div></div>
   <div id="msg" class="full"></div>
+  <div id="watch-area" class="full" style="pointer-events:none;z-index:-1"></div>
 
   <div id="bug"></div>
   <div id="ad-tag"><b>COMMERCIAL</b><span id="ad-count"></span><span id="ad-left"></span></div>
@@ -378,6 +383,10 @@
       var stallTimer = null;
       var upNextShown = false;
       var uiTimer = null, lowerTimer = null;
+      var away = false, timedLeft = 0, offscreen = false;
+      var PAUSE_AWAY = params.get('pause') !== '0';
+      var SPOT_KEY = 'pooktv-spot:' + configUrl;
+      var SPOT_MAX_AGE = 30 * 24 * 3600 * 1000;
       var ytTitles = {};
 
       // ---------- Storage (may be blocked; never required) ----------
@@ -506,7 +515,15 @@
         updateBreakUi();
         if (!current || !shows.length) {
           if (!shows.length) { showMsg('No shows yet. Open the Guide (☰ or G) to upload some, or add them to channel.json.'); return; }
-          playShow(0, false);
+          var spot = params.get('restart') === '1' ? null : readSpot();
+          var i = spot ? indexOfKey(shows, spot.key) : -1;
+          if (i >= 0) {
+            if (spot.at > 5) resumeAt[spot.key] = spot.at;
+            playShow(i, spot.at > 5);
+          } else {
+            playShow(0, false);
+          }
+          checkAway();   // opened in a background tab: hold it until it's looked at
         }
       }
 
@@ -520,7 +537,7 @@
       vid.muted = true;
       vid.addEventListener('ended', onItemEnded);
       vid.addEventListener('error', function () { if (current && current.type === 'video') skipBroken(); });
-      vid.addEventListener('playing', clearStall);
+      vid.addEventListener('playing', function () { clearStall(); if (away) vid.pause(); });
       var pendingSeek = null;
       vid.addEventListener('loadedmetadata', function () {
         if (pendingSeek !== null) { try { vid.currentTime = pendingSeek; } catch (e) {} pendingSeek = null; }
@@ -546,13 +563,14 @@
               onReady: function (e) {
                 ytReady = true;
                 applyMute();
-                e.target.playVideo();
+                if (!away) e.target.playVideo();
                 if (ytPending) { var p = ytPending; ytPending = null; loadYt(p.id, p.at); }
               },
               onStateChange: function (e) {
                 if (!current || current.type !== 'yt') return;
                 if (e.data === YT.PlayerState.PLAYING) {
                   clearStall();
+                  if (away) { e.target.pauseVideo(); return; }
                   // No title in channel.json: use the one YouTube has.
                   var d = e.target.getVideoData && e.target.getVideoData();
                   if (current.autoTitle && d && d.title && d.video_id === current.id) {
@@ -613,15 +631,17 @@
             el('card-sub').textContent = it.sub;
             el('card').classList.add('on');
           }
-          var ms = (it.seconds - (at || 0)) * 1000;
+          var ms = Math.max(500, (it.seconds - (at || 0)) * 1000);
           timedEnd = Date.now() + ms;
-          timedTimer = setTimeout(onItemEnded, Math.max(500, ms));
+          if (away) timedLeft = ms;
+          else timedTimer = setTimeout(onItemEnded, ms);
         }
         updateNow();
       }
 
       function tryPlayVid() {
         vid.muted = muted;
+        if (away) return;
         var r = vid.play();
         if (r && r.catch) r.catch(function () {
           // Blocked with sound: fall back to muted so the channel keeps running.
@@ -644,7 +664,8 @@
         if (!current) return 0;
         if (current.type === 'video') return vid.currentTime || 0;
         if (current.type === 'yt') return ytReady && ytPlayer.getCurrentTime ? ytPlayer.getCurrentTime() || 0 : 0;
-        return current.seconds - Math.max(0, (timedEnd - Date.now()) / 1000);
+        var left = away ? timedLeft : timedEnd - Date.now();
+        return current.seconds - Math.max(0, left / 1000);
       }
       function duration() {
         if (!current) return 0;
@@ -1236,9 +1257,66 @@
       }
       document.addEventListener('mousemove', flashUi);
       document.addEventListener('touchstart', flashUi);
-      document.addEventListener('visibilitychange', function () {
-        if (!document.hidden && current && current.type === 'video' && vid.paused) tryPlayVid();
-      });
+
+      // ---------- Pause when away, pick up where you left off ----------
+      function goAway() {
+        if (away || !PAUSE_AWAY) return;
+        saveSpot();
+        away = true;
+        clearStall();
+        lastTick = null;
+        if (!current) return;
+        if (current.type === 'video') vid.pause();
+        else if (current.type === 'yt') { if (ytReady) ytPlayer.pauseVideo(); }
+        else if (timedTimer) {
+          clearTimeout(timedTimer); timedTimer = null;
+          timedLeft = Math.max(0, timedEnd - Date.now());
+        }
+      }
+      function comeBack() {
+        if (!away) return;
+        away = false;
+        if (!current) return;
+        if (current.type === 'video') { tryPlayVid(); armStall(); }
+        else if (current.type === 'yt') { if (ytReady) ytPlayer.playVideo(); armStall(); }
+        else if (!timedTimer) {
+          timedEnd = Date.now() + timedLeft;
+          timedTimer = setTimeout(onItemEnded, Math.max(300, timedLeft));
+        }
+      }
+      function checkAway() {
+        if (document.hidden || offscreen) goAway(); else comeBack();
+      }
+      document.addEventListener('visibilitychange', checkAway);
+      window.addEventListener('pageshow', checkAway);
+      window.addEventListener('pagehide', function () { saveSpot(); goAway(); });
+      // Scrolled out of view (e.g. further down a Notion page) counts as away too.
+      if ('IntersectionObserver' in window) {
+        new IntersectionObserver(function (entries) {
+          offscreen = !entries[entries.length - 1].isIntersecting;
+          checkAway();
+        }).observe(el('watch-area'));
+      }
+
+      // The spot to come back to: the show (never a commercial) and how far in.
+      function saveSpot() {
+        if (away || !current || !shows.length) return;
+        var spot = null;
+        if (mode === 'show') {
+          var dur = duration(), pos = position();
+          spot = dur && pos > dur - 5 ? { key: shows[(showIdx + 1) % shows.length].key, at: 0 } : { key: current.key, at: Math.max(0, pos - 3) };
+        } else if (mode === 'break' && brk) {
+          spot = { key: brk.nextKey, at: brk.midroll ? (resumeAt[brk.nextKey] || 0) : 0 };
+        }
+        if (spot) { spot.t = Date.now(); store(SPOT_KEY, JSON.stringify(spot)); }
+      }
+      function readSpot() {
+        try {
+          var s = JSON.parse(store(SPOT_KEY) || 'null');
+          return s && s.key && Date.now() - s.t < SPOT_MAX_AGE ? s : null;
+        } catch (e) { return null; }
+      }
+      setInterval(saveSpot, 5000);
 
       // ---------- Go ----------
       updateKeyUi();
@@ -1258,7 +1336,8 @@
         get resumeAt() { return resumeAt; },
         get muted() { return muted; },
         get config() { return cfg; },
-        get isTV() { return isTV; }
+        get isTV() { return isTV; },
+        get away() { return away; }
       };
     })();
   </script>
