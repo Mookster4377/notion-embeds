@@ -224,6 +224,23 @@
       background: var(--bg-2); color: var(--muted); border: 1px solid var(--line);
       white-space: nowrap;
     }
+    .dlg-wide { width: min(760px, calc(100vw - 32px)); }
+    dialog:has(.dlg-wide) { width: min(760px, calc(100vw - 32px)); }
+    .cv-search { display: flex; gap: 8px; }
+    .cv-search input {
+      flex: 1; min-width: 0; background: var(--bg-2); border: 1px solid var(--line-2);
+      border-radius: 8px; padding: 8px 10px;
+    }
+    .cv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; max-height: 60vh; overflow-y: auto; }
+    .cv-item {
+      display: flex; flex-direction: column; gap: 3px; padding: 6px; text-align: left;
+      background: var(--bg-2); border-radius: 10px; min-width: 0;
+    }
+    .cv-item img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; background: var(--card-2); }
+    .cv-item b { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cv-item small { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cv-item:hover { border-color: var(--accent); }
+    .chip.check { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
     .chip.edited { color: var(--accent-2); border-color: color-mix(in srgb, var(--accent-2) 40%, transparent); }
     .row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 4px; align-items: center; }
     .audio-name {
@@ -383,6 +400,7 @@
         </div>
         <div class="actions">
           <button type="button" id="btn-tray" title="Pictures waiting to be used as album art">Image trays<span class="n" id="btn-tray-n"></span></button>
+          <button type="button" id="btn-covers" title="Find album covers on Apple Music for songs without one">Find covers…</button>
           <button type="button" id="btn-backup" title="Save everything to one file, or load it back">Backup…</button>
           <button type="button" id="btn-match" title="Pick MP3s (or a whole folder) and match them to songs by file name">Match song files…</button>
           <button type="button" id="btn-import" title="Load a fresh CSV export of the Music to Listen To database">Update from Notion CSV…</button>
@@ -398,6 +416,7 @@
           <option value="art">Has artwork</option>
           <option value="edited">Title/artist changed</option>
           <option value="audio">Has a song file</option>
+          <option value="check">Covers to check</option>
         </select>
         <span class="stats" id="stats"></span>
       </div>
@@ -486,6 +505,33 @@
     <div class="tray-foot" id="tray-foot"></div>
   </aside>
   <input type="file" id="pick-tray" accept="image/*" multiple hidden>
+  <dialog id="dlg-cover">
+    <form method="dialog" class="dlg dlg-wide">
+      <h2 id="cv-title">Covers</h2>
+      <div class="cv-search">
+        <input type="search" id="cv-q" aria-label="Search Apple Music" spellcheck="false">
+        <button type="button" id="cv-go">Search</button>
+      </div>
+      <div class="progress" id="cv-status" aria-live="polite"></div>
+      <div class="cv-grid" id="cv-grid"></div>
+      <div class="btns"><button value="cancel" class="ghost">Close</button></div>
+      <p class="hint">Covers come from Apple Music, at 1000 × 1000.</p>
+    </form>
+  </dialog>
+  <dialog id="dlg-find">
+    <form method="dialog" class="dlg">
+      <h2>Find covers</h2>
+      <p>Looks up each song without a cover on Apple Music and adds the album cover, matching the artist and album (or the song title when there's no album). Songs that already have a cover are left alone.</p>
+      <p id="fc-scope"></p>
+      <p class="hint">Covers matched on the song title only are marked "check cover". Switch the list to <b>Covers to check</b> to go through them. Use "Find cover" on any song to pick a different one.</p>
+      <div class="progress" id="fc-status" aria-live="polite"></div>
+      <div class="btns">
+        <button value="cancel" class="ghost">Close</button>
+        <button type="button" id="fc-stop" hidden>Stop</button>
+        <button type="button" class="primary" id="fc-go">Start</button>
+      </div>
+    </form>
+  </dialog>
   <dialog id="dlg-backup">
     <form method="dialog" class="dlg">
       <h2>Backup</h2>
@@ -2622,6 +2668,7 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
         if (view.filter === 'art' && !artKeys.has(s.key)) return false;
         if (view.filter === 'edited' && !isEdited(s)) return false;
         if (view.filter === 'audio' && !audioMeta.has(s.key)) return false;
+        if (view.filter === 'check' && !(autoArt.get(s.key) || {}).weak) return false;
         if (q) {
           var c = cur(s);
           var hay = norm(c.title + ' ' + c.artist + ' ' + c.album + ' ' + s.title + ' ' + s.artist);
@@ -2706,9 +2753,21 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       var meta = el('div', 'meta');
       s.playlists.forEach(function (p) { meta.appendChild(el('span', 'chip', p)); });
       if (isEdited(s)) meta.appendChild(el('span', 'chip edited', 'renamed'));
+      var aa = artKeys.has(s.key) && autoArt.get(s.key);
+      if (aa) {
+        var ch = el('span', 'chip' + (aa.weak ? ' check' : ''), aa.weak ? 'check cover' : 'auto cover');
+        ch.title = (aa.weak ? 'Worth a check: matched on the song, not the album. ' : 'Found automatically. ') +
+          (aa.album ? 'Cover of "' + aa.album + '"' + (aa.artist ? ' by ' + aa.artist : '') + ' on Apple Music.' : '');
+        meta.appendChild(ch);
+      }
       f.appendChild(meta);
 
       var row = el('div', 'row');
+      var fcb = el('button', 'small', artKeys.has(s.key) ? 'Other covers' : 'Find cover');
+      fcb.type = 'button';
+      fcb.dataset.act = 'find-cover';
+      fcb.title = 'Pick a cover from Apple Music';
+      row.appendChild(fcb);
       var ab = el('button', 'small', audioMeta.has(s.key) ? 'Change song file' : 'Attach song file');
       ab.type = 'button';
       ab.dataset.act = 'pick-audio';
@@ -2827,12 +2886,14 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
           if (artUrls.has(key)) URL.revokeObjectURL(artUrls.get(key));
           artUrls.delete(key);
           artKeys.add(key);
+          if (autoArt.delete(key)) saveAutoArt();
           refreshCard(key);
           return true;
         });
       }).catch(function (err) { toast(err.message || 'Could not use that image.'); return false; });
     }
     function removeArt(key) {
+      if (autoArt.delete(key)) saveAutoArt();
       return idb.del('art', key).then(function () {
         if (artUrls.has(key)) URL.revokeObjectURL(artUrls.get(key));
         artUrls.delete(key);
@@ -2907,6 +2968,7 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       else if (act === 'pick-art') { pendingKey = key; $('pick-image').click(); }
       else if (act === 'del-art') { e.stopPropagation(); removeArt(key); }
       else if (act === 'pick-audio') { pendingKey = key; $('pick-audio').click(); }
+      else if (act === 'find-cover') openCoverPicker(key);
       else if (act === 'del-audio') removeAudio(key);
       else if (act === 'album') useForAlbum(key);
       else if (act === 'reset') {
@@ -3743,6 +3805,7 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
           }
         }
         man.trays = await idb.get('meta', 'trays').catch(function () { return null; });
+        man.autoArt = await idb.get('meta', 'autoArt').catch(function () { return null; });
         var trays = await idb.entries('tray');
         for (var k = 0; k < trays.length; k++) {
           var t = trays[k][1];
@@ -3834,6 +3897,11 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
         }
         for (var e = 0; e < man.edits.length; e++) await idb.put('edits', man.edits[e][0], man.edits[e][1]);
         if (man.songs) await idb.put('meta', 'songs', man.songs);
+        if (Array.isArray(man.autoArt)) {
+          var aa0 = new Map((await idb.get('meta', 'autoArt').catch(function () { return null; })) || []);
+          man.autoArt.forEach(function (kv) { aa0.set(kv[0], kv[1]); });
+          await idb.put('meta', 'autoArt', Array.from(aa0.entries()));
+        }
         if (Array.isArray(man.trays)) {
           var have = (await idb.get('meta', 'trays').catch(function () { return null; })) || [];
           man.trays.forEach(function (t) {
@@ -3993,6 +4061,232 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       if (keys.length) setTimeout(function () { location.reload(); }, missed.length ? 6000 : 1800);
       else $('bk-save').disabled = $('bk-load').disabled = false;
     }
+
+    // ---------------- find covers (Apple Music / iTunes search) ----------------
+    // Apple's public search, called straight from this page. Apple asks for roughly 20 searches
+    // a minute, so the automatic finder spaces them out and waits if Apple says slow down.
+    var autoArt = new Map();   // song key -> {weak: bool}: covers found automatically
+    function saveAutoArt() { idb.put('meta', 'autoArt', Array.from(autoArt.entries())).catch(function () {}); }
+    var jsonpN = 0;
+    function itunesCall(endpoint, params) {
+      return new Promise(function (resolve, reject) {
+        var cb = '__itunes' + (++jsonpN);
+        var sc = document.createElement('script');
+        var timer = setTimeout(function () { done(); reject(new Error('timeout')); }, 15000);
+        function done() { clearTimeout(timer); delete window[cb]; sc.remove(); }
+        window[cb] = function (d) { done(); resolve(d.results || []); };
+        sc.onerror = function () { done(); reject(new Error('busy')); };
+        var q = new URLSearchParams(Object.assign({ country: 'US', callback: cb }, params));
+        sc.src = 'https://itunes.apple.com/' + endpoint + '?' + q.toString();
+        document.head.appendChild(sc);
+      });
+    }
+    function itunes(params) { return itunesCall('search', Object.assign({ media: 'music', limit: '12' }, params)); }
+    function bigArt(url, size) { return (url || '').replace(/\/\d+x\d+bb\.(jpg|png|webp)$/, '/' + (size || 1000) + 'x' + (size || 1000) + 'bb.jpg'); }
+    // Simplified names for comparing: no brackets, "- Single", "feat.", punctuation or accents.
+    function simple(s) {
+      return norm(s || '')
+        .replace(/\s*[\(\[][^\)\]]*[\)\]]/g, ' ')
+        .replace(/\s+-\s+(single|ep)$/i, ' ')
+        .replace(/\s+(feat\.?|ft\.?|featuring)\s+.*$/i, ' ')
+        .replace(/&/g, ' and ')
+        .replace(/[^a-z0-9぀-ヿ一-鿿]+/g, ' ')
+        .trim();
+    }
+    function looseEq(a, b) {
+      a = simple(a); b = simple(b);
+      return !!a && !!b && (a === b || (a.length > 3 && b.length > 3 && (a.indexOf(b) >= 0 || b.indexOf(a) >= 0)));
+    }
+    function artistOk(want, got) {
+      if (!want) return false;
+      var w = simple(primaryArtist(want)), g = simple(got);
+      return !!w && !!g && (g.indexOf(w) >= 0 || w.indexOf(g) >= 0);
+    }
+    // An artist's whole album list from Apple, fetched once per artist and reused.
+    var artistCache = new Map();
+    function artistAlbums(artist) {
+      var name = primaryArtist(artist), k = simple(name);
+      if (!k || k === 'unknown artist') return Promise.resolve(null);
+      if (artistCache.has(k)) return artistCache.get(k);
+      var pr = (async function () {
+        var found = await itunes({ term: name, entity: 'musicArtist', limit: '5' });
+        var a = found.find(function (r) { return simple(r.artistName) === k; });
+        if (!a) return null;
+        await pause(GAP);
+        var all = await itunesCall('lookup', { id: String(a.artistId), entity: 'album', limit: '200' });
+        return all.filter(function (r) { return r.wrapperType === 'collection'; });
+      })();
+      artistCache.set(k, pr);
+      pr.catch(function () { artistCache.delete(k); });
+      return pr;
+    }
+    function pickAlbum(albums, album) {
+      if (!albums) return null;
+      var raw = norm(album.trim());
+      return albums.find(function (r) { return norm(r.collectionName) === raw; }) ||
+        albums.find(function (r) { return simple(r.collectionName) === simple(album); }) ||
+        albums.find(function (r) { return looseEq(r.collectionName, album); }) || null;
+    }
+    // Best Apple result for a song, or null. weak = worth a second look.
+    async function lookupCover(s) {
+      var c = cur(s);
+      var artist = c.artist.trim(), album = c.album.trim(), title = c.title.replace(/\s*\([\w-]{11}\)\s*$/, '').trim();
+      // 1. The album, found in the artist's own catalog.
+      if (album && artist) {
+        var hit = pickAlbum(await artistAlbums(artist), album);
+        if (hit) return { url: bigArt(hit.artworkUrl100), album: hit.collectionName, artist: hit.artistName, weak: false };
+        await pause(GAP);
+      }
+      // 2. The song itself.
+      var liveWanted = /\blive\b/i.test(title + ' ' + album);
+      function score(r) {
+        var sc = 0;
+        if (looseEq(r.trackName, title)) sc += 4;
+        if (artistOk(artist, r.artistName)) sc += 3;
+        if (album && looseEq(r.collectionName, album)) sc += 3;
+        if (!liveWanted && /\blive\b/i.test((r.trackName || '') + ' ' + (r.collectionName || ''))) sc -= 3;
+        return sc;
+      }
+      var terms = [];
+      if (album) terms.push([artist ? primaryArtist(artist) : '', simple(title), simple(album)].filter(Boolean).join(' '));
+      terms.push([artist ? primaryArtist(artist) : '', simple(title)].filter(Boolean).join(' '));
+      var best = null, bestScore = 0;
+      for (var i = 0; i < terms.length; i++) {
+        if (i) await pause(GAP);
+        var tracks = await itunes({ term: terms[i], entity: 'song', limit: '25' });
+        tracks.forEach(function (r) { var sc = score(r); if (sc > bestScore) { bestScore = sc; best = r; } });
+        if (bestScore >= 7 && (!album || bestScore >= 10)) break;
+      }
+      if (!best || bestScore < 4) return null;
+      var albumOk = !album || looseEq(best.collectionName, album);
+      return { url: bigArt(best.artworkUrl100), album: best.collectionName, artist: best.artistName,
+               weak: bestScore < 7 || !albumOk };
+    }
+    function pause(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+    var GAP = 3200;
+    async function fetchCover(url) {
+      var r = await fetch(url);
+      if (!r.ok) throw new Error('Apple did not send the picture (' + r.status + ').');
+      return r.blob();
+    }
+
+    // ----- pick a cover for one song -----
+    var coverKey = null;
+    async function openCoverPicker(key) {
+      coverKey = key;
+      var s = findSong(key), c = cur(s);
+      $('cv-title').textContent = 'Covers for ' + c.title;
+      $('cv-q').value = [primaryArtist(c.artist), simple(c.album) || simple(c.title)].filter(Boolean).join(' ');
+      $('dlg-cover').showModal();
+      searchCovers();
+    }
+    async function searchCovers() {
+      var q = $('cv-q').value.trim();
+      var grid = $('cv-grid');
+      grid.innerHTML = '';
+      if (!q) return;
+      $('cv-status').textContent = 'Searching Apple Music…';
+      try {
+        var both = await Promise.all([itunes({ term: q, entity: 'album', limit: '12' }), itunes({ term: q, entity: 'song', limit: '12' })]);
+        var seen = new Set(), list = [];
+        both[0].concat(both[1]).forEach(function (r) {
+          var u = bigArt(r.artworkUrl100);
+          if (!u || seen.has(u)) return;
+          seen.add(u);
+          list.push({ url: u, thumb: bigArt(r.artworkUrl100, 300), album: r.collectionName, artist: r.artistName,
+                      year: (r.releaseDate || '').slice(0, 4), track: r.wrapperType === 'track' ? r.trackName : '' });
+        });
+        $('cv-status').textContent = list.length ? 'Click a cover to use it.' : 'Nothing found. Try fewer words, or just the artist.';
+        list.forEach(function (it) {
+          var b = el('button', 'cv-item');
+          b.type = 'button';
+          b.dataset.url = it.url;
+          var img = document.createElement('img');
+          img.src = it.thumb; img.alt = ''; img.loading = 'lazy';
+          b.appendChild(img);
+          b.appendChild(el('b', null, it.album));
+          b.appendChild(el('small', null, it.artist + (it.year ? ' · ' + it.year : '')));
+          b.title = it.album + ' — ' + it.artist + (it.track ? '\nSong: ' + it.track : '');
+          grid.appendChild(b);
+        });
+      } catch (e) {
+        $('cv-status').textContent = 'Apple Music search did not answer. Check your internet, wait a minute, and try again.';
+      }
+    }
+    $('cv-go').addEventListener('click', searchCovers);
+    $('cv-q').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); searchCovers(); } });
+    $('cv-grid').addEventListener('click', async function (e) {
+      var b = e.target.closest('.cv-item');
+      if (!b || !coverKey) return;
+      $('cv-status').textContent = 'Saving…';
+      try {
+        var blob = await fetchCover(b.dataset.url);
+        var key = coverKey;
+        if (await setArt(key, blob)) {
+          autoArt.delete(key); saveAutoArt(); refreshCard(key);
+          $('dlg-cover').close();
+          toast('Cover added to ' + cur(findSong(key)).title + '.');
+        }
+      } catch (err) { $('cv-status').textContent = err.message; }
+    });
+
+    // ----- find covers for the whole list -----
+    var finding = false, stopFinding = false;
+    $('btn-covers').addEventListener('click', function () {
+      var todo = filtered.filter(function (s) { return !artKeys.has(s.key); });
+      var mins = Math.max(1, Math.round(todo.length * 4.5 / 60));
+      $('fc-scope').textContent = todo.length + ' song' + (todo.length === 1 ? '' : 's') + ' in this list ' +
+        (view.playlist ? '(' + view.playlist + ') ' : '') + (todo.length === 1 ? 'has' : 'have') + ' no cover yet.' +
+        (todo.length ? ' At Apple\'s pace that takes about ' + (mins === 1 ? 'a minute' : mins + ' minutes') + '; you can keep working meanwhile.' : '');
+      $('fc-go').disabled = !todo.length || finding;
+      if (!finding) $('fc-status').textContent = '';
+      $('dlg-find').showModal();
+    });
+    $('fc-stop').addEventListener('click', function () { stopFinding = true; $('fc-status').textContent = 'Stopping after this one…'; });
+    $('fc-go').addEventListener('click', async function () {
+      if (finding) return;
+      var todo = filtered.filter(function (s) { return !artKeys.has(s.key); });
+      finding = true; stopFinding = false;
+      $('fc-go').disabled = true; $('fc-stop').hidden = false;
+      $('btn-covers').textContent = 'Finding covers…';
+      var found = 0, weak = 0, none = 0;
+      for (var i = 0; i < todo.length && !stopFinding; i++) {
+        var s = todo[i];
+        if (artKeys.has(s.key)) continue;
+        $('fc-status').textContent = 'Looking up ' + (i + 1) + ' of ' + todo.length + ': ' + cur(s).title +
+          '  ·  found ' + found + (weak ? ' (' + weak + ' to check)' : '') + ', not found ' + none;
+        var res = null, tries = 0;
+        while (tries < 4) {
+          try { res = await lookupCover(s); break; }
+          catch (e) {
+            tries++;
+            $('fc-status').textContent = 'Apple asked us to slow down. Waiting a minute, then carrying on…';
+            await pause(60000);
+            if (stopFinding) break;
+          }
+        }
+        if (res) {
+          try {
+            var blob = await fetchCover(res.url);
+            if (await setArt(s.key, blob)) {
+              autoArt.set(s.key, { weak: res.weak, album: res.album, artist: res.artist });
+              saveAutoArt();
+              refreshCard(s.key);
+              found++; if (res.weak) weak++;
+            }
+          } catch (e) { none++; }
+        } else none++;
+        await pause(GAP);
+      }
+      finding = false;
+      $('fc-stop').hidden = true;
+      $('btn-covers').textContent = 'Find covers…';
+      $('fc-status').textContent = (stopFinding ? 'Stopped. ' : 'Done. ') + 'Found ' + found + ' cover' + (found === 1 ? '' : 's') +
+        (weak ? ', ' + weak + ' worth checking (filter: "Covers to check")' : '') +
+        (none ? '. No good match for ' + none + ' — use "Find cover" on those to pick by hand' : '') + '.';
+      $('fc-go').disabled = false;
+      renderStats();
+    });
 
     // ---------------- image trays ----------------
     // Several named trays of pictures waiting to be used. A tray keeps its pictures in the
@@ -4362,13 +4656,15 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       idb.get('meta', 'songs').catch(function () { return null; }),
       idb.entries('edits').catch(function () { return []; }),
       idb.keys('art').catch(function () { return []; }),
-      idb.entries('audio').catch(function () { return []; })
+      idb.entries('audio').catch(function () { return []; }),
+      idb.get('meta', 'autoArt').catch(function () { return null; })
     ]).then(function (r) {
       if (r[0] && r[0].list) { setSongs(r[0].list); sourceLabel = r[0].label; }
       else { setSongs(parseSnapshot()); sourceLabel = 'Music Station in Notion, as of ' + SNAPSHOT_DATE; }
       r[1].forEach(function (kv) { edits.set(kv[0], kv[1]); });
       r[2].forEach(function (k) { artKeys.add(k); });
       r[3].forEach(function (kv) { audioMeta.set(kv[0], kv[1].name); });
+      (r[4] || []).forEach(function (kv) { autoArt.set(kv[0], kv[1]); });
       loadTrays().catch(function () { renderTray(); });
       try { if (localStorage.getItem('album-art-tray-open')) trayOpen(true); } catch (e) {}
       showSource();
