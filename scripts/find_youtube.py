@@ -111,10 +111,11 @@ def main():
     html = open(PAGE, encoding='utf-8').read()
     songs = read_songs(html)
     cache = json.load(open(CACHE, encoding='utf-8')) if os.path.exists(CACHE) else {}
-    todo = [s for s in songs if s['key'] not in cache and not EMBEDDED_ID.search(s['title'])]
+    # Empty results are usually YouTube sending a page without results, so search those again.
+    todo = [s for s in songs if not cache.get(s['key']) and not EMBEDDED_ID.search(s['title'])]
     if args.limit:
         todo = todo[:args.limit]
-    print(f'{len(songs)} songs, {len(cache)} already looked up, {len(todo)} to search', flush=True)
+    print(f'{len(songs)} songs, {len(songs) - len(todo)} already done, {len(todo)} to search', flush=True)
 
     lock = threading.Lock()
     state = {'done': 0, 'failed': 0}
@@ -124,12 +125,14 @@ def main():
         for attempt in range(4):
             try:
                 results = search(query_for(song))
-                break
+                if results:
+                    break
             except Exception:
-                time.sleep(2 + attempt * 4 + random.random() * 2)
+                results = None
+            time.sleep(2 + attempt * 4 + random.random() * 2)
         with lock:
             state['done'] += 1
-            if results is None:
+            if not results:
                 state['failed'] += 1
             else:
                 cache[song['key']] = results
