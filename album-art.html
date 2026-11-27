@@ -240,6 +240,22 @@
     .cv-item b { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .cv-item small { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .cv-item:hover { border-color: var(--accent); }
+    a.small.btn {
+      display: inline-flex; align-items: center; gap: 5px; text-decoration: none;
+      font-size: 13px; padding: 4px 9px; border-radius: 8px; line-height: 1.2;
+      border: 1px solid var(--line-2); background: var(--card-2);
+    }
+    a.small.btn.yt { color: #fff; background: #d6213b; border-color: transparent; }
+    a.small.btn.yt.weak { background: color-mix(in srgb, #d6213b 55%, var(--card-2)); }
+    a.small.btn.yt:hover { filter: brightness(1.1); }
+    .yt-edit { padding: 4px 8px; }
+    .yt-current { display: flex; gap: 12px; align-items: center; background: var(--bg-2); border-radius: 10px; padding: 8px; }
+    .yt-current img { width: 120px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 6px; flex: none; }
+    .yt-current div { min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 13.5px; }
+    .yt-current a { overflow: hidden; text-overflow: ellipsis; }
+    .yt-current small { color: var(--muted); }
+    .yt-current small.warn { color: var(--warn); }
+    #yt-input.bad { border-color: var(--danger); }
     .chip.check { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
     .chip.edited { color: var(--accent-2); border-color: color-mix(in srgb, var(--accent-2) 40%, transparent); }
     .row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 4px; align-items: center; }
@@ -417,6 +433,8 @@
           <option value="edited">Title/artist changed</option>
           <option value="audio">Has a song file</option>
           <option value="check">Covers to check</option>
+          <option value="yt">Has a YouTube link</option>
+          <option value="noyt">No YouTube link</option>
         </select>
         <span class="stats" id="stats"></span>
       </div>
@@ -505,6 +523,22 @@
     <div class="tray-foot" id="tray-foot"></div>
   </aside>
   <input type="file" id="pick-tray" accept="image/*" multiple hidden>
+  <dialog id="dlg-yt">
+    <form method="dialog" class="dlg">
+      <h2 id="yt-title">YouTube link</h2>
+      <div class="yt-current" id="yt-current" hidden></div>
+      <div class="cv-search">
+        <input type="text" id="yt-input" placeholder="Paste a YouTube link" spellcheck="false" autocomplete="off" aria-label="YouTube link">
+        <button type="button" id="yt-search">Search YouTube</button>
+      </div>
+      <p class="hint" id="yt-hint">Search YouTube opens in a new tab. Copy the video's link and paste it here.</p>
+      <div class="btns">
+        <button type="button" class="ghost" id="yt-remove" hidden>Remove link</button>
+        <button value="cancel" class="ghost">Cancel</button>
+        <button type="button" class="primary" id="yt-save">Save</button>
+      </div>
+    </form>
+  </dialog>
   <dialog id="dlg-cover">
     <form method="dialog" class="dlg dlg-wide">
       <h2 id="cv-title">Covers</h2>
@@ -545,6 +579,11 @@
         <button type="button" class="primary" id="bk-save">Save backup</button>
       </div>
       <p class="hint">Loading a backup adds what's in it to what's already here. A song that has artwork in both keeps the backup's. Nothing else is removed.</p>
+      <h2 style="font-size:15px;margin-top:6px">YouTube links</h2>
+      <p>Bring in the links from <b>YouTube Song Finder</b>: its backup file (Save / load → Save backup file) or its CSV (Download list as CSV).</p>
+      <div class="btns" style="justify-content:flex-start">
+        <button type="button" id="bk-yt">Import YouTube links…</button>
+      </div>
       <h2 style="font-size:15px;margin-top:6px">Only have an export?</h2>
       <p>Pick the <b>Music Station</b> export (the .zip, or the folder if you already unzipped it). Covers, renames and song files are put back on the right songs. A <b>Plex Music</b> export works too, matched by artist and title.</p>
       <div class="btns" style="justify-content:flex-start">
@@ -554,6 +593,7 @@
     </form>
   </dialog>
   <input type="file" id="pick-backup" accept=".zip,application/zip" hidden>
+  <input type="file" id="pick-yt" accept=".json,.csv,application/json,text/csv" hidden>
   <input type="file" id="pick-export-zip" accept=".zip,application/zip" hidden>
   <input type="file" id="pick-export-dir" webkitdirectory multiple hidden>
   <div class="toast" id="toast" role="status"></div>
@@ -2669,6 +2709,8 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
         if (view.filter === 'edited' && !isEdited(s)) return false;
         if (view.filter === 'audio' && !audioMeta.has(s.key)) return false;
         if (view.filter === 'check' && !(autoArt.get(s.key) || {}).weak) return false;
+        if (view.filter === 'yt' && !ytOf(s.key)) return false;
+        if (view.filter === 'noyt' && ytOf(s.key)) return false;
         if (q) {
           var c = cur(s);
           var hay = norm(c.title + ' ' + c.artist + ' ' + c.album + ' ' + s.title + ' ' + s.artist);
@@ -2688,8 +2730,9 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       var withArt = pool.filter(function (s) { return artKeys.has(s.key); }).length;
       var ed = pool.filter(isEdited).length;
       var au = pool.filter(function (s) { return audioMeta.has(s.key); }).length;
+      var yt = pool.filter(function (s) { return ytOf(s.key); }).length;
       $('stats').innerHTML = '<b>' + withArt + '</b> of ' + pool.length + ' have artwork · <b>' + ed +
-        '</b> renamed · <b>' + au + '</b> song files' +
+        '</b> renamed · <b>' + au + '</b> song files · <b>' + yt + '</b> YouTube links' +
         (filtered.length !== pool.length ? ' · showing ' + filtered.length : '');
     }
 
@@ -2768,6 +2811,21 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       fcb.dataset.act = 'find-cover';
       fcb.title = 'Pick a cover from Apple Music';
       row.appendChild(fcb);
+      var yv = ytOf(s.key);
+      if (yv) {
+        var yl = el('a', 'small btn yt' + (yv.weak ? ' weak' : ''), '▶ YouTube');
+        yl.href = ytWatch(yv.v); yl.target = '_blank'; yl.rel = 'noopener';
+        yl.title = (yv.t || 'Open on YouTube') + (yv.weak ? '\n(found automatically; may be the wrong video)' : '');
+        row.appendChild(yl);
+        var ye = el('button', 'small ghost yt-edit', '✎');
+        ye.type = 'button'; ye.dataset.act = 'yt'; ye.title = 'Change or remove the YouTube link';
+        ye.setAttribute('aria-label', 'Change the YouTube link');
+        row.appendChild(ye);
+      } else {
+        var ya = el('button', 'small', '+ YouTube');
+        ya.type = 'button'; ya.dataset.act = 'yt'; ya.title = 'Add a YouTube link';
+        row.appendChild(ya);
+      }
       var ab = el('button', 'small', audioMeta.has(s.key) ? 'Change song file' : 'Attach song file');
       ab.type = 'button';
       ab.dataset.act = 'pick-audio';
@@ -2969,6 +3027,7 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       else if (act === 'del-art') { e.stopPropagation(); removeArt(key); }
       else if (act === 'pick-audio') { pendingKey = key; $('pick-audio').click(); }
       else if (act === 'find-cover') openCoverPicker(key);
+      else if (act === 'yt') openYt(key);
       else if (act === 'del-audio') removeAudio(key);
       else if (act === 'album') useForAlbum(key);
       else if (act === 'reset') {
@@ -3385,7 +3444,7 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       var p = writer.file([root, 'README.txt'], utf8(readme));
       plan.forEach(function (pl) {
         var dir = safeName(pl.name);
-        var csv = [['Track', 'Title', 'Artist', 'Album', 'Artwork file', 'Song file', 'Renamed']];
+        var csv = [['Track', 'Title', 'Artist', 'Album', 'Artwork file', 'Song file', 'Renamed', 'YouTube']];
         var m3u = ['#EXTM3U'];
         pl.items.forEach(function (s) {
           var i = pl.nums.get(s.key) - 1;
@@ -3421,7 +3480,8 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
               }
               return steps;
             }).then(function () {
-              csv.push([i + 1, c.title, c.artist, c.album, artName, audioName, isEdited(s) ? 'yes' : '']);
+              var yv2 = ytOf(s.key);
+              csv.push([i + 1, c.title, c.artist, c.album, artName, audioName, isEdited(s) ? 'yes' : '', yv2 ? ytWatch(yv2.v) : '']);
               done++;
               if (done % 10 === 0 || done === total) $('progress').textContent = 'Packing ' + done + ' of ' + total + ' songs…';
             });
@@ -3806,6 +3866,7 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
         }
         man.trays = await idb.get('meta', 'trays').catch(function () { return null; });
         man.autoArt = await idb.get('meta', 'autoArt').catch(function () { return null; });
+        man.youtube = await idb.get('meta', 'youtube').catch(function () { return null; });
         var trays = await idb.entries('tray');
         for (var k = 0; k < trays.length; k++) {
           var t = trays[k][1];
@@ -3897,6 +3958,11 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
         }
         for (var e = 0; e < man.edits.length; e++) await idb.put('edits', man.edits[e][0], man.edits[e][1]);
         if (man.songs) await idb.put('meta', 'songs', man.songs);
+        if (Array.isArray(man.youtube)) {
+          var y0 = new Map((await idb.get('meta', 'youtube').catch(function () { return null; })) || []);
+          man.youtube.forEach(function (kv) { y0.set(kv[0], kv[1]); });
+          await idb.put('meta', 'youtube', Array.from(y0.entries()));
+        }
         if (Array.isArray(man.autoArt)) {
           var aa0 = new Map((await idb.get('meta', 'autoArt').catch(function () { return null; })) || []);
           man.autoArt.forEach(function (kv) { aa0.set(kv[0], kv[1]); });
@@ -4061,6 +4127,118 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       if (keys.length) setTimeout(function () { location.reload(); }, missed.length ? 6000 : 1800);
       else $('bk-save').disabled = $('bk-load').disabled = false;
     }
+
+    // ---------------- YouTube links ----------------
+    // ytUser: links you set or imported (kept in storage; {v: null} means "no link").
+    // ytPre: links found ahead of time by scripts/find_youtube.py, built into this page.
+    var ytUser = new Map();
+    var ytPre = {};
+    try { var vd = document.getElementById('video-data'); if (vd) ytPre = JSON.parse(vd.textContent); } catch (e) {}
+    function ytOf(key) {
+      if (ytUser.has(key)) { var u = ytUser.get(key); return u && u.v ? u : null; }
+      var p = ytPre[key];
+      if (p && p.v) return { v: p.v, t: p.t || '', c: p.c || '', weak: !!p.w };
+      var s = findSong(key);
+      var m = s && s.title.match(/\(([\w-]{11})\)\s*$/);
+      return m ? { v: m[1], t: '', c: '' } : null;
+    }
+    function saveYt() { return idb.put('meta', 'youtube', Array.from(ytUser.entries())).catch(function () {}); }
+    function parseVideo(text) {
+      text = (text || '').trim();
+      if (/^[\w-]{11}$/.test(text)) return text;
+      var m = text.match(/(?:v=|youtu\.be\/|\/shorts\/|\/embed\/|\/live\/)([\w-]{11})/);
+      return m ? m[1] : null;
+    }
+    function ytWatch(id) { return 'https://www.youtube.com/watch?v=' + id; }
+    function ytSearch(s) {
+      var c = cur(s);
+      var q = (c.artist ? c.artist + ' ' : '') + c.title.replace(/\s*\([\w-]{11}\)\s*$/, '');
+      return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q);
+    }
+
+    var ytKey = null;
+    function openYt(key) {
+      ytKey = key;
+      var s = findSong(key), y = ytOf(key);
+      $('yt-title').textContent = 'YouTube link for ' + cur(s).title;
+      $('yt-input').value = y ? ytWatch(y.v) : '';
+      $('yt-input').classList.remove('bad');
+      $('yt-current').innerHTML = '';
+      if (y) {
+        var a = el('a', null, y.t || ytWatch(y.v));
+        a.href = ytWatch(y.v); a.target = '_blank'; a.rel = 'noopener';
+        var img = document.createElement('img');
+        img.src = 'https://i.ytimg.com/vi/' + y.v + '/mqdefault.jpg'; img.alt = '';
+        $('yt-current').appendChild(img);
+        var t = el('div');
+        t.appendChild(a);
+        if (y.c) t.appendChild(el('small', null, y.c));
+        if (y.weak) t.appendChild(el('small', 'warn', 'Found automatically and may be the wrong video. Play it to check.'));
+        $('yt-current').appendChild(t);
+      }
+      $('yt-current').hidden = !y;
+      $('yt-remove').hidden = !y;
+      $('dlg-yt').showModal();
+      $('yt-input').focus();
+      $('yt-input').select();
+    }
+    $('yt-search').addEventListener('click', function () { window.open(ytSearch(findSong(ytKey)), '_blank', 'noopener'); $('yt-input').focus(); });
+    $('yt-save').addEventListener('click', function () {
+      var raw = $('yt-input').value.trim();
+      var id = parseVideo(raw);
+      if (!raw) { $('dlg-yt').close(); return; }
+      if (!id) { $('yt-input').classList.add('bad'); $('yt-hint').textContent = 'That does not look like a YouTube link. Copy it from the address bar or the Share button.'; return; }
+      var prev = ytOf(ytKey);
+      ytUser.set(ytKey, { v: id, t: prev && prev.v === id ? prev.t : '', c: prev && prev.v === id ? prev.c : '' });
+      saveYt(); refreshCard(ytKey); renderStats();
+      $('dlg-yt').close();
+    });
+    $('yt-input').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); $('yt-save').click(); } });
+    $('yt-input').addEventListener('input', function () { this.classList.remove('bad'); $('yt-hint').textContent = ''; });
+    $('yt-remove').addEventListener('click', function () {
+      ytUser.set(ytKey, { v: null });
+      saveYt(); refreshCard(ytKey); renderStats();
+      $('dlg-yt').close();
+    });
+
+    // Import from YouTube Song Finder: its backup (.json) or its CSV download.
+    $('bk-yt').addEventListener('click', function () { $('pick-yt').click(); });
+    $('pick-yt').addEventListener('change', async function () {
+      var f = this.files[0];
+      this.value = '';
+      if (!f) return;
+      try {
+        var text = (await f.text()).replace(/^﻿/, '');
+        var byKey = new Map(songs.map(function (s) { return [s.key, s]; }));
+        var n = 0;
+        if (/^\s*\{/.test(text)) {
+          var d = JSON.parse(text);
+          if (!d || typeof d.songs !== 'object') throw new Error();
+          Object.keys(d.songs).forEach(function (k) {
+            var r = d.songs[k];
+            if (r && r.v && byKey.has(k)) { ytUser.set(k, { v: r.v, t: r.vt || '', c: r.vc || '', weak: !!r.weak }); n++; }
+          });
+        } else {
+          var rows = parseCsv(text);
+          var head = (rows.shift() || []).map(function (h) { return h.trim().toLowerCase(); });
+          var ti = head.indexOf('title'), ai = head.indexOf('artist'), yi = head.indexOf('youtube'), vi = head.indexOf('video title');
+          if (ti < 0 || yi < 0) throw new Error();
+          rows.forEach(function (r) {
+            var id = parseVideo(r[yi] || '');
+            if (!id) return;
+            var k = (r[ti] || '') + '\u0001' + (ai >= 0 ? r[ai] || '' : '');
+            if (!byKey.has(k)) return;
+            ytUser.set(k, { v: id, t: vi >= 0 ? r[vi] || '' : '', c: '' });
+            n++;
+          });
+        }
+        await saveYt();
+        applyFilter();
+        $('bk-progress').textContent = 'Added ' + n + ' YouTube link' + (n === 1 ? '' : 's') + '.';
+      } catch (e) {
+        $('bk-progress').textContent = 'That is not a YouTube Song Finder backup or CSV.';
+      }
+    });
 
     // ---------------- find covers (Apple Music / iTunes search) ----------------
     // Apple's public search, called straight from this page. Apple asks for roughly 20 searches
@@ -4657,7 +4835,8 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       idb.entries('edits').catch(function () { return []; }),
       idb.keys('art').catch(function () { return []; }),
       idb.entries('audio').catch(function () { return []; }),
-      idb.get('meta', 'autoArt').catch(function () { return null; })
+      idb.get('meta', 'autoArt').catch(function () { return null; }),
+      idb.get('meta', 'youtube').catch(function () { return null; })
     ]).then(function (r) {
       if (r[0] && r[0].list) { setSongs(r[0].list); sourceLabel = r[0].label; }
       else { setSongs(parseSnapshot()); sourceLabel = 'Music Station in Notion, as of ' + SNAPSHOT_DATE; }
@@ -4665,6 +4844,7 @@ New Dawn|Saviour 3.0|New Dawn - Single|J
       r[2].forEach(function (k) { artKeys.add(k); });
       r[3].forEach(function (kv) { audioMeta.set(kv[0], kv[1].name); });
       (r[4] || []).forEach(function (kv) { autoArt.set(kv[0], kv[1]); });
+      (r[5] || []).forEach(function (kv) { ytUser.set(kv[0], kv[1]); });
       loadTrays().catch(function () { renderTray(); });
       try { if (localStorage.getItem('album-art-tray-open')) trayOpen(true); } catch (e) {}
       showSource();

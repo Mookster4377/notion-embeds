@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Find a YouTube video for every song in youtube-finder.html and save the results into it.
+"""Find a YouTube video for every song and save the links into both apps.
 
 Reads the song list built into youtube-finder.html, searches YouTube for
-"artist title" for each song, and writes the top 3 results into the page's
-<script id="video-data"> block. The page uses the top result for any song you
-have not set yourself, and offers the other two under "Other picks".
+"artist title" for each song, and writes the top 3 results into the
+<script id="video-data"> block of youtube-finder.html and album-art.html.
+YouTube Song Finder uses the top result for any song you have not set
+yourself and offers the other two under "Other picks"; Album Art Studio
+shows it as the song's "YouTube" button.
 
 Searches are cached in .youtube-cache.json so the script can be stopped and
 re-run; only songs not looked up yet are searched again.
@@ -27,6 +29,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PAGE = os.path.join(ROOT, 'youtube-finder.html')
+PAGES = [PAGE, os.path.join(ROOT, 'album-art.html')]
 CACHE = os.path.join(ROOT, '.youtube-cache.json')
 UA = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/130.0 Safari/537.36')
@@ -152,13 +155,21 @@ def main():
         out[s['key']] = rec
     blob = json.dumps(out, ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')
     block = '<script id="video-data" type="application/json">' + blob + '</script>'
-    if '<script id="video-data"' in html:
-        html = re.sub(r'<script id="video-data" type="application/json">.*?</script>',
-                      lambda _: block, html, count=1, flags=re.S)
-    else:
-        html = html.replace('  <script id="song-data"', '  ' + block + '\n  <script id="song-data"', 1)
-    open(PAGE, 'w', encoding='utf-8').write(html)
-    print(f'Saved {len(out)} videos into youtube-finder.html '
+    saved = []
+    for page in PAGES:
+        if not os.path.exists(page):
+            continue
+        html = open(page, encoding='utf-8').read()
+        if '<script id="video-data"' in html:
+            html = re.sub(r'<script id="video-data" type="application/json">.*?</script>',
+                          lambda _: block, html, count=1, flags=re.S)
+        elif '  <script id="song-data"' in html:
+            html = html.replace('  <script id="song-data"', '  ' + block + '\n  <script id="song-data"', 1)
+        else:
+            continue
+        open(page, 'w', encoding='utf-8').write(html)
+        saved.append(os.path.basename(page))
+    print(f'Saved {len(out)} videos into {" and ".join(saved)} '
           f'({n_weak} marked "check this", {state["failed"]} searches failed).')
 
 
